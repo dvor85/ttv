@@ -120,4 +120,3 @@ class DateForm(xbmcgui.WindowXMLDialog):
                     self.fillMonth(date)
 
         super(DateForm, self).onClick(controlId)
-

@@ -198,7 +198,7 @@ class TSengine(xbmc.Player):
         msg = self.thr.getTSMessage()
         if msg.getType() == TSMessage.AUTH:
             if msg.getParams() == '0':
-                LogToXMC('Пользователь не зарегестрирован', 2)
+                LogToXBMC('Пользователь не зарегестрирован', 2)
                 self.last_error = 'Пользователь не зарегестрирован'
                 self.end()
                 return

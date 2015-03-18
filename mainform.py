@@ -156,19 +156,19 @@ class WMainForm(xbmcgui.WindowXML):
             self.archive.append(li)
 
     def getEpg(self, param):
-       data = defines.GET('http://api.torrent-tv.ru/v3/translation_epg.php?session=%s&epg_id=%s&typeresult=json' % (self.session, param), cookie = self.session)
-       jdata = json.loads(data)
-       if jdata['success'] == 0:
-          self.epg[param] = []
-          self.showSimpleEpg(param)
-       else:
-           self.epg[param] = jdata['data']
-           selitem = self.list.getSelectedItem()
+        data = defines.GET('http://api.torrent-tv.ru/v3/translation_epg.php?session=%s&epg_id=%s&typeresult=json' % (self.session, param), cookie = self.session)
+        jdata = json.loads(data)
+        if jdata['success'] == 0:
+            self.epg[param] = []
+            self.showSimpleEpg(param)
+        else:
+            self.epg[param] = jdata['data']
+            selitem = self.list.getSelectedItem()
+            
+            if selitem.getProperty('epg_cdn_id') == param:
+                self.showSimpleEpg(param)
            
-           if selitem.getProperty('epg_cdn_id') == param:
-               self.showSimpleEpg(param)
-           
-       self.hideStatus()
+        self.hideStatus()
 
     def showScreen(self, cdn):
         if defines.tryStringToInt(cdn) < 1:
@@ -190,20 +190,20 @@ class WMainForm(xbmcgui.WindowXML):
             data = defines.GET('http://api.torrent-tv.ru/v3/version.php?application=xbmc&version=%s' % defines.VERSION)
             jdata = json.loads(data)
             if jdata['support'] == 0:
-               from okdialog import OkDialog
-               dialog = OkDialog("okdialog.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
-               dialog.setText("Текущая версия приложения (%s) не поддерживается. Последняя версия %s " % (defines.VERSION, jdata['last_version'].encode('utf-8')))
-               #dialog.setText('Hello World')
-               dialog.doModal()
-               self.close()
+                from okdialog import OkDialog
+                dialog = OkDialog("okdialog.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
+                dialog.setText("Текущая версия приложения (%s) не поддерживается. Последняя версия %s " % (defines.VERSION, jdata['last_version'].encode('utf-8')))
+                #dialog.setText('Hello World')
+                dialog.doModal()
+                self.close()
             self.img_progress = self.getControl(108)
             self.txt_progress = self.getControl(107)
             self.progress = self.getControl(WMainForm.PROGRESS_BAR)
             self.showStatus("Авторизация")
             guid = defines.ADDON.getSetting("uuid")
             if guid == '':
-              guid = str(uuid.uuid1())
-              defines.ADDON.setSetting("uuid", guid)
+                guid = str(uuid.uuid1())
+                defines.ADDON.setSetting("uuid", guid)
             guid = guid.replace('-', '')
             print guid
             data = defines.GET('http://api.torrent-tv.ru/v3/auth.php?username=%s&password=%s&typeresult=json&application=xbmc&guid=%s' % (defines.ADDON.getSetting('login'), defines.ADDON.getSetting('password'), guid))
@@ -433,7 +433,7 @@ class WMainForm(xbmcgui.WindowXML):
                 except:
                     break
                 if ce == None:
-                    brea;
+                    break;
                 if i >= curepg.__len__():
                     break
                 sbt = time.localtime(float(curepg[i]['btime']))
@@ -463,8 +463,8 @@ class WMainForm(xbmcgui.WindowXML):
             self.isCanceled = True
             #xbmc.executebuiltin('Action(PreviousMenu)')
             if self.player.TSPlayer:
-               self.player.TSPlayer.closed = True
-               self.player.Stop()
+                self.player.TSPlayer.closed = True
+                self.player.Stop()
             self.close()
         elif action.getId() in WMainForm.ARROW_ACTIONS:
             LogToXBMC("ARROW_ACTION %s" % self.seltab )

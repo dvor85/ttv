@@ -8,9 +8,9 @@ dom.parse(defines.ADDON_PATH + '/resources/settings.xml')
 xset = None
 skins = []
 for set in dom.find('category').findall('setting'):
-     if set.attrib['id'] == 'skin':
-         skins.append(set.attrib['values'])
-         xset = set
+    if set.attrib['id'] == 'skin':
+        skins.append(set.attrib['values'])
+        xset = set
 
 if os.path.exists(defines.DATA_PATH + '/resources/skins/'):
     dirs = os.listdir(defines.DATA_PATH + '/resources/skins/');

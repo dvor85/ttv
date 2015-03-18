@@ -18,7 +18,8 @@ if REMOTE_DBG:
         sys.stderr.write("Error: {0}:{1} | You must add org.python.pydev.debug.pysrc to your PYTHONPATH.".format(t, v))
         import traceback
         traceback.print_tb(tb)
-        sys.exit(1)
+        del tb
+    
 
 import xbmc
 import xbmcaddon
@@ -39,12 +40,12 @@ def checkPort(params):
 
 if __name__ == '__main__':
     if not defines.ADDON.getSetting('skin'):
-       defines.ADDON.setSetting('skin', 'st.anger')
+        defines.ADDON.setSetting('skin', 'st.anger')
     if defines.ADDON.getSetting("skin") == "default":
-       defines.ADDON.setSetting("skin", "st.anger")
+        defines.ADDON.setSetting("skin", "st.anger")
     if not defines.ADDON.getSetting("login"):
-       defines.ADDON.setSetting("login", "anonymous")
-       defines.ADDON.setSetting("password", "anonymous")
+        defines.ADDON.setSetting("login", "anonymous")
+        defines.ADDON.setSetting("password", "anonymous")
 
     thr = defines.MyThread(checkPort, defines.ADDON.getSetting("outport"))
     thr.start()
