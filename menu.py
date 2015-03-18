@@ -20,9 +20,9 @@ def LogToXBMC(text, type = 1):
     del log
 
 class MenuForm(xbmcgui.WindowXMLDialog):
-    CMD_ADD_FAVOURITE = 'favourite_add'
-    CMD_DEL_FAVOURITE = 'favourite_delete'
-    CMD_UP_FAVOURITE = 'favourite_up'
+    CMD_ADD_FAVOURITE = 'favourite_add.php'
+    CMD_DEL_FAVOURITE = 'favourite_delete.php'
+    CMD_UP_FAVOURITE = 'favourite_up.php'
     CMD_DOWN_FAVOURITE = 'favourite_down.php'
     CMD_CLOSE_TS = 'close_ts'
     CONTROL_CMD_LIST = 301
@@ -68,11 +68,11 @@ class MenuForm(xbmcgui.WindowXMLDialog):
             li = lt.getSelectedItem()
             cmd = li.getLabel2()
             LogToXBMC("cmd=%s" % cmd)
-            if cmd == MenuForm.CMD_DEL_FAVOURITE: self.DelFromFavourite()
-            elif cmd == MenuForm.CMD_ADD_FAVOURITE: self.AddToFavourite()
-            elif cmd == MenuForm.CMD_DOWN_FAVOURITE: self.DownFavourite()
-            elif cmd == MenuForm.CMD_UP_FAVOURITE: self.UpFavourite()
-            elif cmd == MenuForm.CMD_CLOSE_TS: self.CloseTS()
+    
+            if cmd == MenuForm.CMD_CLOSE_TS: 
+                self.CloseTS()
+            else:
+                self._sendCmd(cmd)
             self.close()
 
     def _sendCmd(self, cmd):
@@ -85,17 +85,6 @@ class MenuForm(xbmcgui.WindowXMLDialog):
             self.result = jdata['error']
         else:
             self.result = 'OK'
-    def DelFromFavourite(self):
-        self._sendCmd('favourite_delete.php')
-
-    def AddToFavourite(self):
-        self._sendCmd('favourite_add.php')
-
-    def UpFavourite(self):
-        self._sendCmd('favourite_up.php')
-
-    def DownFavourite(self):
-        self._sendCmd('favourite_down.php')
 
     def CloseTS(self):
         LogToXBMC('Closet TS')

@@ -13,19 +13,17 @@ from mainform import WMainForm
 #from TSCore import TSengine as tsengine
 
 #defines
-ADDON = xbmcaddon.Addon( id = 'script.torrent-tv.ru.pp' )
+import defines
+
 ACE_PORT=62062
 CANCEL_DIALOG  = ( 9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448, )
-PTR_FILE =ADDON.getSetting('port_path')
-ADDON_ICON     = ADDON.getAddonInfo('icon')
-ADDON_PATH = ADDON.getAddonInfo('path')
 BTN_CHANNELS_ID = 102
 BTN_TRANSLATIONS_ID = 103
 BTN_CLOSE = 101
 
 try:
-    if PTR_FILE:  
-        gf = open(PTR_FILE, 'r')
+    if defines.PTR_FILE:  
+        gf = open(defines.PTR_FILE, 'r')
         ACE_PORT=int(gf.read())
         gf.close()
 except: PTR_FILE=None
@@ -36,12 +34,12 @@ if not PTR_FILE:
         gf = open(pfile, 'r')
         ACE_PORT=int(gf.read())
         gf.close()
-        ADDON.setSetting('port_path',pfile)
+        defines.ADDON.setSetting('port_path',pfile)
         print ACE_PORT
     except: ACE_PORT=62062
 
 # functions
-def showMessage(message = '', heading='Torrent-TV.RU', times = 3000, pics = ADDON_ICON):
+def showMessage(message = '', heading='Torrent-TV.RU', times = 3000, pics = defines.ADDON_ICON):
     try: xbmc.executebuiltin('XBMC.Notification("%s", "%s", %s, "%s")' % (heading.encode('utf-8'), message.encode('utf-8'), times, pics.encode('utf-8')))
     except Exception, e:
         try: xbmc.executebuiltin('XBMC.Notification("%s", "%s", %s, "%s")' % (heading, message, times, pics))
@@ -50,7 +48,7 @@ def showMessage(message = '', heading='Torrent-TV.RU', times = 3000, pics = ADDO
 
 
 def main():
-    ui = WMainForm("DialogDownloadProgress.xml", ADDON_PATH, 'default')
+    ui = WMainForm("DialogDownloadProgress.xml", defines.ADDON_PATH, 'default')
     ui.show()
     #thr = _DBThread(start, None)
     #thr.start()

@@ -89,7 +89,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.category[WMainForm.CHN_TYPE_MODERATION] = { "name" : WMainForm.CHN_TYPE_MODERATION, "channels": []}
         self.category[WMainForm.CHN_TYPE_FAVOURITE] = { "name" : WMainForm.CHN_TYPE_FAVOURITE, "channels": []}
         self.translation = []
-
+        
     def getChannels(self, param):
         data = defines.GET('http://api.torrent-tv.ru/v3/translation_list.php?session=%s&type=%s&typeresult=json' % (self.session, param), cookie = self.session)
         jdata = json.loads(data)
@@ -306,6 +306,7 @@ class WMainForm(xbmcgui.WindowXML):
             self.setFocusId(50)
         elif controlID == 50:
             selItem = control.getSelectedItem()
+            
             if not selItem:
                 return
             if selItem.getLabel() == '..':
@@ -346,11 +347,11 @@ class WMainForm(xbmcgui.WindowXML):
             if selItem.getProperty("access_user") == 0:
                 access = selItem.getProperty("access_translation")
                 if access == "registred":
-                   defines.showMessage("Трансляция доступна для зарегестрированных пользователей")
+                    defines.showMessage("Трансляция доступна для зарегестрированных пользователей")
                 elif access == "vip":
-                   defines.showMessage("Трансляция доступна для VIP пользователей")
+                    defines.showMessage("Трансляция доступна для VIP пользователей")
                 else:
-                   defines.showMessage("На данный момент трансляция не доступна")
+                    defines.showMessage("На данный момент трансляция не доступна")
                 return
              
             buf = xbmcgui.ListItem(selItem.getLabel())
@@ -394,7 +395,7 @@ class WMainForm(xbmcgui.WindowXML):
            
             LogToXBMC('CUR SELTAB %s' % self.seltab)
             
-           # xbmc.executebuiltin('SendClick(12345,%s)' % self.seltab)
+        # xbmc.executebuiltin('SendClick(12345,%s)' % self.seltab)
         elif controlID == WMainForm.BTN_FULLSCREEN:
             if defines.ADDON.getSetting("winmode") == "true":
                 self.player.show()
