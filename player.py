@@ -131,7 +131,7 @@ class MyPlayer(xbmcgui.WindowXML):
         self.parent.hideStatus()
         LogToXBMC('Play torrent')
         self.TSPlayer.play_url_ind(0,li.getLabel(), li.getProperty('icon'), li.getProperty('icon'), torrent = url, mode = mode)
-        print 'end playing'
+        LogToXBMC('End playing')
         
     def hide(self):
         pass

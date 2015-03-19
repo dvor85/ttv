@@ -16,6 +16,7 @@ PTR_FILE = ADDON.getSetting('port_path')
 DATA_PATH = xbmc.translatePath(os.path.join("special://profile/addon_data", ADDON_ID))
 VERSION = ADDON.getAddonInfo('version')
 AUTOSTART = ADDON.getSetting('startlast') == 'true'
+DEBUG = ADDON.getSetting('debug') == 'true'
 skin = ADDON.getSetting('skin')
 SKIN_PATH = ADDON_PATH
 

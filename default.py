@@ -2,11 +2,10 @@
 # Writer (c) 2011, Welicobratov K.A., E-mail: 07pov23@gmail.com
 
 import os, sys
-
-REMOTE_DBG = True 
+import defines
 
 # append pydev remote debugger
-if REMOTE_DBG:
+if defines.DEBUG:
     # Make pydev debugger works for auto reload.
     # Note pydevd module need to be copied in XBMC\system\python\Lib\pysrc
     try:
@@ -19,13 +18,13 @@ if REMOTE_DBG:
         import traceback
         traceback.print_tb(tb)
         del tb
+        sys.exit(0)
     
 
 import xbmc
 import xbmcaddon
 import cPickle
-import defines
-import os
+
 
 import mainform 
 from okdialog import OkDialog

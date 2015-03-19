@@ -8,19 +8,6 @@ import threading
 
 import defines
 
-class MyThread(threading.Thread):
-
-    def __init__(self, func, params, back = True):
-        threading.Thread.__init__(self)
-        self.func = func
-        self.params = params
-        #self.parent = parent
-
-    def run(self):
-        self.func(self.params)
-    def stop(self):
-        pass
-
 class InfoForm(xbmcgui.WindowXMLDialog):
     LABEL_USER_LOGIN = 101
     LABEL_USER_BALANCE = 102
@@ -56,10 +43,10 @@ class InfoForm(xbmcgui.WindowXMLDialog):
         
         self.portLabel.setLabel("%s (Проверяется)" % self.outport, "Проверка")
 
-        thraddr = MyThread(self.getAddr, None)
+        thraddr = defines.MyThread(self.getAddr, None)
         thraddr.start()
         
-        thrport = MyThread(self.checkPort, self.outport)
+        thrport = defines.MyThread(self.checkPort, self.outport)
         thrport.start()
 
     def printASStatus(self, text):
@@ -84,7 +71,7 @@ class InfoForm(xbmcgui.WindowXMLDialog):
             self.printCheckPort(params, True)
             return True
 
-    def printCheckPort(self, params, res = False):
+    def printCheckPort(self, params, res=False):
         if self.portLabel:
             if res:
                 self.portLabel.setLabel("%s ([COLOR=green]%s[/COLOR])" % (params, self.TEXT_YESPORT))

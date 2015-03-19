@@ -1,7 +1,7 @@
 ﻿# Copyright (c) 2013 Torrent-TV.RU
 # Writer (c) 2013, Welicobratov K.A., E-mail: 07pov23@gmail.com
 
-#imports
+# imports
 import xbmcgui
 import xbmc
 import xbmcaddon
@@ -21,24 +21,26 @@ from dateform import DateForm
 import uuid
 import os
 import socket
+import cPickle
 
 import defines
+from unicodedata import category
 
-def LogToXBMC(text, type = 1):
+def LogToXBMC(text, type=1):
     ttext = ''
     if type == 2:
         ttext = 'ERROR:'
 
     log = open(defines.ADDON_PATH + '/mainform.log', 'a')
-    print '[MainForm %s] %s %s\r' % (time.strftime('%X'),ttext, text)
-    log.write('[MainForm %s] %s %s\r' % (time.strftime('%X'),ttext, text))
+    print '[MainForm %s] %s %s\r' % (time.strftime('%X'), ttext, text)
+    log.write('[MainForm %s] %s %s\r' % (time.strftime('%X'), ttext, text))
     log.close()
     del log
 
 class WMainForm(xbmcgui.WindowXML):
-    CANCEL_DIALOG  = ( 9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448, )
+    CANCEL_DIALOG = (9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448,)
     CONTEXT_MENU_IDS = (117, 101)
-    ARROW_ACTIONS = (1,2,3,4)
+    ARROW_ACTIONS = (1, 2, 3, 4)
     ACTION_MOUSE = 107
     BTN_CHANNELS_ID = 102
     BTN_TRANSLATIONS_ID = 103
@@ -60,7 +62,7 @@ class WMainForm(xbmcgui.WindowXML):
     API_ERROR_NOCONNECT = 'noconnect'
     API_ERROR_ALREADY = 'already'
     API_ERROR_NOPARAM = 'noparam'
-    API_ERROR_NOFAVOURITE = 'nofavourite'
+    API_ERROR_NOFAVOURITE = 'nofavourite'    
 
 
     def __init__(self, *args, **kwargs):
@@ -77,12 +79,30 @@ class WMainForm(xbmcgui.WindowXML):
         self.player = MyPlayer("player.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
         self.player.parent = self
         self.amalkerWnd = AdsForm("adsdialog.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
-        self.cur_category = WMainForm.CHN_TYPE_FAVOURITE
+        self.cur_category, self.selitem_id = self.load_selitem_info()
         self.epg = {}
-        self.selitem_id = -1
         self.playditem = -1
         self.user = None
         self.infoform = None
+        
+    def load_selitem_info(self):
+        lastch = os.path.join(defines.DATA_PATH, 'lastch')
+        if os.path.isfile(lastch):
+            try:
+                with open(lastch, 'rb') as lastch_obj:
+                    category = cPickle.load(lastch_obj)
+                    selitem_id = cPickle.load(lastch_obj)                    
+                    return (category, selitem_id)
+            except:
+                return (WMainForm.CHN_TYPE_FAVOURITE, -1)
+        else:
+            return (WMainForm.CHN_TYPE_FAVOURITE, -1)
+            
+    def dump_selitem_info(self, category, selitem_id):
+        lastch = os.path.join(defines.DATA_PATH, 'lastch')
+        with open(lastch, 'wb') as lastch_obj:
+            cPickle.dump(category, lastch_obj)
+            cPickle.dump(selitem_id, lastch_obj)    
 
     def initLists(self):
         self.category = {}
@@ -91,7 +111,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.translation = []
         
     def getChannels(self, param):
-        data = defines.GET('http://api.torrent-tv.ru/v3/translation_list.php?session=%s&type=%s&typeresult=json' % (self.session, param), cookie = self.session)
+        data = defines.GET('http://api.torrent-tv.ru/v3/translation_list.php?session=%s&type=%s&typeresult=json' % (self.session, param), cookie=self.session)
         jdata = json.loads(data)
         if jdata['success'] == 0:
             self.showStatus(jdata['error'])
@@ -135,7 +155,7 @@ class WMainForm(xbmcgui.WindowXML):
                 self.category[WMainForm.CHN_TYPE_FAVOURITE]["channels"].append(li)
 
     def getArcChannels(self, param):
-        data = defines.GET('http://api.torrent-tv.ru/v3/arc_list.php?session=%s&typeresult=json' % self.session, cookie = self.session)
+        data = defines.GET('http://api.torrent-tv.ru/v3/arc_list.php?session=%s&typeresult=json' % self.session, cookie=self.session)
         jdata = json.loads(data)
         self.archive = []
         if jdata['success'] == 0:
@@ -156,7 +176,7 @@ class WMainForm(xbmcgui.WindowXML):
             self.archive.append(li)
 
     def getEpg(self, param):
-        data = defines.GET('http://api.torrent-tv.ru/v3/translation_epg.php?session=%s&epg_id=%s&typeresult=json' % (self.session, param), cookie = self.session)
+        data = defines.GET('http://api.torrent-tv.ru/v3/translation_epg.php?session=%s&epg_id=%s&typeresult=json' % (self.session, param), cookie=self.session)
         jdata = json.loads(data)
         if jdata['success'] == 0:
             self.epg[param] = []
@@ -174,7 +194,7 @@ class WMainForm(xbmcgui.WindowXML):
         if defines.tryStringToInt(cdn) < 1:
             return
 
-        data = defines.GET('http://api.torrent-tv.ru/v3/translation_screen.php?session=%s&channel_id=%s&typeresult=json&count=1' % (self.session, cdn), cookie = self.session)
+        data = defines.GET('http://api.torrent-tv.ru/v3/translation_screen.php?session=%s&channel_id=%s&typeresult=json&count=1' % (self.session, cdn), cookie=self.session)
         jdata = json.loads(data)
         img = self.getControl(WMainForm.IMG_SCREEN)
         img.setImage("")
@@ -193,7 +213,7 @@ class WMainForm(xbmcgui.WindowXML):
                 from okdialog import OkDialog
                 dialog = OkDialog("okdialog.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
                 dialog.setText("Текущая версия приложения (%s) не поддерживается. Последняя версия %s " % (defines.VERSION, jdata['last_version'].encode('utf-8')))
-                #dialog.setText('Hello World')
+                # dialog.setText('Hello World')
                 dialog.doModal()
                 self.close()
             self.img_progress = self.getControl(108)
@@ -213,10 +233,8 @@ class WMainForm(xbmcgui.WindowXML):
                 return
 
             self.user = {"login" : defines.ADDON.getSetting('login'), "balance" : jdata["balance"]}
-            
             self.session = jdata['session']
             self.updateList()
-            
 
         except Exception, e:
             LogToXBMC('OnInit: %s' % e, 2)
@@ -233,7 +251,7 @@ class WMainForm(xbmcgui.WindowXML):
                 self.selitem_id = self.list.getSelectedPosition()
                 LogToXBMC('Selected %s' % self.selitem_id)
                 epg_id = selItem.getProperty('epg_cdn_id')
-                #LogToXBMC('Icon list item = %s' % selItem.getIconImage())
+                # LogToXBMC('Icon list item = %s' % selItem.getIconImage())
                 img = self.getControl(WMainForm.IMG_SCREEN)
                 img.setImage("")
                 
@@ -251,24 +269,33 @@ class WMainForm(xbmcgui.WindowXML):
                 thr.start()
                 img = self.getControl(1111)
                 img.setImage(selItem.getProperty('icon'))
+        
     
     def checkButton(self, controlId):
         control = self.getControl(controlId)
         control.setLabel('>%s<' % control.getLabel())
         if self.seltab:
             btn = self.getControl(self.seltab)
-            btn.setLabel(btn.getLabel().replace('<', '').replace('>',''))
+            btn.setLabel(btn.getLabel().replace('<', '').replace('>', ''))
         self.seltab = controlId
         LogToXBMC('Focused %s %s' % (WMainForm.CONTROL_LIST, self.selitem_id))
-        if self.selitem_id > -1:
-            #self.setFocusId(WMainForm.CONTROL_LIST)
-            self.list.selectItem(self.selitem_id)
+        if self.selitem_id > -1:     
+            if self.selitem_id < self.list.size():       
+                self.list.selectItem(self.selitem_id)
+                self.emulate_startChannel()
+            
+    def emulate_startChannel(self):
+        self.setFocusId(WMainForm.CONTROL_LIST)
+        xbmc.sleep(1000)
+        self.onClick(WMainForm.CONTROL_LIST)
 
     def onClickChannels(self):
         LogToXBMC('onClickChannels')
         self.fillChannels()
         if self.seltab != WMainForm.BTN_CHANNELS_ID:
+            LogToXBMC('size of list is: {}'.format(self.list.size()))
             self.checkButton(WMainForm.BTN_CHANNELS_ID)
+        
 
     def onClickTranslations(self):
         self.fillTranslation()
@@ -280,7 +307,7 @@ class WMainForm(xbmcgui.WindowXML):
         
         if self.seltab != WMainForm.BTN_ARCHIVE_ID:
             self.checkButton(WMainForm.BTN_ARCHIVE_ID)
-
+            
     def onClick(self, controlID):
         control = self.getControl(controlID)
         LogToXBMC('onClick %s' % controlID)
@@ -291,6 +318,7 @@ class WMainForm(xbmcgui.WindowXML):
                 self.setFocus(self.list)
                 self.list.selectItem(self.playditem)
                 self.playditem = -1
+               
                 
         elif controlID == WMainForm.BTN_TRANSLATIONS_ID: 
             self.onClickTranslations()
@@ -303,12 +331,13 @@ class WMainForm(xbmcgui.WindowXML):
             self.onClickArchive()
             
         elif controlID == 200: 
-            self.setFocusId(50)
-        elif controlID == 50:
+            self.setFocusId(WMainForm.CONTROL_LIST)
+        elif controlID == WMainForm.CONTROL_LIST:
             selItem = control.getSelectedItem()
             
             if not selItem:
                 return
+            LogToXBMC("selItem is {}".format(selItem.getLabel()))
             if selItem.getLabel() == '..':
                 if self.seltab == WMainForm.BTN_CHANNELS_ID:
                     self.fillCategory()
@@ -331,8 +360,8 @@ class WMainForm(xbmcgui.WindowXML):
 
                 stime = time.strptime(selItem.getProperty("date"), "%Y-%m-%d")
                 datefrm.date = datetime.date(stime.tm_year, stime.tm_mon, stime.tm_mday)
-                #datefrm.date =datetime.fromtimestamp(time.mktime(time.strptime(selItem.getProperty("date"), "%Y-%m-%d")))
-                #datefrm.date = datetime.strptime(selItem.getProperty("date"), "%Y-%m-%d")
+                # datefrm.date =datetime.fromtimestamp(time.mktime(time.strptime(selItem.getProperty("date"), "%Y-%m-%d")))
+                # datefrm.date = datetime.strptime(selItem.getProperty("date"), "%Y-%m-%d")
                 datefrm.doModal()
                 find = False
                 for li in self.archive:
@@ -364,8 +393,16 @@ class WMainForm(xbmcgui.WindowXML):
                 return
             print selItem.getProperty("type")
             self.playditem = self.selitem_id
+            self.dump_selitem_info(self.cur_category, self.selitem_id)
             
-            self.player.Start(buf)
+            for i in range(5):
+                self.player.Start(buf)
+                if not self.isCanceled:
+                    xbmc.sleep(3000)
+                else:
+                    break
+                
+            
             if xbmc.getCondVisibility("Window.IsVisible(home)"):
                 LogToXBMC("Close from HOME Window")
                 self.close()
@@ -412,7 +449,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.infoform.doModal()
         self.infoform = None
 
-    def showSimpleEpg(self, epg_id = None):
+    def showSimpleEpg(self, epg_id=None):
         controlEpg = self.getControl(WMainForm.LBL_FIRST_EPG)
         if epg_id and self.epg[epg_id].__len__() > 0:
             ctime = time.time()
@@ -424,10 +461,10 @@ class WMainForm(xbmcgui.WindowXML):
             et = float(float(curepg[0]['etime']))
             sbt = time.localtime(bt)
             set = time.localtime(et)
-            self.progress.setPercent((ctime - bt)*100/(et - bt))
+            self.progress.setPercent((ctime - bt) * 100 / (et - bt))
             controlEpg.setLabel('%.2d:%.2d - %.2d:%.2d %s' % (sbt.tm_hour, sbt.tm_min, set.tm_hour, set.tm_min, curepg[0]['name']))
             nextepg = ''
-            for i in range(1,99):
+            for i in range(1, 99):
                 ce = None
                 try:
                     ce = self.getControl(WMainForm.LBL_FIRST_EPG + i)
@@ -441,11 +478,11 @@ class WMainForm(xbmcgui.WindowXML):
                 set = time.localtime(float(curepg[i]['etime']))
                 nextepg = '%.2d:%.2d - %.2d:%.2d %s' % (sbt.tm_hour, sbt.tm_min, set.tm_hour, set.tm_min, curepg[i]['name'])
                 ce.setLabel(nextepg);
-            #controlEpg1.setLabel(nextepg)
+            # controlEpg1.setLabel(nextepg)
 
         else:
             controlEpg.setLabel('Нет программы')
-            for i in range(1,99):
+            for i in range(1, 99):
                 ce = None
                 try:
                     self.getControl(WMainForm.LBL_FIRST_EPG + i).setLabel('');
@@ -453,22 +490,23 @@ class WMainForm(xbmcgui.WindowXML):
                     break
             self.progress.setPercent(1)
 
-    def onAction(self, action):
+    def onAction(self, action):                
         if not action:
             super(WMainForm, self).onAction(action)
             return
+        LogToXBMC('Событие {}'.format(action.getId()))        
         if action.getButtonCode() == 61513:
             return;
         if action in WMainForm.CANCEL_DIALOG:
             LogToXBMC('CLOSE FORM')
             self.isCanceled = True
-            #xbmc.executebuiltin('Action(PreviousMenu)')
+            # xbmc.executebuiltin('Action(PreviousMenu)')
             if self.player.TSPlayer:
                 self.player.TSPlayer.closed = True
                 self.player.Stop()
             self.close()
         elif action.getId() in WMainForm.ARROW_ACTIONS:
-            LogToXBMC("ARROW_ACTION %s" % self.seltab )
+            LogToXBMC("ARROW_ACTION %s" % self.seltab)
             self.onFocus(self.getFocusId())
         elif action.getId() in WMainForm.CONTEXT_MENU_IDS and self.getFocusId() == WMainForm.CONTROL_LIST:
             if action.getId() == 101:
@@ -503,6 +541,8 @@ class WMainForm(xbmcgui.WindowXML):
                 self.onFocus(WMainForm.CONTROL_LIST)
         else:
             super(WMainForm, self).onAction(action)
+        
+        
 
     def updateList(self):
         self.showStatus("Получение списка каналов")
@@ -535,6 +575,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.img_progress.setVisible(False)
         self.hideStatus()
         LogToXBMC(self.selitem_id)
+        
         
 
     def showStatus(self, str):
@@ -595,7 +636,7 @@ class WMainForm(xbmcgui.WindowXML):
             li.setProperty('id', '%s' % gr)
             self.list.addItem(li)
 
-    def fillRecords(self, li, date = time.localtime()):
+    def fillRecords(self, li, date=time.localtime()):
         self.showStatus("Загрузка архива")
         LogToXBMC("Show records")
         self.list.reset()
@@ -606,7 +647,7 @@ class WMainForm(xbmcgui.WindowXML):
         const_li.setProperty("epg_cdn_id", li.getProperty("epg_cdn_id"))
         const_li.setProperty("date", "%s-%s-%s" % (date.year, date.month, date.day))
         self.list.addItem(const_li)
-        data = defines.GET("http://api.torrent-tv.ru/v3/arc_records.php?session=%s&date=%d-%d-%s&epg_id=%s&typeresult=json" % (self.session, date.day, date.month, date.year, li.getProperty("epg_cdn_id")), cookie = self.session)
+        data = defines.GET("http://api.torrent-tv.ru/v3/arc_records.php?session=%s&date=%d-%d-%s&epg_id=%s&typeresult=json" % (self.session, date.day, date.month, date.year, li.getProperty("epg_cdn_id")), cookie=self.session)
         jdata = json.loads(data)
         if jdata["success"] == 0:
             self.showStatus(jdata["error"])
