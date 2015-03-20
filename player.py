@@ -34,6 +34,7 @@ class MyPlayer(xbmcgui.WindowXML):
     CONTROL_BUTTON_INFOWIN = 209
     CONTROL_BUTTON_STOP = 200
     ACTION_RBC = 101
+    ARROW_ACTIONS = (1, 2, 3, 4)
 
     def __init__(self, *args, **kwargs):
         self.played = False
@@ -160,6 +161,7 @@ class MyPlayer(xbmcgui.WindowXML):
             self.TSPlayer = None
 
     def onAction(self, action):
+        LogToXBMC('Событие {}'.format(action.getId()))
         if action in CANCEL_DIALOG:
             LogToXBMC('Closes player %s %s' % (action.getId(), action.getButtonCode()))
             self.close()

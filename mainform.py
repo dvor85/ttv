@@ -84,25 +84,27 @@ class WMainForm(xbmcgui.WindowXML):
         self.playditem = -1
         self.user = None
         self.infoform = None
+        self.init = True
         
     def load_selitem_info(self):
-        lastch = os.path.join(defines.DATA_PATH, 'lastch')
-        if os.path.isfile(lastch):
-            try:
-                with open(lastch, 'rb') as lastch_obj:
-                    category = cPickle.load(lastch_obj)
-                    selitem_id = cPickle.load(lastch_obj)                    
-                    return (category, selitem_id)
-            except:
-                return (WMainForm.CHN_TYPE_FAVOURITE, -1)
-        else:
-            return (WMainForm.CHN_TYPE_FAVOURITE, -1)
+        try:
+            lastch = os.path.join(defines.DATA_PATH, 'lastch')
+            with open(lastch, 'rb') as lastch_obj:
+                category = cPickle.load(lastch_obj)
+                selitem_id = cPickle.load(lastch_obj)                    
+                return (category, selitem_id)
+        except:
+            LogToXBMC('lastch can''t load', 2)
+        return (WMainForm.CHN_TYPE_FAVOURITE, -1)
             
     def dump_selitem_info(self, category, selitem_id):
-        lastch = os.path.join(defines.DATA_PATH, 'lastch')
-        with open(lastch, 'wb') as lastch_obj:
-            cPickle.dump(category, lastch_obj)
-            cPickle.dump(selitem_id, lastch_obj)    
+        try:
+            lastch = os.path.join(defines.DATA_PATH, 'lastch')
+            with open(lastch, 'wb') as lastch_obj:
+                cPickle.dump(category, lastch_obj)
+                cPickle.dump(selitem_id, lastch_obj)
+        except:
+            LogToXBMC('Can''t save lastch', 2)    
 
     def initLists(self):
         self.category = {}
@@ -279,10 +281,9 @@ class WMainForm(xbmcgui.WindowXML):
             btn.setLabel(btn.getLabel().replace('<', '').replace('>', ''))
         self.seltab = controlId
         LogToXBMC('Focused %s %s' % (WMainForm.CONTROL_LIST, self.selitem_id))
-        if self.selitem_id > -1:     
-            if self.selitem_id < self.list.size():       
-                self.list.selectItem(self.selitem_id)
-                self.emulate_startChannel()
+        if 0 < self.selitem_id < self.list.size():     
+            self.list.selectItem(self.selitem_id)   
+                
             
     def emulate_startChannel(self):
         self.setFocusId(WMainForm.CONTROL_LIST)
@@ -295,6 +296,9 @@ class WMainForm(xbmcgui.WindowXML):
         if self.seltab != WMainForm.BTN_CHANNELS_ID:
             LogToXBMC('size of list is: {}'.format(self.list.size()))
             self.checkButton(WMainForm.BTN_CHANNELS_ID)
+            if self.init:
+                self.init = False             
+                self.emulate_startChannel()
         
 
     def onClickTranslations(self):
@@ -395,12 +399,9 @@ class WMainForm(xbmcgui.WindowXML):
             self.playditem = self.selitem_id
             self.dump_selitem_info(self.cur_category, self.selitem_id)
             
-            for i in range(5):
+            while not self.IsCanceled():
                 self.player.Start(buf)
-                if not self.isCanceled:
-                    xbmc.sleep(3000)
-                else:
-                    break
+                xbmc.sleep(1000)
                 
             
             if xbmc.getCondVisibility("Window.IsVisible(home)"):
