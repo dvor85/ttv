@@ -281,7 +281,7 @@ class WMainForm(xbmcgui.WindowXML):
             btn.setLabel(btn.getLabel().replace('<', '').replace('>', ''))
         self.seltab = controlId
         LogToXBMC('Focused %s %s' % (WMainForm.CONTROL_LIST, self.selitem_id))
-        if 0 < self.selitem_id < self.list.size():     
+        if (self.list != None) and (0 < self.selitem_id < self.list.size()):     
             self.list.selectItem(self.selitem_id)   
                 
             
