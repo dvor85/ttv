@@ -282,7 +282,10 @@ class WMainForm(xbmcgui.WindowXML):
         self.seltab = controlId
         LogToXBMC('Focused %s %s' % (WMainForm.CONTROL_LIST, self.selitem_id))
         if (self.list != None) and (0 < self.selitem_id < self.list.size()):     
-            self.list.selectItem(self.selitem_id)   
+            self.list.selectItem(self.selitem_id)  
+            if self.init:
+                self.init = False             
+                self.emulate_startChannel() 
                 
             
     def emulate_startChannel(self):
@@ -296,9 +299,7 @@ class WMainForm(xbmcgui.WindowXML):
         if self.seltab != WMainForm.BTN_CHANNELS_ID:
             LogToXBMC('size of list is: {}'.format(self.list.size()))
             self.checkButton(WMainForm.BTN_CHANNELS_ID)
-            if self.init:
-                self.init = False             
-                self.emulate_startChannel()
+            
         
 
     def onClickTranslations(self):
