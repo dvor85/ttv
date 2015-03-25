@@ -209,12 +209,12 @@ class WMainForm(xbmcgui.WindowXML):
 
     def onInit(self):
         try:
-            data = defines.GET('http://api.torrent-tv.ru/v3/version.php?application=xbmc&version=%s' % defines.VERSION)
+            data = defines.GET('http://api.torrent-tv.ru/v3/version.php?application=xbmc&version=%s' % defines.TTV_VERSION)
             jdata = json.loads(data)
             if jdata['support'] == 0:
                 from okdialog import OkDialog
                 dialog = OkDialog("okdialog.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
-                dialog.setText("Текущая версия приложения (%s) не поддерживается. Последняя версия %s " % (defines.VERSION, jdata['last_version'].encode('utf-8')))
+                dialog.setText("Текущая версия приложения (%s) не поддерживается. Последняя версия %s " % (defines.TTV_VERSION, jdata['last_version'].encode('utf-8')))
                 # dialog.setText('Hello World')
                 dialog.doModal()
                 self.close()

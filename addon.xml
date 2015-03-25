@@ -1,8 +1,8 @@
 ﻿<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="script.torrent-tv.ru.pp"
        name="Torrent-TV XBMC PLUS PLUS"
-       version="1.5.3"
-       provider-name="demon">
+       version="1.0.1"
+       provider-name="dvor85">
     <requires>
 		  <import addon="xbmc.python" version="2.1.0" />
       <import addon="script.module.beautifulsoup"/>
@@ -12,8 +12,8 @@
     </extension>
     <extension library="autostart.py" point="xbmc.service" />
     <extension point="xbmc.addon.metadata">
-        <summary>Torrent-TV XBMC</summary>
-        <description>Торрент ТВ теперь можно смотреть на медиаплатформе XBMC.</description>
+        <summary>Torrent-TV XBMC PLUS PLUS</summary>
+        <description>Исправленная версия Торрент ТВ.</description>
         <platform>all</platform>
     </extension>
 </addon>
