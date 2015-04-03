@@ -11,17 +11,17 @@ import json
 import defines
 
 from ts import TSengine as tsengine
-#defines
-CANCEL_DIALOG  = ( 9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448, )
+# defines
+CANCEL_DIALOG = (9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448,)
 
-def LogToXBMC(text, type = 1):
+def LogToXBMC(text, type=1):
     ttext = ''
     if type == 2:
         ttext = 'ERROR:'
 
     log = open(defines.ADDON_PATH + '/player.log', 'a')
-    print '[MyPlayer %s] %s %s\r' % (time.strftime('%X'),ttext, text)
-    log.write('[MyPlayer %s] %s %s\r' % (time.strftime('%X'),ttext, text))
+    print '[MyPlayer %s] %s %s\r' % (time.strftime('%X'), ttext, text)
+    log.write('[MyPlayer %s] %s %s\r' % (time.strftime('%X'), ttext, text))
     log.close()
     del log
 
@@ -45,6 +45,9 @@ class MyPlayer(xbmcgui.WindowXML):
         self.visible = False
         self.t = None
         self.focusId = 203
+        self.nextepg_id = 1
+        self.curepg = None
+        
 
     def onInit(self):
         if not self.li:
@@ -57,7 +60,7 @@ class MyPlayer(xbmcgui.WindowXML):
         self.UpdateEpg()
         self.getControl(MyPlayer.CONTROL_WINDOW_ID).setVisible(False)
         self.setFocusId(MyPlayer.CONTROL_EPG_ID)
-
+        
     def UpdateEpg(self):
         if not self.li:
             return
@@ -67,37 +70,50 @@ class MyPlayer(xbmcgui.WindowXML):
         progress = self.getControl(MyPlayer.CONTROL_PROGRESS_ID)
         if epg_id and self.parent.epg.has_key(epg_id) and self.parent.epg[epg_id].__len__() > 0:
             ctime = time.time()
-            curepg = filter(lambda x: (float(x['etime']) > ctime), self.parent.epg[epg_id])
-            bt = float(curepg[0]['btime'])
-            et = float(curepg[0]['etime'])
+            self.curepg = filter(lambda x: (float(x['etime']) > ctime), self.parent.epg[epg_id])
+            bt = float(self.curepg[0]['btime'])
+            et = float(self.curepg[0]['etime'])
             sbt = time.localtime(bt)
             set = time.localtime(et)
-            progress.setPercent((ctime - bt)*100/(et - bt))
-            controlEpg.setLabel('%.2d:%.2d - %.2d:%.2d %s' % (sbt.tm_hour, sbt.tm_min, set.tm_hour, set.tm_min, curepg[0]['name']))
-            #nextepg = ''
-            #for i in (1,2,3):
-            #    if i >= curepg.__len__():
-            #        break
-            #    sbt = time.localtime(curepg[i]['btime'])
-            #    set = time.localtime(curepg[i]['etime'])
-            #    nextepg = nextepg + '%.2d:%.2d - %.2d:%.2d %s\n' % (sbt.tm_hour, sbt.tm_min, set.tm_hour, set.tm_min, curepg[i]['name'])
-            #controlEpg1.setLabel(nextepg)
+            progress.setPercent((ctime - bt) * 100 / (et - bt))
+            controlEpg.setLabel('%.2d:%.2d - %.2d:%.2d %s' % (sbt.tm_hour, sbt.tm_min, set.tm_hour, set.tm_min, self.curepg[0]['name']))
+            self.setNextEpg()
+            
         else:
             controlEpg.setLabel('Нет программы')
-            #controlEpg1.setLabel('')
+            controlEpg1.setLabel('')
             progress.setPercent(1)
+            
+    def setNextEpg(self):
+        nextepg = ''
+        if len(self.curepg) > 1:
+            if self.nextepg_id < 1:
+                self.nextepg_id = 1
+                return
+            elif self.nextepg_id >= len(self.curepg):
+                self.nextepg_id = len(self.curepg) - 1
+                return
+                
+            controlEpg1 = self.getControl(112)  
+               
+            sbt = time.localtime(self.curepg[self.nextepg_id]['btime'])
+            set = time.localtime(self.curepg[self.nextepg_id]['etime'])
+            nextepg = nextepg + '%.2d:%.2d - %.2d:%.2d %s\n' % (sbt.tm_hour, sbt.tm_min, set.tm_hour, set.tm_min, self.curepg[self.nextepg_id]['name'])
+                
+        controlEpg1.setLabel(nextepg)         
+               
+
 
     def Stop(self):
         print 'CLOSE STOP'
-        #self.TSPlayer.thr.error = Exception('Stop player')
+        # self.TSPlayer.thr.error = Exception('Stop player')
         xbmc.executebuiltin('PlayerControl(Stop)')
 
     def Start(self, li):
-        pass
         print "Start play "
         if not self.TSPlayer :
             LogToXBMC('InitTS')
-            self.TSPlayer = tsengine(parent = self.parent)
+            self.TSPlayer = tsengine(parent=self.parent)
 
         self.li = li
         LogToXBMC('Load Torrent')
@@ -128,16 +144,16 @@ class MyPlayer(xbmcgui.WindowXML):
             self.parent.showStatus("Канал временно не доступен")
             return
         url = jdata["source"]
-        mode = jdata["type"].upper().replace("CONTENTID","PID")
+        mode = jdata["type"].upper().replace("CONTENTID", "PID")
         self.parent.hideStatus()
         LogToXBMC('Play torrent')
-        self.TSPlayer.play_url_ind(0,li.getLabel(), li.getProperty('icon'), li.getProperty('icon'), torrent = url, mode = mode)
+        self.TSPlayer.play_url_ind(0, li.getLabel(), li.getProperty('icon'), li.getProperty('icon'), torrent=url, mode=mode)
         LogToXBMC('End playing')
         
     def hide(self):
         pass
-        #xbmc.executebuiltin('Action(ParentDir)')
-        #if self.TSPlayer.playing:
+        # xbmc.executebuiltin('Action(ParentDir)')
+        # if self.TSPlayer.playing:
         #    xbmc.executebuiltin('Action(ParentDir)')
         #    print 'Главное меню'
 
@@ -168,6 +184,12 @@ class MyPlayer(xbmcgui.WindowXML):
         elif action.getId() == MyPlayer.ACTION_RBC:
             LogToXBMC('CLOSE PLAYER 101 %s %s' % (action.getId(), action.getButtonCode()))
             self.close()
+        elif action.getId() == 3: 
+            self.nextepg_id -= 1            
+            self.setNextEpg()
+        elif action.getId() == 4:
+            self.nextepg_id += 1            
+            self.setNextEpg()
         elif action.getId() == 0 and action.getButtonCode() == 61530:
             xbmc.executebuiltin('Action(FullScreen)')
             xbmc.sleep(4000)

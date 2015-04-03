@@ -29,30 +29,35 @@ if (skin != None) and (skin != "") and (skin != 'st.anger'):
 def Autostart(state):
     userdata = xbmc.translatePath("special://masterprofile")
     autoexec = os.path.join(userdata, 'autoexec.py')
-    if state:
-        if os.path.isfile(autoexec): 
-            mode = 'r+' 
-        else: 
-            mode = 'w+'     
-        
-        try:   
-            with open(autoexec, mode) as autoexec_file:
-                found = False
-                for line in autoexec_file:
-                    if ADDON_ID in line:
-                        found = True
-                        break
-        
-                if not found:
-                    autoexec_file.write('import xbmc\n')
-                    autoexec_file.write("xbmc.executebuiltin('RunAddon(%s)')\n" % ADDON_ID)
-        except:
-            t, v, tb = sys.exc_info()        
-            sys.stderr.write("Error while write autoexec.py: {}:{}.".format(t, v))
-            del tb
+
+    if os.path.isfile(autoexec): 
+        mode = 'r+' 
+    elif state: 
+        mode = 'w+'     
     else:
-        if os.path.isfile(autoexec): 
+        return
+        
+    try:   
+        found = False
+        with open(autoexec, mode) as autoexec_file:            
+            for line in autoexec_file:
+                if ADDON_ID in line:
+                    found = True
+                    break
+    
+            if not found and state:
+                autoexec_file.seek(0)
+                autoexec_file.write('import xbmc\n')
+                autoexec_file.write("xbmc.executebuiltin('RunAddon(%s)')\n" % ADDON_ID)
+                autoexec_file.truncate()
+                
+        if not state and found: 
             os.unlink(autoexec)
+    except:
+        t, v, tb = sys.exc_info()        
+        sys.stderr.write("Error while write autoexec.py: {}:{}.".format(t, v))
+        del tb
+        
         
 
 class MyThread(threading.Thread):
