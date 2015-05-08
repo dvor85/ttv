@@ -140,7 +140,7 @@ class WMainForm(xbmcgui.WindowXML):
             li.setProperty('icon', ch['logo'])
             li.setProperty("type", "channel")
             li.setProperty("id", '%s' % ch["id"])
-            li.setProperty("access_translation", ch["access_translation"])
+            li.setProperty("access_translation", '%s' % ch["access_translation"])
             li.setProperty("access_user", '%s' % ch["access_user"])
             
             if param == 'channel':
