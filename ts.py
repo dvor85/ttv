@@ -438,7 +438,7 @@ class TSengine(xbmc.Player):
             try:
                 if xbmc.abortRequested:
                     LogToXBMC("XBMC Shutdown")
-                    break;
+                    break
                 xbmc.sleep(250)
                 #if not self.isPlaying() and self.playing:
                 #    self.tsstop()

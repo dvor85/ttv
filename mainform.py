@@ -475,7 +475,7 @@ class WMainForm(xbmcgui.WindowXML):
                 except:
                     break
                 if ce == None:
-                    break;
+                    break
                 if i >= curepg.__len__():
                     break
                 sbt = time.localtime(float(curepg[i]['btime']))
