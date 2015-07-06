@@ -129,13 +129,9 @@ class WMainForm(xbmcgui.WindowXML):
             if not ch['logo']:
                 ch['logo'] = ''
             else:
-                ch['logo'] = 'http://torrent-tv.ru/uploads/' + ch['logo']
-            
-            chname = ch["name"]
-            if ch["access_user"] == 0:
-                chname = "[COLOR FF646464]%s[/COLOR]" % chname
-            
-            li = xbmcgui.ListItem(chname, '%s' % ch['id'], ch['logo'], ch['logo'])
+                ch['logo'] = 'http://torrent-tv.ru/uploads/' + ch['logo']    
+                        
+            li = xbmcgui.ListItem(ch["name"], '%s' % ch['id'], ch['logo'], ch['logo'])
             li.setProperty('epg_cdn_id', '%s' % ch['epg_id'])
             li.setProperty('icon', ch['logo'])
             li.setProperty("type", "channel")
@@ -144,17 +140,34 @@ class WMainForm(xbmcgui.WindowXML):
             li.setProperty("access_user", '%s' % ch["access_user"])
             
             if param == 'channel':
+                chname = "%i. %s" % ((len(self.category['%s' % ch['group']]["channels"])+1), ch["name"])
+                if ch["access_user"] == 0:
+                    chname = "[COLOR FF646464]%s[/COLOR]" % chname
+                li.setLabel(chname)           
                 li.setProperty('commands', "%s,%s" % (MenuForm.CMD_ADD_FAVOURITE, MenuForm.CMD_CLOSE_TS))
                 self.category['%s' % ch['group']]["channels"].append(li)
             elif param == 'moderation':
+                chname = "%i. %s" % ((len(self.category[WMainForm.CHN_TYPE_MODERATION]["channels"])+1), ch["name"])
+                if ch["access_user"] == 0:
+                    chname = "[COLOR FF646464]%s[/COLOR]" % chname
+                li.setLabel(chname) 
                 li.setProperty('commands', "%s,%s" % (MenuForm.CMD_ADD_FAVOURITE, MenuForm.CMD_CLOSE_TS))
                 self.category[WMainForm.CHN_TYPE_MODERATION]["channels"].append(li)
             elif param == 'translation':
+                chname = "%i. %s" % ((len(self.translation)+1), ch["name"])
+                if ch["access_user"] == 0:
+                    chname = "[COLOR FF646464]%s[/COLOR]" % chname
+                li.setLabel(chname)   
                 li.setProperty('commands', "%s,%s" % (MenuForm.CMD_ADD_FAVOURITE, MenuForm.CMD_CLOSE_TS))
                 self.translation.append(li)
             elif param == 'favourite':
+                chname = "%i. %s" % ((len(self.category[WMainForm.CHN_TYPE_FAVOURITE]["channels"])+1), ch["name"])
+                if ch["access_user"] == 0:
+                    chname = "[COLOR FF646464]%s[/COLOR]" % chname
+                li.setLabel(chname) 
                 li.setProperty('commands', "%s,%s,%s,%s" % (MenuForm.CMD_DEL_FAVOURITE, MenuForm.CMD_UP_FAVOURITE, MenuForm.CMD_DOWN_FAVOURITE, MenuForm.CMD_CLOSE_TS))
                 self.category[WMainForm.CHN_TYPE_FAVOURITE]["channels"].append(li)
+                
 
     def getArcChannels(self, param):
         data = defines.GET('http://api.torrent-tv.ru/v3/arc_list.php?session=%s&typeresult=json' % self.session, cookie=self.session)
@@ -165,13 +178,14 @@ class WMainForm(xbmcgui.WindowXML):
             return
         
         for ch in jdata['channels']:
+            chname = "%i. %s" % ((len(self.archive)+1), ch["name"])
             if not ch["id"]:
                 continue
             if not ch["logo"]:
                 ch["logo"] = ""
             else:
                 ch["logo"] = "http://torrent-tv.ru/uploads/" + ch["logo"]
-            li = xbmcgui.ListItem(ch["name"], '%s' % ch["id"], ch["logo"], ch["logo"])
+            li = xbmcgui.ListItem(chname, '%s' % ch["id"], ch["logo"], ch["logo"])
             li.setProperty("epg_cdn_id", '%s' % ch["epg_id"])
             li.setProperty("icon", ch["logo"])
             li.setProperty("type", "archive")
@@ -387,22 +401,28 @@ class WMainForm(xbmcgui.WindowXML):
                 else:
                     defines.showMessage("На данный момент трансляция не доступна")
                 return
-             
-            buf = xbmcgui.ListItem(selItem.getLabel())
-            buf.setProperty('epg_cdn_id', selItem.getProperty('epg_cdn_id'))
-            buf.setProperty('icon', selItem.getProperty('icon'))
-            buf.setProperty("type", selItem.getProperty("type"))
-            buf.setProperty("id", selItem.getProperty("id"))
-            if selItem.getProperty("type") == "archive":
-                self.fillRecords(buf, datetime.datetime.today());
-                return
-            print selItem.getProperty("type")
-            self.playditem = self.selitem_id
-            self.dump_selitem_info(self.cur_category, self.selitem_id)
             
+            buf = None
             while not self.IsCanceled():
+                 
+                buf = xbmcgui.ListItem(selItem.getLabel())
+                buf.setProperty('epg_cdn_id', selItem.getProperty('epg_cdn_id'))
+                buf.setProperty('icon', selItem.getProperty('icon'))
+                buf.setProperty("type", selItem.getProperty("type"))
+                buf.setProperty("id", selItem.getProperty("id"))
+                if selItem.getProperty("type") == "archive":
+                    self.fillRecords(buf, datetime.datetime.today());
+                    return
+                print selItem.getProperty("type")
+                self.playditem = self.selitem_id
+                self.dump_selitem_info(self.cur_category, self.selitem_id)
+            
+            
                 self.player.Start(buf)
-                xbmc.sleep(1000)                
+                xbmc.sleep(1000)       
+                selItem = self.list.getListItem(self.selitem_id)   
+                self.setFocus(self.list)
+                self.list.selectItem(self.selitem_id)      
                 
                 if xbmc.getCondVisibility("Window.IsVisible(home)"):
                     LogToXBMC("Close from HOME Window")

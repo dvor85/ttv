@@ -35,9 +35,9 @@ class MyPlayer(xbmcgui.WindowXML):
     CONTROL_BUTTON_STOP = 200
     ACTION_RBC = 101
     ARROW_ACTIONS = (1, 2, 3, 4)
+    DIGIT_BUTTONS = range(58, 68)
 
     def __init__(self, *args, **kwargs):
-        self.played = False
         self.thr = None
         self.TSPlayer = None
         self.parent = None
@@ -47,6 +47,11 @@ class MyPlayer(xbmcgui.WindowXML):
         self.focusId = 203
         self.nextepg_id = 1
         self.curepg = None
+        self.last_digit_pressed = None
+        self.last_digit_pressed_time = time.time()
+        self.channel_number_str = ''
+        self.thr = None
+        
         
 
     def onInit(self):
@@ -157,8 +162,6 @@ class MyPlayer(xbmcgui.WindowXML):
         #    xbmc.executebuiltin('Action(ParentDir)')
         #    print 'Главное меню'
 
-    def getPlayed(self):
-        return self.played
 
     def hideControl(self):
         self.getControl(MyPlayer.CONTROL_WINDOW_ID).setVisible(False)
@@ -175,6 +178,19 @@ class MyPlayer(xbmcgui.WindowXML):
             LogToXBMC("Закрыть TS");
             subprocess.Popen('taskkill /F /IM ace_engine.exe /T')
             self.TSPlayer = None
+            
+    def run_selected_channel(self, param):        
+        xbmc.sleep(3000)
+        if self.channel_number_str != '':
+            channel_number = int(self.channel_number_str)        
+            LogToXBMC('CHANNEL NUMBER IS: %i' % channel_number)              
+            if 0 < channel_number < self.parent.list.size():
+                self.parent.selitem_id = channel_number
+                self.Stop()
+            else:    
+                defines.showMessage('No such channel in current category!')
+            self.channel_number_str = ''
+        
 
     def onAction(self, action):
         LogToXBMC('Событие {}'.format(action.getId()))
@@ -194,6 +210,12 @@ class MyPlayer(xbmcgui.WindowXML):
             xbmc.executebuiltin('Action(FullScreen)')
             xbmc.sleep(4000)
             xbmc.executebuiltin('Action(Back)')
+        elif action.getId() in MyPlayer.DIGIT_BUTTONS:
+            ############# IN PRESSING DIGIT KEYS ############
+            self.channel_number_str += str(action.getId() - 58)                   
+            self.thr = defines.MyThread(self.run_selected_channel, None)
+            self.thr.daemon = True
+            self.thr.start()
 
         wnd = self.getControl(MyPlayer.CONTROL_WINDOW_ID)
         if not self.visible:

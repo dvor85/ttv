@@ -5,7 +5,7 @@ import urllib2
 import urllib
 import threading
 import os
-from BeautifulSoup import BeautifulSoup, BeautifulStoneSoup
+from BeautifulSoup import BeautifulSoup
 
 ADDON = xbmcaddon.Addon(id='script.torrent-tv.ru.pp')
 ADDON_ICON = ADDON.getAddonInfo('icon')
@@ -65,13 +65,14 @@ class MyThread(threading.Thread):
         threading.Thread.__init__(self)
         self.func = func
         self.params = params
-        # self.parent = parent
+        self.isCanceled = False
 
     def run(self):
         self.func(self.params)
+        
     def stop(self):
-        pass
-
+        self.isCanceled = True
+        
 if (sys.platform == 'win32') or (sys.platform == 'win64'):
     ADDON_PATH = ADDON_PATH.decode('utf-8')
 
@@ -79,26 +80,32 @@ def showMessage(message='', heading='Torrent-TV.RU', times=6789):
     try: 
         xbmc.executebuiltin('XBMC.Notification("%s", "%s", %s, %s)' % (heading.encode('utf-8'), message.encode('utf-8'), times, ADDON_ICON))
     except Exception, e:
-        try: xbmc.executebuiltin('XBMC.Notification("%s", "%s", %s, %s)' % (heading, message, times, ADDON_ICON))
+        try: 
+            xbmc.executebuiltin('XBMC.Notification("%s", "%s", %s, %s)' % (heading, message, times, ADDON_ICON))
         except Exception, e:
-            xbmc.log('showMessage: exec failed [%s]' % 3)
+            xbmc.log('showMessage: exec failed [%s]' % e, 3)
 
-def GET(target, post=None, cookie=None, tryies=10):
-    try:
-        print target
-        req = urllib2.Request(url=target, data=post)
-        req.add_header('User-Agent', 'XBMC (script.torrent-tv.ru)')
-        if cookie:
-            req.add_header('Cookie', 'PHPSESSID=%s' % cookie)
-        resp = urllib2.urlopen(req, timeout=6)
-        http = resp.read()
-        resp.close()
-        return http
-    except Exception, e:
-        if tryies > 0:            
-            tryies -= 1
-            return GET(target, post, cookie, tryies)
-        xbmc.log('GET EXCEPT [%s]' % (e), 4)
+def GET(target, post=None, cookie=None):
+    t = 0
+    while True:
+        t += 1
+        try:
+            print target
+            req = urllib2.Request(url=target, data=post)
+            req.add_header('User-Agent', 'XBMC (script.torrent-tv.ru)')
+            if cookie:
+                req.add_header('Cookie', 'PHPSESSID=%s' % cookie)
+            resp = urllib2.urlopen(req, timeout=6)
+            try:
+                http = resp.read()
+                return http
+            finally:
+                resp.close()
+            
+        except Exception, e:
+            if t % 10 == 0:
+                xbmc.log('GET EXCEPT [%s]' % (e), 4)
+                xbmc.sleep(30000)       
 
 def checkPort(params):
         data = GET("http://2ip.ru/check-port/?port=%s" % params)
