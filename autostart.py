@@ -17,5 +17,5 @@ if os.path.exists(defines.DATA_PATH + '/resources/skins/'):
     xset.attrib['values'] = "st.anger|"+"|".join(dirs);
     dom.write(defines.ADDON_PATH + '/resources/settings.xml', 'utf-8')   
 else:
-    xset.attrib['values'] = "st.anger";
+    xset.attrib['values'] = "st.anger"
     dom.write(defines.ADDON_PATH + '/resources/settings.xml', 'utf-8')         

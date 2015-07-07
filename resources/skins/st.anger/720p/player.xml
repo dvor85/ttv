@@ -1,6 +1,7 @@
 ﻿<window id="12346">
   <visible>Player.HasMedia + Window.IsActive(PlayerControls) + !Window.IsActive(FullscreenVideo) + !Window.IsActive(Visualisation)</visible>
     <controls>
+    
     <control type="group" id="201">
       <control type="videowindow">
         <posx>0</posx>
@@ -172,9 +173,35 @@
               <scroll>true</scroll>
             </control>
           </control>
-        </control>
-        
+        </control>        
       </control>
+    <control type="label">
+        <desctiption>Time</desctiption>
+        <posx>1210</posx>
+        <posy>10</posy>        
+        <visible>true</visible>
+        <label>$INFO[System.Time]</label>
+    </control>
+    <control type="label" id = "399">
+        <description>Name</description>
+        <posx>10</posx>
+        <posy>10</posy>
+        <font>font30</font>
+        <textcolor>ff00ff7f</textcolor>
+        <visible>true</visible>
+        <label>Наименование</label>
+    </control>
+    <control type="label" id = "299">
+        <animation effect="fade" delay="300" start="0" end="75" time="1000" pulse="True" condition="Control.IsVisible(299)">conditional</animation>
+        <description>Switching</description>
+        <posx>500</posx>
+        <posy>350</posy>
+        <font>font30</font>
+        <textcolor>FFFDFDF0</textcolor>
+        <visible>true</visible>
+        <label>Переключение...</label>
+    </control>
+    
     </control>
   </controls>
 </window>

@@ -7,7 +7,7 @@ import datetime
 import defines
 
 class DateForm(xbmcgui.WindowXMLDialog):
-    def __ini__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         self.li = None
         self.get_method = None
         self.session = None

@@ -189,11 +189,11 @@ class TSengine(xbmc.Player):
             self.end()
             return
         
-        reqk = defines.GET("http://api.torrent-tv.ru/xbmc_get_key.php?key=" + msg.getParams()['key']);
+        reqk = defines.GET("http://api.torrent-tv.ru/xbmc_get_key.php?key=" + msg.getParams()['key'])
         
         self.thr.msg = TSMessage()
         LogToXBMC('Send READY')
-        self.sendCommand('READY key=' + reqk);
+        self.sendCommand('READY key=' + reqk)
         self.Wait(TSMessage.AUTH)
         msg = self.thr.getTSMessage()
         if msg.getType() == TSMessage.AUTH:
@@ -567,7 +567,7 @@ class SockThread(threading.Thread):
                 self.active = False
                 self.error = e
                 LogToXBMC('RECV THREADING %s' % e, 2)
-                _msg = TSMessage();
+                _msg = TSMessage()
                 _msg.type = TSMessage.ERROR
                 _msg.params = 'Ошибка соединения с TS'
                 self.state_method(_msg)

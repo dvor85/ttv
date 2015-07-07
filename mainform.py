@@ -10,6 +10,7 @@ import json
 import urllib2
 import time
 import datetime
+import threading
 
 from ts import TSengine as tsengine
 from player import MyPlayer
@@ -41,6 +42,7 @@ class WMainForm(xbmcgui.WindowXML):
     CANCEL_DIALOG = (9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448,)
     CONTEXT_MENU_IDS = (117, 101)
     ARROW_ACTIONS = (1, 2, 3, 4)
+    DIGIT_BUTTONS = range(58, 68)
     ACTION_MOUSE = 107
     BTN_CHANNELS_ID = 102
     BTN_TRANSLATIONS_ID = 103
@@ -80,11 +82,15 @@ class WMainForm(xbmcgui.WindowXML):
         self.player.parent = self
         self.amalkerWnd = AdsForm("adsdialog.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
         self.cur_category, self.selitem_id = self.load_selitem_info()
+        self.player.channel_number = self.selitem_id
+        self.channel_number = self.selitem_id
         self.epg = {}
         self.playditem = -1
         self.user = None
         self.infoform = None
         self.init = True
+        self.channel_number_str = ''
+        self.thr = None
         
     def load_selitem_info(self):
         try:
@@ -296,13 +302,30 @@ class WMainForm(xbmcgui.WindowXML):
         self.seltab = controlId
         LogToXBMC('Focused %s %s' % (WMainForm.CONTROL_LIST, self.selitem_id))
         if (self.list != None) and (0 < self.selitem_id < self.list.size()):     
-            self.list.selectItem(self.selitem_id)  
+            #self.list.selectItem(self.selitem_id)  
             if self.init:
                 self.init = False             
-                self.emulate_startChannel() 
+                self.emulate_startChannel()
+                
+    def select_channel(self): 
+        if self.thr != None:
+            self.thr.cancel()
+            self.thr = None      
+        self.channel_number = defines.tryStringToInt(self.channel_number_str)                       
+        LogToXBMC('CHANNEL NUMBER IS: %i' % self.channel_number)              
+        if 0 < self.channel_number < self.list.size():
+            #self.selitem_id = channel_number            
+            self.setFocus(self.list)
+            self.list.selectItem(self.channel_number)
+            #self.player.Stop()
+#        else:    
+#            defines.showMessage('No such channel in current category!')
+        self.channel_number_str = '' 
                 
             
     def emulate_startChannel(self):
+        self.channel_number_str = str(self.selitem_id)
+        self.select_channel()
         self.setFocusId(WMainForm.CONTROL_LIST)
         xbmc.sleep(1000)
         self.onClick(WMainForm.CONTROL_LIST)
@@ -326,6 +349,68 @@ class WMainForm(xbmcgui.WindowXML):
         
         if self.seltab != WMainForm.BTN_ARCHIVE_ID:
             self.checkButton(WMainForm.BTN_ARCHIVE_ID)
+            
+    def LoopPlay(self):        
+        while not self.IsCanceled():
+            selItem = self.list.getListItem(self.selitem_id)
+            
+            if selItem.getProperty("access_user") == 0:
+                access = selItem.getProperty("access_translation")
+                if access == "registred":
+                    defines.showMessage("Трансляция доступна для зарегестрированных пользователей")
+                elif access == "vip":
+                    defines.showMessage("Трансляция доступна для VIP пользователей")
+                else:
+                    defines.showMessage("На данный момент трансляция не доступна")
+                xbmc.sleep(30000)
+                continue
+                 
+            buf = xbmcgui.ListItem(selItem.getLabel())
+            buf.setProperty('epg_cdn_id', selItem.getProperty('epg_cdn_id'))
+            buf.setProperty('icon', selItem.getProperty('icon'))
+            buf.setProperty("type", selItem.getProperty("type"))
+            buf.setProperty("id", selItem.getProperty("id"))
+            if selItem.getProperty("type") == "archive":
+                self.fillRecords(buf, datetime.datetime.today())
+                return
+            print selItem.getProperty("type")
+            self.playditem = self.selitem_id
+            self.dump_selitem_info(self.cur_category, self.selitem_id)
+        
+            self.player.Start(buf)
+                   
+            if not self.IsCanceled():
+                xbmc.sleep(1000)   
+                self.channel_number_str = str(self.selitem_id)
+                self.select_channel()      
+            
+            if xbmc.getCondVisibility("Window.IsVisible(home)"):
+                LogToXBMC("Close from HOME Window")
+                self.close()
+            elif xbmc.getCondVisibility("Window.IsVisible(video)"):
+                self.close()
+                LogToXBMC("Is Video Window")
+            elif xbmc.getCondVisibility("Window.IsVisible(programs)"):
+                self.close()
+                LogToXBMC("Is programs Window")
+            elif xbmc.getCondVisibility("Window.IsVisible(addonbrowser)"):
+                self.close()
+                LogToXBMC("Is addonbrowser Window")
+            elif xbmc.getCondVisibility("Window.IsMedia"):
+                self.close()
+                LogToXBMC("Is media Window")
+            elif xbmc.getCondVisibility("Window.IsVisible(12346)"):
+                self.close()
+                LogToXBMC("Is plugin Window")
+            else:
+                jrpc = json.loads(xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"GUI.GetProperties","params":{"properties":["currentwindow"]},"id":1}'))
+                if jrpc["result"]["currentwindow"]["id"] == 10025:
+                    LogToXBMC("Is video plugins window")
+                    self.close()
+                
+                LogToXBMC("Is Other Window")
+
+            LogToXBMC('CUR SELTAB %s' % self.seltab)
             
     def onClick(self, controlID):
         control = self.getControl(controlID)
@@ -375,7 +460,7 @@ class WMainForm(xbmcgui.WindowXML):
                     print "SELITEM EMPTY"
                 datefrm = DateForm("dateform.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
                 if datefrm == None:
-                    print "From not created"
+                    print "Form not created"
 
                 stime = time.strptime(selItem.getProperty("date"), "%Y-%m-%d")
                 datefrm.date = datetime.date(stime.tm_year, stime.tm_mon, stime.tm_mday)
@@ -392,65 +477,7 @@ class WMainForm(xbmcgui.WindowXML):
                     self.fillRecords(self.archive[0], datefrm.date)
                     return
             
-            if selItem.getProperty("access_user") == 0:
-                access = selItem.getProperty("access_translation")
-                if access == "registred":
-                    defines.showMessage("Трансляция доступна для зарегестрированных пользователей")
-                elif access == "vip":
-                    defines.showMessage("Трансляция доступна для VIP пользователей")
-                else:
-                    defines.showMessage("На данный момент трансляция не доступна")
-                return
-            
-            buf = None
-            while not self.IsCanceled():
-                 
-                buf = xbmcgui.ListItem(selItem.getLabel())
-                buf.setProperty('epg_cdn_id', selItem.getProperty('epg_cdn_id'))
-                buf.setProperty('icon', selItem.getProperty('icon'))
-                buf.setProperty("type", selItem.getProperty("type"))
-                buf.setProperty("id", selItem.getProperty("id"))
-                if selItem.getProperty("type") == "archive":
-                    self.fillRecords(buf, datetime.datetime.today());
-                    return
-                print selItem.getProperty("type")
-                self.playditem = self.selitem_id
-                self.dump_selitem_info(self.cur_category, self.selitem_id)
-            
-            
-                self.player.Start(buf)
-                xbmc.sleep(1000)       
-                selItem = self.list.getListItem(self.selitem_id)   
-                self.setFocus(self.list)
-                self.list.selectItem(self.selitem_id)      
-                
-                if xbmc.getCondVisibility("Window.IsVisible(home)"):
-                    LogToXBMC("Close from HOME Window")
-                    self.close()
-                elif xbmc.getCondVisibility("Window.IsVisible(video)"):
-                    self.close();
-                    LogToXBMC("Is Video Window")
-                elif xbmc.getCondVisibility("Window.IsVisible(programs)"):
-                    self.close();
-                    LogToXBMC("Is programs Window")
-                elif xbmc.getCondVisibility("Window.IsVisible(addonbrowser)"):
-                    self.close();
-                    LogToXBMC("Is addonbrowser Window")
-                elif xbmc.getCondVisibility("Window.IsMedia"):
-                    self.close();
-                    LogToXBMC("Is media Window")
-                elif xbmc.getCondVisibility("Window.IsVisible(12346)"):
-                    self.close();
-                    LogToXBMC("Is plugin Window")
-                else:
-                    jrpc = json.loads(xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"GUI.GetProperties","params":{"properties":["currentwindow"]},"id":1}'))
-                    if jrpc["result"]["currentwindow"]["id"] == 10025:
-                        LogToXBMC("Is video plugins window");
-                        self.close();
-                    
-                    LogToXBMC("Is Other Window")
-    
-                LogToXBMC('CUR SELTAB %s' % self.seltab)
+            self.LoopPlay()
             
         # xbmc.executebuiltin('SendClick(12345,%s)' % self.seltab)
         elif controlID == WMainForm.BTN_FULLSCREEN:
@@ -501,7 +528,7 @@ class WMainForm(xbmcgui.WindowXML):
                 sbt = time.localtime(float(curepg[i]['btime']))
                 set = time.localtime(float(curepg[i]['etime']))
                 nextepg = '%.2d:%.2d - %.2d:%.2d %s' % (sbt.tm_hour, sbt.tm_min, set.tm_hour, set.tm_min, curepg[i]['name'])
-                ce.setLabel(nextepg);
+                ce.setLabel(nextepg)
             # controlEpg1.setLabel(nextepg)
 
         else:
@@ -509,18 +536,18 @@ class WMainForm(xbmcgui.WindowXML):
             for i in range(1, 99):
                 ce = None
                 try:
-                    self.getControl(WMainForm.LBL_FIRST_EPG + i).setLabel('');
+                    self.getControl(WMainForm.LBL_FIRST_EPG + i).setLabel('')
                 except:
                     break
             self.progress.setPercent(1)
-
+            
     def onAction(self, action):                
         if not action:
             super(WMainForm, self).onAction(action)
             return
         LogToXBMC('Событие {}'.format(action.getId()))        
         if action.getButtonCode() == 61513:
-            return;
+            return
         if action in WMainForm.CANCEL_DIALOG:
             LogToXBMC('CLOSE FORM')
             self.isCanceled = True
@@ -558,11 +585,18 @@ class WMainForm(xbmcgui.WindowXML):
             elif res == WMainForm.API_ERROR_NOFAVOURITE:
                 self.showStatus('Канал не найден в избранном')
             elif res == 'TSCLOSE':
-                LogToXBMC("Закрыть TS");
-                self.player.EndTS();
+                LogToXBMC("Закрыть TS")
+                self.player.EndTS()
         elif action.getId() == WMainForm.ACTION_MOUSE:
             if (self.getFocusId() == WMainForm.CONTROL_LIST):
                 self.onFocus(WMainForm.CONTROL_LIST)
+        elif action.getId() in WMainForm.DIGIT_BUTTONS:
+            ############# IN PRESSING DIGIT KEYS ############
+            self.channel_number_str += str(action.getId() - 58)
+            self.setFocus(self.list)
+            self.list.selectItem(defines.tryStringToInt(self.channel_number_str))
+            self.thr = threading.Timer(1, self.select_channel)
+            self.thr.start()
         else:
             super(WMainForm, self).onAction(action)
         
@@ -647,7 +681,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.list.reset()
         for ch in self.archive:
             self.list.addItem(ch)
-        LogToXBMC("fillArchive");
+        LogToXBMC("fillArchive")
 
     def fillCategory(self):
         if not self.list:

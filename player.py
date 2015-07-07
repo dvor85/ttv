@@ -36,6 +36,8 @@ class MyPlayer(xbmcgui.WindowXML):
     ACTION_RBC = 101
     ARROW_ACTIONS = (1, 2, 3, 4)
     DIGIT_BUTTONS = range(58, 68)
+    CH_NAME_ID = 399
+    DLG_SWITCH_ID = 299
 
     def __init__(self, *args, **kwargs):
         self.thr = None
@@ -47,11 +49,11 @@ class MyPlayer(xbmcgui.WindowXML):
         self.focusId = 203
         self.nextepg_id = 1
         self.curepg = None
-        self.last_digit_pressed = None
-        self.last_digit_pressed_time = time.time()
-        self.channel_number_str = ''
         self.thr = None
-        
+        self.channel_number = 0
+        self.channel_number_str = ''
+        self.chinfo = None
+        self.swinfo = None
         
 
     def onInit(self):
@@ -60,6 +62,11 @@ class MyPlayer(xbmcgui.WindowXML):
         
         cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
         cicon.setImage(self.li.getProperty('icon'))
+        self.chinfo = self.getControl(MyPlayer.CH_NAME_ID)
+        threading.Timer(3, self.chinfo.setVisible, [False]).start()
+        self.chinfo.setLabel(self.parent.list.getListItem(self.channel_number).getLabel())
+        self.swinfo = self.getControl(MyPlayer.DLG_SWITCH_ID)
+        self.swinfo.setVisible(False)
         if not self.parent:
             return
         self.UpdateEpg()
@@ -128,16 +135,16 @@ class MyPlayer(xbmcgui.WindowXML):
         print li.getProperty("type")
         print li.getProperty("id")
         if (li.getProperty("type") == "channel"):
-            data = defines.GET("http://api.torrent-tv.ru/v3/translation_stream.php?session=%s&channel_id=%s&typeresult=json" % (self.parent.session, li.getProperty("id")));
+            data = defines.GET("http://api.torrent-tv.ru/v3/translation_stream.php?session=%s&channel_id=%s&typeresult=json" % (self.parent.session, li.getProperty("id")))
         elif (li.getProperty("type") == "record"):
-            data = defines.GET("http://api.torrent-tv.ru/v3/arc_stream.php?session=%s&record_id=%s&typeresult=json" % (self.parent.session, li.getProperty("id")));
+            data = defines.GET("http://api.torrent-tv.ru/v3/arc_stream.php?session=%s&record_id=%s&typeresult=json" % (self.parent.session, li.getProperty("id")))
         else:
             self.parent.showStatus("Неизвестный тип контента")
             return
         if not data:
             self.parent.showStatus("Неизвестный тип контента")
             return
-        jdata = json.loads(data);
+        jdata = json.loads(data)
         print jdata
         if not jdata["success"]:
             self.parent.showStatus("Канал временно не доступен")
@@ -175,21 +182,25 @@ class MyPlayer(xbmcgui.WindowXML):
         import sys
 
         if sys.platform == 'win32' or sys.platform == 'win64':
-            LogToXBMC("Закрыть TS");
+            LogToXBMC("Закрыть TS")
             subprocess.Popen('taskkill /F /IM ace_engine.exe /T')
             self.TSPlayer = None
             
-    def run_selected_channel(self, param):        
-        xbmc.sleep(3000)
-        if self.channel_number_str != '':
-            channel_number = int(self.channel_number_str)        
-            LogToXBMC('CHANNEL NUMBER IS: %i' % channel_number)              
-            if 0 < channel_number < self.parent.list.size():
-                self.parent.selitem_id = channel_number
-                self.Stop()
-            else:    
-                defines.showMessage('No such channel in current category!')
-            self.channel_number_str = ''
+    def run_selected_channel(self):
+        if self.thr != None: 
+            self.thr.cancel() 
+            self.thr = None      
+        self.channel_number = defines.tryStringToInt(self.channel_number_str)        
+        LogToXBMC('CHANNEL NUMBER IS: %i' % self.channel_number)              
+        if 0 < self.channel_number < self.parent.list.size() and self.parent.selitem_id != self.channel_number:
+            self.parent.selitem_id = self.channel_number
+            self.Stop()
+        else:    
+            #defines.showMessage('No such channel in current category!')
+            self.chinfo.setVisible(False)     
+            self.swinfo.setVisible(False) 
+        self.channel_number_str = ''
+        
         
 
     def onAction(self, action):
@@ -200,22 +211,30 @@ class MyPlayer(xbmcgui.WindowXML):
         elif action.getId() == MyPlayer.ACTION_RBC:
             LogToXBMC('CLOSE PLAYER 101 %s %s' % (action.getId(), action.getButtonCode()))
             self.close()
-        elif action.getId() == 3: 
-            self.nextepg_id -= 1            
-            self.setNextEpg()
-        elif action.getId() == 4:
-            self.nextepg_id += 1            
-            self.setNextEpg()
+#         elif action.getId() in (3, 4): 
+#             ############### IF ARROW PRESSED - SWITCH CHANNEL ###############
+#             if action.getId() == 3:
+#                 self.channel_number += 1
+#                 if self.channel_number > self.parent.list.size():
+#                     self.channel_number = 1
+#             else:
+#                 self.channel_number -= 1
+#                 if self.channel_number <= 0:
+#                     self.channel_number = self.parent.list.size()
+#             self.channel_number_str = str(self.channel_number)
+#             self.run_selected_channel()
+        elif action.getId() in MyPlayer.DIGIT_BUTTONS:
+            ############# IF PRESSED DIGIT KEYS - SWITCH CHANNEL ############
+            self.channel_number_str += str(action.getId() - 58)  
+            self.chinfo.setVisible(True)     
+            self.swinfo.setVisible(True)                             
+            self.chinfo.setLabel(self.parent.list.getListItem(defines.tryStringToInt(self.channel_number_str)).getLabel())
+            self.thr = threading.Timer(3, self.run_selected_channel)
+            self.thr.start()   
         elif action.getId() == 0 and action.getButtonCode() == 61530:
             xbmc.executebuiltin('Action(FullScreen)')
             xbmc.sleep(4000)
             xbmc.executebuiltin('Action(Back)')
-        elif action.getId() in MyPlayer.DIGIT_BUTTONS:
-            ############# IN PRESSING DIGIT KEYS ############
-            self.channel_number_str += str(action.getId() - 58)                   
-            self.thr = defines.MyThread(self.run_selected_channel, None)
-            self.thr.daemon = True
-            self.thr.start()
 
         wnd = self.getControl(MyPlayer.CONTROL_WINDOW_ID)
         if not self.visible:
