@@ -8,6 +8,8 @@ import defines
 if defines.DEBUG:
     # Make pydev debugger works for auto reload.
     # Note pydevd module need to be copied in XBMC\system\python\Lib\pysrc
+    #Add "sys.path.append(os.path.normpath(os.path.join(os.path.dirname(__file__), '..')))" to 
+    #d:\Program Files (x86)\Kodi\system\python\Lib\pysrc\_pydev_imps\_pydev_pluginbase.py
     try:
         import pysrc.pydevd as pydevd  # with the addon script.module.pydevd, only use `import pydevd`
         # stdoutToServer and stderrToServer redirect stdout and stderr to eclipse console

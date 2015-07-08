@@ -40,20 +40,25 @@ class MyPlayer(xbmcgui.WindowXML):
     DLG_SWITCH_ID = 299
 
     def __init__(self, *args, **kwargs):
-        self.thr = None
+        
         self.TSPlayer = None
         self.parent = None
         self.li = None
-        self.visible = False
-        self.t = None
-        self.focusId = 203
+        self.visible = False        
+        self.focusId = MyPlayer.CONTROL_WINDOW_ID
         self.nextepg_id = 1
         self.curepg = None
-        self.thr = None
+        
+        self.select_timer = None
+        self.hide_control_timer = None
+        self.select_timer = None
+        self.hide_swinfo_timer = None
+        
         self.channel_number = 0
         self.channel_number_str = ''
         self.chinfo = None
         self.swinfo = None
+        self.control_window = None
         
 
     def onInit(self):
@@ -62,16 +67,31 @@ class MyPlayer(xbmcgui.WindowXML):
         
         cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
         cicon.setImage(self.li.getProperty('icon'))
+        self.control_window = self.getControl(MyPlayer.CONTROL_WINDOW_ID)
         self.chinfo = self.getControl(MyPlayer.CH_NAME_ID)
-        threading.Timer(3, self.chinfo.setVisible, [False]).start()
-        self.chinfo.setLabel(self.parent.list.getListItem(self.channel_number).getLabel())
+        self.chinfo.setLabel(self.li.getLabel())
         self.swinfo = self.getControl(MyPlayer.DLG_SWITCH_ID)
         self.swinfo.setVisible(False)
         if not self.parent:
             return
         self.UpdateEpg()
-        self.getControl(MyPlayer.CONTROL_WINDOW_ID).setVisible(False)
+        self.control_window.setVisible(True)
+        self.hide_control_window()
         self.setFocusId(MyPlayer.CONTROL_EPG_ID)
+        
+
+    def hide_control_window(self):
+        def hide():
+            self.control_window.setVisible(False)
+            self.setFocusId(MyPlayer.CONTROL_WINDOW_ID)
+            self.focusId = MyPlayer.CONTROL_WINDOW_ID
+            
+        if self.hide_control_timer:
+            self.hide_control_timer.cancel()
+            self.hide_control_timer = None
+        self.hide_control_timer = threading.Timer(4, hide)
+        self.hide_control_timer.start()
+        
         
     def UpdateEpg(self):
         if not self.li:
@@ -115,10 +135,9 @@ class MyPlayer(xbmcgui.WindowXML):
         controlEpg1.setLabel(nextepg)         
                
 
-
     def Stop(self):
         print 'CLOSE STOP'
-        # self.TSPlayer.thr.error = Exception('Stop player')
+        # self.TSPlayer.select_timer.error = Exception('Stop player')
         xbmc.executebuiltin('PlayerControl(Stop)')
 
     def Start(self, li):
@@ -169,12 +188,6 @@ class MyPlayer(xbmcgui.WindowXML):
         #    xbmc.executebuiltin('Action(ParentDir)')
         #    print 'Главное меню'
 
-
-    def hideControl(self):
-        self.getControl(MyPlayer.CONTROL_WINDOW_ID).setVisible(False)
-        self.setFocusId(MyPlayer.CONTROL_WINDOW_ID)
-        self.focusId = MyPlayer.CONTROL_WINDOW_ID
-        
     def EndTS(self):
         if self.TSPlayer:
             self.TSPlayer.end()
@@ -187,18 +200,16 @@ class MyPlayer(xbmcgui.WindowXML):
             self.TSPlayer = None
             
     def run_selected_channel(self):
-        if self.thr != None: 
-            self.thr.cancel() 
-            self.thr = None      
+        if self.select_timer: 
+            self.select_timer.cancel() 
+            self.select_timer = None      
         self.channel_number = defines.tryStringToInt(self.channel_number_str)        
         LogToXBMC('CHANNEL NUMBER IS: %i' % self.channel_number)              
         if 0 < self.channel_number < self.parent.list.size() and self.parent.selitem_id != self.channel_number:
             self.parent.selitem_id = self.channel_number
             self.Stop()
-        else:    
-            #defines.showMessage('No such channel in current category!')
-            self.chinfo.setVisible(False)     
-            self.swinfo.setVisible(False) 
+        
+        self.swinfo.setVisible(False) 
         self.channel_number_str = ''
         
         
@@ -212,7 +223,7 @@ class MyPlayer(xbmcgui.WindowXML):
             LogToXBMC('CLOSE PLAYER 101 %s %s' % (action.getId(), action.getButtonCode()))
             self.close()
 #         elif action.getId() in (3, 4): 
-#             ############### IF ARROW PRESSED - SWITCH CHANNEL ###############
+#             ############### IF ARROW UP AND DOWN PRESSED - SWITCH CHANNEL ###############
 #             if action.getId() == 3:
 #                 self.channel_number += 1
 #                 if self.channel_number > self.parent.list.size():
@@ -226,30 +237,27 @@ class MyPlayer(xbmcgui.WindowXML):
         elif action.getId() in MyPlayer.DIGIT_BUTTONS:
             ############# IF PRESSED DIGIT KEYS - SWITCH CHANNEL ############
             self.channel_number_str += str(action.getId() - 58)  
-            self.chinfo.setVisible(True)     
             self.swinfo.setVisible(True)                             
             self.chinfo.setLabel(self.parent.list.getListItem(defines.tryStringToInt(self.channel_number_str)).getLabel())
-            self.thr = threading.Timer(3, self.run_selected_channel)
-            self.thr.start()   
+            self.select_timer = threading.Timer(4, self.run_selected_channel)
+            self.select_timer.start()   
         elif action.getId() == 0 and action.getButtonCode() == 61530:
             xbmc.executebuiltin('Action(FullScreen)')
             xbmc.sleep(4000)
             xbmc.executebuiltin('Action(Back)')
 
-        wnd = self.getControl(MyPlayer.CONTROL_WINDOW_ID)
+        
         if not self.visible:
             self.UpdateEpg()
-            wnd.setVisible(True)
+           
             if self.focusId == MyPlayer.CONTROL_WINDOW_ID:
                 self.setFocusId(MyPlayer.CONTROL_BUTTON_PAUSE)
             else:
                 self.setFocusId(self.focusId)
             self.setFocusId(self.getFocusId())
-            if self.t:
-                self.t.cancel()
-                self.t = None
-            self.t = threading.Timer(4, self.hideControl)
-            self.t.start()
+            self.control_window.setVisible(True)
+            self.hide_control_window()
+            
 
     def onClick(self, controlID):
         if controlID == MyPlayer.CONTROL_BUTTON_STOP:

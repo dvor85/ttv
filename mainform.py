@@ -84,13 +84,12 @@ class WMainForm(xbmcgui.WindowXML):
         self.cur_category, self.selitem_id = self.load_selitem_info()
         self.player.channel_number = self.selitem_id
         self.channel_number = self.selitem_id
-        self.epg = {}
         self.playditem = -1
         self.user = None
         self.infoform = None
         self.init = True
         self.channel_number_str = ''
-        self.thr = None
+        self.select_timer = None
         
     def load_selitem_info(self):
         try:
@@ -302,15 +301,15 @@ class WMainForm(xbmcgui.WindowXML):
         self.seltab = controlId
         LogToXBMC('Focused %s %s' % (WMainForm.CONTROL_LIST, self.selitem_id))
         if (self.list != None) and (0 < self.selitem_id < self.list.size()):     
-            #self.list.selectItem(self.selitem_id)  
+            self.list.selectItem(self.selitem_id)  
             if self.init:
                 self.init = False             
                 self.emulate_startChannel()
                 
     def select_channel(self): 
-        if self.thr != None:
-            self.thr.cancel()
-            self.thr = None      
+        if self.select_timer != None:
+            self.select_timer.cancel()
+            self.select_timer = None      
         self.channel_number = defines.tryStringToInt(self.channel_number_str)                       
         LogToXBMC('CHANNEL NUMBER IS: %i' % self.channel_number)              
         if 0 < self.channel_number < self.list.size():
@@ -324,8 +323,6 @@ class WMainForm(xbmcgui.WindowXML):
                 
             
     def emulate_startChannel(self):
-        self.channel_number_str = str(self.selitem_id)
-        self.select_channel()
         self.setFocusId(WMainForm.CONTROL_LIST)
         xbmc.sleep(1000)
         self.onClick(WMainForm.CONTROL_LIST)
@@ -595,8 +592,8 @@ class WMainForm(xbmcgui.WindowXML):
             self.channel_number_str += str(action.getId() - 58)
             self.setFocus(self.list)
             self.list.selectItem(defines.tryStringToInt(self.channel_number_str))
-            self.thr = threading.Timer(1, self.select_channel)
-            self.thr.start()
+            self.select_timer = threading.Timer(1, self.select_channel)
+            self.select_timer.start()
         else:
             super(WMainForm, self).onAction(action)
         
