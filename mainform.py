@@ -90,6 +90,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.init = True
         self.channel_number_str = ''
         self.select_timer = None
+        self.hide_window_timer = None
         
     def load_selitem_info(self):
         try:
@@ -145,28 +146,28 @@ class WMainForm(xbmcgui.WindowXML):
             li.setProperty("access_user", '%s' % ch["access_user"])
             
             if param == 'channel':
-                chname = "%i. %s" % ((len(self.category['%s' % ch['group']]["channels"])+1), ch["name"])
+                chname = "%i. %s" % ((len(self.category['%s' % ch['group']]["channels"]) + 1), ch["name"])
                 if ch["access_user"] == 0:
                     chname = "[COLOR FF646464]%s[/COLOR]" % chname
                 li.setLabel(chname)           
                 li.setProperty('commands', "%s,%s" % (MenuForm.CMD_ADD_FAVOURITE, MenuForm.CMD_CLOSE_TS))
                 self.category['%s' % ch['group']]["channels"].append(li)
             elif param == 'moderation':
-                chname = "%i. %s" % ((len(self.category[WMainForm.CHN_TYPE_MODERATION]["channels"])+1), ch["name"])
+                chname = "%i. %s" % ((len(self.category[WMainForm.CHN_TYPE_MODERATION]["channels"]) + 1), ch["name"])
                 if ch["access_user"] == 0:
                     chname = "[COLOR FF646464]%s[/COLOR]" % chname
                 li.setLabel(chname) 
                 li.setProperty('commands', "%s,%s" % (MenuForm.CMD_ADD_FAVOURITE, MenuForm.CMD_CLOSE_TS))
                 self.category[WMainForm.CHN_TYPE_MODERATION]["channels"].append(li)
             elif param == 'translation':
-                chname = "%i. %s" % ((len(self.translation)+1), ch["name"])
+                chname = "%i. %s" % ((len(self.translation) + 1), ch["name"])
                 if ch["access_user"] == 0:
                     chname = "[COLOR FF646464]%s[/COLOR]" % chname
                 li.setLabel(chname)   
                 li.setProperty('commands', "%s,%s" % (MenuForm.CMD_ADD_FAVOURITE, MenuForm.CMD_CLOSE_TS))
                 self.translation.append(li)
             elif param == 'favourite':
-                chname = "%i. %s" % ((len(self.category[WMainForm.CHN_TYPE_FAVOURITE]["channels"])+1), ch["name"])
+                chname = "%i. %s" % ((len(self.category[WMainForm.CHN_TYPE_FAVOURITE]["channels"]) + 1), ch["name"])
                 if ch["access_user"] == 0:
                     chname = "[COLOR FF646464]%s[/COLOR]" % chname
                 li.setLabel(chname) 
@@ -183,7 +184,7 @@ class WMainForm(xbmcgui.WindowXML):
             return
         
         for ch in jdata['channels']:
-            chname = "%i. %s" % ((len(self.archive)+1), ch["name"])
+            chname = "%i. %s" % ((len(self.archive) + 1), ch["name"])
             if not ch["id"]:
                 continue
             if not ch["logo"]:
@@ -256,6 +257,8 @@ class WMainForm(xbmcgui.WindowXML):
             self.user = {"login" : defines.ADDON.getSetting('login'), "balance" : jdata["balance"]}
             self.session = jdata['session']
             self.updateList()
+            self.hide_main_window()
+            
 
         except Exception, e:
             LogToXBMC('OnInit: %s' % e, 2)
@@ -300,26 +303,30 @@ class WMainForm(xbmcgui.WindowXML):
             btn.setLabel(btn.getLabel().replace('<', '').replace('>', ''))
         self.seltab = controlId
         LogToXBMC('Focused %s %s' % (WMainForm.CONTROL_LIST, self.selitem_id))
-        if (self.list != None) and (0 < self.selitem_id < self.list.size()):     
+        if (self.list) and (0 < self.selitem_id < self.list.size()):     
             self.list.selectItem(self.selitem_id)  
             if self.init:
                 self.init = False             
                 self.emulate_startChannel()
                 
     def select_channel(self): 
-        if self.select_timer != None:
-            self.select_timer.cancel()
-            self.select_timer = None      
         self.channel_number = defines.tryStringToInt(self.channel_number_str)                       
         LogToXBMC('CHANNEL NUMBER IS: %i' % self.channel_number)              
         if 0 < self.channel_number < self.list.size():
-            #self.selitem_id = channel_number            
             self.setFocus(self.list)
             self.list.selectItem(self.channel_number)
-            #self.player.Stop()
-#        else:    
-#            defines.showMessage('No such channel in current category!')
         self.channel_number_str = '' 
+        
+    def hide_main_window(self):
+        def hide():
+            if not self.IsCanceled():
+                self.onClick(WMainForm.BTN_FULLSCREEN)
+        
+        if self.hide_window_timer:
+            self.hide_window_timer.cancel()
+            self.hide_window_timer = None
+        self.hide_window_timer = threading.Timer(5, hide)
+        self.hide_window_timer.start()
                 
             
     def emulate_startChannel(self):
@@ -591,11 +598,17 @@ class WMainForm(xbmcgui.WindowXML):
             ############# IN PRESSING DIGIT KEYS ############
             self.channel_number_str += str(action.getId() - 58)
             self.setFocus(self.list)
-            self.list.selectItem(defines.tryStringToInt(self.channel_number_str))
+            self.channel_number = defines.tryStringToInt(self.channel_number_str)
+            self.list.selectItem(self.channel_number)
+            if self.select_timer:
+                self.select_timer.cancel()
+                self.select_timer = None      
             self.select_timer = threading.Timer(1, self.select_channel)
             self.select_timer.start()
         else:
             super(WMainForm, self).onAction(action)
+            
+        self.hide_main_window()
         
         
 

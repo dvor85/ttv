@@ -53,6 +53,7 @@ class MyPlayer(xbmcgui.WindowXML):
         self.hide_control_timer = None
         self.select_timer = None
         self.hide_swinfo_timer = None
+        self.update_epg_thr = None
         
         self.channel_number = 0
         self.channel_number_str = ''
@@ -63,8 +64,7 @@ class MyPlayer(xbmcgui.WindowXML):
 
     def onInit(self):
         if not self.li:
-            return
-        
+            return        
         cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
         cicon.setImage(self.li.getProperty('icon'))
         self.control_window = self.getControl(MyPlayer.CONTROL_WINDOW_ID)
@@ -74,7 +74,9 @@ class MyPlayer(xbmcgui.WindowXML):
         self.swinfo.setVisible(False)
         if not self.parent:
             return
-        self.UpdateEpg()
+        
+        self.update_epg_thr = defines.MyThread(self.UpdateEpg, self.li)
+        self.update_epg_thr.start()
         self.control_window.setVisible(True)
         self.hide_control_window()
         self.setFocusId(MyPlayer.CONTROL_EPG_ID)
@@ -93,14 +95,19 @@ class MyPlayer(xbmcgui.WindowXML):
         self.hide_control_timer.start()
         
         
-    def UpdateEpg(self):
-        if not self.li:
+    def UpdateEpg(self, li):
+        if not li:
             return
-        epg_id = self.li.getProperty('epg_cdn_id')
+        self.setFocusId(MyPlayer.CONTROL_EPG_ID)
+        cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
+        cicon.setImage(li.getProperty('icon'))
+        epg_id = li.getProperty('epg_cdn_id')
         controlEpg = self.getControl(MyPlayer.CONTROL_EPG_ID)
         controlEpg1 = self.getControl(112)
         progress = self.getControl(MyPlayer.CONTROL_PROGRESS_ID)
-        if epg_id and self.parent.epg.has_key(epg_id) and self.parent.epg[epg_id].__len__() > 0:
+        if not self.parent.epg.has_key(epg_id):
+            self.parent.getEpg(epg_id)
+        if epg_id and self.parent.epg.has_key(epg_id) and len(self.parent.epg[epg_id]) > 0:
             ctime = time.time()
             self.curepg = filter(lambda x: (float(x['etime']) > ctime), self.parent.epg[epg_id])
             bt = float(self.curepg[0]['btime'])
@@ -200,45 +207,60 @@ class MyPlayer(xbmcgui.WindowXML):
             self.TSPlayer = None
             
     def run_selected_channel(self):
-        if self.select_timer: 
-            self.select_timer.cancel() 
-            self.select_timer = None      
         self.channel_number = defines.tryStringToInt(self.channel_number_str)        
         LogToXBMC('CHANNEL NUMBER IS: %i' % self.channel_number)              
-        if 0 < self.channel_number < self.parent.list.size() and self.parent.selitem_id != self.channel_number:
+        if 0 < self.channel_number < self.parent.list.size() and self.parent.selitem_id != self.channel_number:            
             self.parent.selitem_id = self.channel_number
-            self.Stop()
-        
-        self.swinfo.setVisible(False) 
+            self.Stop()    
+        self.swinfo.setVisible(False)     
+        self.channel_number = self.parent.selitem_id  
+        self.chinfo.setLabel(self.parent.list.getListItem(self.parent.selitem_id).getLabel()) 
         self.channel_number_str = ''
-        
         
 
     def onAction(self, action):
         LogToXBMC('Событие {}'.format(action.getId()))
+            
         if action in CANCEL_DIALOG:
             LogToXBMC('Closes player %s %s' % (action.getId(), action.getButtonCode()))
             self.close()
         elif action.getId() == MyPlayer.ACTION_RBC:
             LogToXBMC('CLOSE PLAYER 101 %s %s' % (action.getId(), action.getButtonCode()))
             self.close()
-#         elif action.getId() in (3, 4): 
-#             ############### IF ARROW UP AND DOWN PRESSED - SWITCH CHANNEL ###############
-#             if action.getId() == 3:
-#                 self.channel_number += 1
-#                 if self.channel_number > self.parent.list.size():
-#                     self.channel_number = 1
-#             else:
-#                 self.channel_number -= 1
-#                 if self.channel_number <= 0:
-#                     self.channel_number = self.parent.list.size()
-#             self.channel_number_str = str(self.channel_number)
-#             self.run_selected_channel()
+        elif action.getId() in (3, 4): 
+            ############### IF ARROW UP AND DOWN PRESSED - SWITCH CHANNEL ###############
+            if action.getId() == 3:
+                self.channel_number += 1
+                if self.channel_number >= self.parent.list.size():
+                    self.channel_number = 1
+            else:
+                self.channel_number -= 1
+                if self.channel_number <= 0:
+                    self.channel_number = self.parent.list.size() - 1
+            self.channel_number_str = str(self.channel_number)
+            self.swinfo.setVisible(True) 
+            li = self.parent.list.getListItem(self.channel_number)                            
+            self.chinfo.setLabel(li.getLabel())
+            
+            self.update_epg_thr = defines.MyThread(self.UpdateEpg, li)
+            self.update_epg_thr.start()
+            if self.select_timer: 
+                self.select_timer.cancel() 
+                self.select_timer = None
+            self.select_timer = threading.Timer(4, self.run_selected_channel)
+            self.select_timer.start()
         elif action.getId() in MyPlayer.DIGIT_BUTTONS:
-            ############# IF PRESSED DIGIT KEYS - SWITCH CHANNEL ############
+            ############# IF PRESSED DIGIT KEYS - SWITCH CHANNEL #######################
             self.channel_number_str += str(action.getId() - 58)  
-            self.swinfo.setVisible(True)                             
-            self.chinfo.setLabel(self.parent.list.getListItem(defines.tryStringToInt(self.channel_number_str)).getLabel())
+            self.swinfo.setVisible(True) 
+            self.channel_number = defines.tryStringToInt(self.channel_number_str) 
+            li = self.parent.list.getListItem(self.channel_number)                            
+            self.chinfo.setLabel(li.getLabel())
+            self.update_epg_thr = defines.MyThread(self.UpdateEpg, li)
+            self.update_epg_thr.start()                     
+            if self.select_timer: 
+                self.select_timer.cancel() 
+                self.select_timer = None
             self.select_timer = threading.Timer(4, self.run_selected_channel)
             self.select_timer.start()   
         elif action.getId() == 0 and action.getButtonCode() == 61530:
@@ -246,9 +268,10 @@ class MyPlayer(xbmcgui.WindowXML):
             xbmc.sleep(4000)
             xbmc.executebuiltin('Action(Back)')
 
-        
         if not self.visible:
-            self.UpdateEpg()
+            if not self.update_epg_thr or not self.update_epg_thr.isAlive():
+                self.update_epg_thr = defines.MyThread(self.UpdateEpg, self.li)
+                self.update_epg_thr.start()
            
             if self.focusId == MyPlayer.CONTROL_WINDOW_ID:
                 self.setFocusId(MyPlayer.CONTROL_BUTTON_PAUSE)
@@ -258,7 +281,7 @@ class MyPlayer(xbmcgui.WindowXML):
             self.control_window.setVisible(True)
             self.hide_control_window()
             
-
+            
     def onClick(self, controlID):
         if controlID == MyPlayer.CONTROL_BUTTON_STOP:
             self.close()
