@@ -363,14 +363,14 @@ class TSengine(xbmc.Player):
         elif state.getType() == TSMessage.ERROR:
             self.parent.showStatus(state.getParams())
     
-    def play_url_ind(self, index=0, title='', icon=None, thumb=None, torrent=None, mode = None):
+    def play_url_ind(self, index=0, title='', icon=None, thumb=None, torrent=None, mode=None):
         if self.last_error:
             return
         if torrent or self.torrent == '':
             self.torrent = torrent
             self.mode = mode
         if not self.torrent or self.torrent == '':
-            self.parent.showStatus('Нечево проигрывать')
+            self.parent.showStatus('Нечего проигрывать')
             return
         spons = ''
         if self.mode != TSengine.MODE_PID:

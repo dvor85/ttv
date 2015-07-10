@@ -53,13 +53,14 @@ class MyPlayer(xbmcgui.WindowXML):
         self.hide_control_timer = None
         self.select_timer = None
         self.hide_swinfo_timer = None
-        self.update_epg_thr = None
+        self.update_epg_lock = threading.RLock()
         
         self.channel_number = 0
         self.channel_number_str = ''
         self.chinfo = None
         self.swinfo = None
         self.control_window = None
+        
         
 
     def onInit(self):
@@ -74,9 +75,16 @@ class MyPlayer(xbmcgui.WindowXML):
         self.swinfo.setVisible(False)
         if not self.parent:
             return
+    
+        if self.channel_number != 0:
+            self.parent.selitem_id = self.channel_number
+        else:
+            self.channel_number = self.parent.selitem_id
         
-        self.update_epg_thr = defines.MyThread(self.UpdateEpg, self.li)
-        self.update_epg_thr.start()
+        LogToXBMC("channel_number = %i" % self.channel_number)
+        LogToXBMC("selitem_id = %i" % self.parent.selitem_id)    
+        
+        defines.MyThread(self.UpdateEpg, self.li).start()
         self.control_window.setVisible(True)
         self.hide_control_window()
         self.setFocusId(MyPlayer.CONTROL_EPG_ID)
@@ -96,32 +104,34 @@ class MyPlayer(xbmcgui.WindowXML):
         
         
     def UpdateEpg(self, li):
-        if not li:
-            return
-        self.setFocusId(MyPlayer.CONTROL_EPG_ID)
-        cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
-        cicon.setImage(li.getProperty('icon'))
-        epg_id = li.getProperty('epg_cdn_id')
-        controlEpg = self.getControl(MyPlayer.CONTROL_EPG_ID)
-        controlEpg1 = self.getControl(112)
-        progress = self.getControl(MyPlayer.CONTROL_PROGRESS_ID)
-        if not self.parent.epg.has_key(epg_id):
-            self.parent.getEpg(epg_id)
-        if epg_id and self.parent.epg.has_key(epg_id) and len(self.parent.epg[epg_id]) > 0:
-            ctime = time.time()
-            self.curepg = filter(lambda x: (float(x['etime']) > ctime), self.parent.epg[epg_id])
-            bt = float(self.curepg[0]['btime'])
-            et = float(self.curepg[0]['etime'])
-            sbt = time.localtime(bt)
-            set = time.localtime(et)
-            progress.setPercent((ctime - bt) * 100 / (et - bt))
-            controlEpg.setLabel('%.2d:%.2d - %.2d:%.2d %s' % (sbt.tm_hour, sbt.tm_min, set.tm_hour, set.tm_min, self.curepg[0]['name']))
-            self.setNextEpg()
-            
-        else:
-            controlEpg.setLabel('Нет программы')
-            controlEpg1.setLabel('')
-            progress.setPercent(1)
+        with self.update_epg_lock:
+            if not li:
+                return
+            self.setFocusId(MyPlayer.CONTROL_EPG_ID)
+            cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
+            cicon.setImage(li.getProperty('icon'))
+            epg_id = li.getProperty('epg_cdn_id')
+            controlEpg = self.getControl(MyPlayer.CONTROL_EPG_ID)
+            controlEpg1 = self.getControl(112)
+            progress = self.getControl(MyPlayer.CONTROL_PROGRESS_ID)
+            if not self.parent.epg.has_key(epg_id):
+                self.parent.getEpg(epg_id)
+            if epg_id and self.parent.epg.has_key(epg_id) and len(self.parent.epg[epg_id]) > 0:
+                ctime = time.time()
+                self.curepg = filter(lambda x: (float(x['etime']) > ctime), self.parent.epg[epg_id])
+                bt = float(self.curepg[0]['btime'])
+                et = float(self.curepg[0]['etime'])
+                sbt = time.localtime(bt)
+                set = time.localtime(et)
+                progress.setPercent((ctime - bt) * 100 / (et - bt))
+                controlEpg.setLabel('%.2d:%.2d - %.2d:%.2d %s' % (sbt.tm_hour, sbt.tm_min, set.tm_hour, set.tm_min, self.curepg[0]['name']))
+                self.setNextEpg()
+                
+            else:
+                controlEpg.setLabel('Нет программы')
+                controlEpg1.setLabel('')
+                progress.setPercent(1)
+        
             
     def setNextEpg(self):
         nextepg = ''
@@ -144,16 +154,16 @@ class MyPlayer(xbmcgui.WindowXML):
 
     def Stop(self):
         print 'CLOSE STOP'
-        # self.TSPlayer.select_timer.error = Exception('Stop player')
         xbmc.executebuiltin('PlayerControl(Stop)')
 
     def Start(self, li):
         print "Start play "
-        if not self.TSPlayer :
+        if not self.TSPlayer:
             LogToXBMC('InitTS')
             self.TSPlayer = tsengine(parent=self.parent)
 
         self.li = li
+        self.channel_number = self.parent.selitem_id
         LogToXBMC('Load Torrent')
         
         self.parent.showStatus("Получение ссылки...")
@@ -219,7 +229,7 @@ class MyPlayer(xbmcgui.WindowXML):
         
 
     def onAction(self, action):
-        LogToXBMC('Событие {}'.format(action.getId()))
+        LogToXBMC('Action {} | ButtonCode {}'.format(action.getId(), action.getButtonCode()))
             
         if action in CANCEL_DIALOG:
             LogToXBMC('Closes player %s %s' % (action.getId(), action.getButtonCode()))
@@ -241,9 +251,7 @@ class MyPlayer(xbmcgui.WindowXML):
             self.swinfo.setVisible(True) 
             li = self.parent.list.getListItem(self.channel_number)                            
             self.chinfo.setLabel(li.getLabel())
-            
-            self.update_epg_thr = defines.MyThread(self.UpdateEpg, li)
-            self.update_epg_thr.start()
+            defines.MyThread(self.UpdateEpg, li).start()
             if self.select_timer: 
                 self.select_timer.cancel() 
                 self.select_timer = None
@@ -256,8 +264,7 @@ class MyPlayer(xbmcgui.WindowXML):
             self.channel_number = defines.tryStringToInt(self.channel_number_str) 
             li = self.parent.list.getListItem(self.channel_number)                            
             self.chinfo.setLabel(li.getLabel())
-            self.update_epg_thr = defines.MyThread(self.UpdateEpg, li)
-            self.update_epg_thr.start()                     
+            defines.MyThread(self.UpdateEpg, li).start()
             if self.select_timer: 
                 self.select_timer.cancel() 
                 self.select_timer = None
@@ -267,12 +274,10 @@ class MyPlayer(xbmcgui.WindowXML):
             xbmc.executebuiltin('Action(FullScreen)')
             xbmc.sleep(4000)
             xbmc.executebuiltin('Action(Back)')
+        else:
+            defines.MyThread(self.UpdateEpg, self.li).start()
 
-        if not self.visible:
-            if not self.update_epg_thr or not self.update_epg_thr.isAlive():
-                self.update_epg_thr = defines.MyThread(self.UpdateEpg, self.li)
-                self.update_epg_thr.start()
-           
+        if not self.visible:            
             if self.focusId == MyPlayer.CONTROL_WINDOW_ID:
                 self.setFocusId(MyPlayer.CONTROL_BUTTON_PAUSE)
             else:

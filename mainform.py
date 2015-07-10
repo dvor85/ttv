@@ -68,6 +68,7 @@ class WMainForm(xbmcgui.WindowXML):
 
 
     def __init__(self, *args, **kwargs):
+        LogToXBMC('__init__')
         self.isCanceled = False
         self.translation = []
         self.category = {}
@@ -81,9 +82,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.player = MyPlayer("player.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
         self.player.parent = self
         self.amalkerWnd = AdsForm("adsdialog.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
-        self.cur_category, self.selitem_id = self.load_selitem_info()
-        self.player.channel_number = self.selitem_id
-        self.channel_number = self.selitem_id
+        self.cur_category, self.selitem_id = self.load_selitem_info()               
         self.playditem = -1
         self.user = None
         self.infoform = None
@@ -91,6 +90,73 @@ class WMainForm(xbmcgui.WindowXML):
         self.channel_number_str = ''
         self.select_timer = None
         self.hide_window_timer = None
+        
+    def onInit(self):
+        try:
+            data = defines.GET('http://api.torrent-tv.ru/v3/version.php?application=xbmc&version=%s' % defines.TTV_VERSION)
+            jdata = json.loads(data)
+            if jdata['support'] == 0:
+                from okdialog import OkDialog
+                dialog = OkDialog("okdialog.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
+                dialog.setText("Текущая версия приложения (%s) не поддерживается. Последняя версия %s " % (defines.TTV_VERSION, jdata['last_version'].encode('utf-8')))
+                # dialog.setText('Hello World')
+                dialog.doModal()
+                self.close()
+            self.img_progress = self.getControl(108)
+            self.txt_progress = self.getControl(107)
+            self.progress = self.getControl(WMainForm.PROGRESS_BAR)
+            self.showStatus("Авторизация")
+            guid = defines.ADDON.getSetting("uuid")
+            if guid == '':
+                guid = str(uuid.uuid1())
+                defines.ADDON.setSetting("uuid", guid)
+            guid = guid.replace('-', '')
+            print guid
+            data = defines.GET('http://api.torrent-tv.ru/v3/auth.php?username=%s&password=%s&typeresult=json&application=xbmc&guid=%s' % (defines.ADDON.getSetting('login'), defines.ADDON.getSetting('password'), guid))
+            jdata = json.loads(data)
+            if jdata['success'] == 0:
+                self.showStatus(jdata['error'])
+                return
+
+            self.user = {"login" : defines.ADDON.getSetting('login'), "balance" : jdata["balance"]}
+            self.session = jdata['session']
+            self.updateList()
+            self.hide_main_window()
+            
+
+        except Exception, e:
+            LogToXBMC('OnInit: %s' % e, 2)
+
+    def onFocus(self, ControlID):
+        if ControlID == WMainForm.CONTROL_LIST:
+            if not self.list:
+                return
+            selItem = self.list.getSelectedItem()
+            if selItem:
+                if selItem.getLabel2() == self.selitem or selItem.getLabel() == '..':
+                    return
+                self.selitem = selItem.getLabel2()
+                self.selitem_id = self.list.getSelectedPosition()
+                LogToXBMC('Selected %s' % self.selitem_id)
+                epg_id = selItem.getProperty('epg_cdn_id')
+                # LogToXBMC('Icon list item = %s' % selItem.getIconImage())
+                img = self.getControl(WMainForm.IMG_SCREEN)
+                img.setImage("")
+                
+                if epg_id == '0':
+                    self.showSimpleEpg()
+                elif self.epg.has_key(epg_id):
+                    self.showSimpleEpg(epg_id)
+                else:
+                    self.showStatus('Загрузка программы')
+                    thr = defines.MyThread(self.getEpg, epg_id)
+                    thr.start()
+                
+                
+                thr = defines.MyThread(self.showScreen, selItem.getLabel2())
+                thr.start()
+                img = self.getControl(1111)
+                img.setImage(selItem.getProperty('icon'))
         
     def load_selitem_info(self):
         try:
@@ -207,7 +273,7 @@ class WMainForm(xbmcgui.WindowXML):
             self.epg[param] = jdata['data']
             selitem = self.list.getSelectedItem()
             
-            if selitem.getProperty('epg_cdn_id') == param:
+            if selitem and selitem.getProperty('epg_cdn_id') == param:
                 self.showSimpleEpg(param)
            
         self.hideStatus()
@@ -227,73 +293,7 @@ class WMainForm(xbmcgui.WindowXML):
             LogToXBMC('showScreen: %s' % jdata['screens'][0]['filename'])
             img.setImage(jdata['screens'][0]['filename'])
 
-    def onInit(self):
-        try:
-            data = defines.GET('http://api.torrent-tv.ru/v3/version.php?application=xbmc&version=%s' % defines.TTV_VERSION)
-            jdata = json.loads(data)
-            if jdata['support'] == 0:
-                from okdialog import OkDialog
-                dialog = OkDialog("okdialog.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
-                dialog.setText("Текущая версия приложения (%s) не поддерживается. Последняя версия %s " % (defines.TTV_VERSION, jdata['last_version'].encode('utf-8')))
-                # dialog.setText('Hello World')
-                dialog.doModal()
-                self.close()
-            self.img_progress = self.getControl(108)
-            self.txt_progress = self.getControl(107)
-            self.progress = self.getControl(WMainForm.PROGRESS_BAR)
-            self.showStatus("Авторизация")
-            guid = defines.ADDON.getSetting("uuid")
-            if guid == '':
-                guid = str(uuid.uuid1())
-                defines.ADDON.setSetting("uuid", guid)
-            guid = guid.replace('-', '')
-            print guid
-            data = defines.GET('http://api.torrent-tv.ru/v3/auth.php?username=%s&password=%s&typeresult=json&application=xbmc&guid=%s' % (defines.ADDON.getSetting('login'), defines.ADDON.getSetting('password'), guid))
-            jdata = json.loads(data)
-            if jdata['success'] == 0:
-                self.showStatus(jdata['error'])
-                return
-
-            self.user = {"login" : defines.ADDON.getSetting('login'), "balance" : jdata["balance"]}
-            self.session = jdata['session']
-            self.updateList()
-            self.hide_main_window()
             
-
-        except Exception, e:
-            LogToXBMC('OnInit: %s' % e, 2)
-
-    def onFocus(self, ControlID):
-        if ControlID == 50:
-            if not self.list:
-                return
-            selItem = self.list.getSelectedItem()
-            if selItem:
-                if selItem.getLabel2() == self.selitem or selItem.getLabel() == '..':
-                    return
-                self.selitem = selItem.getLabel2()
-                self.selitem_id = self.list.getSelectedPosition()
-                LogToXBMC('Selected %s' % self.selitem_id)
-                epg_id = selItem.getProperty('epg_cdn_id')
-                # LogToXBMC('Icon list item = %s' % selItem.getIconImage())
-                img = self.getControl(WMainForm.IMG_SCREEN)
-                img.setImage("")
-                
-                if epg_id == '0':
-                    self.showSimpleEpg()
-                elif self.epg.has_key(epg_id):
-                    self.showSimpleEpg(epg_id)
-                else:
-                    self.showStatus('Загрузка программы')
-                    thr = defines.MyThread(self.getEpg, epg_id)
-                    thr.start()
-                
-                
-                thr = defines.MyThread(self.showScreen, selItem.getLabel2())
-                thr.start()
-                img = self.getControl(1111)
-                img.setImage(selItem.getProperty('icon'))
-        
     
     def checkButton(self, controlId):
         control = self.getControl(controlId)
@@ -309,23 +309,23 @@ class WMainForm(xbmcgui.WindowXML):
                 self.init = False             
                 self.emulate_startChannel()
                 
-    def select_channel(self): 
-        self.channel_number = defines.tryStringToInt(self.channel_number_str)                       
-        LogToXBMC('CHANNEL NUMBER IS: %i' % self.channel_number)              
-        if 0 < self.channel_number < self.list.size():
+    def select_channel(self):                 
+        chnum = defines.tryStringToInt(self.channel_number_str)                       
+        LogToXBMC('CHANNEL NUMBER IS: %i' % chnum)              
+        if 0 < chnum < self.list.size():            
+            self.selitem_id = chnum
             self.setFocus(self.list)
-            self.list.selectItem(self.channel_number)
-        self.channel_number_str = '' 
+            self.list.selectItem(self.selitem_id)
         
     def hide_main_window(self):
         def hide():
-            if not self.IsCanceled():
+            if not self.IsCanceled() and self.player.TSPlayer and self.player.TSPlayer.playing:
                 self.onClick(WMainForm.BTN_FULLSCREEN)
         
         if self.hide_window_timer:
             self.hide_window_timer.cancel()
             self.hide_window_timer = None
-        self.hide_window_timer = threading.Timer(5, hide)
+        self.hide_window_timer = threading.Timer(8, hide)
         self.hide_window_timer.start()
                 
             
@@ -386,7 +386,8 @@ class WMainForm(xbmcgui.WindowXML):
             if not self.IsCanceled():
                 xbmc.sleep(1000)   
                 self.channel_number_str = str(self.selitem_id)
-                self.select_channel()      
+                self.select_channel()  
+                self.channel_number_str = ''    
             
             if xbmc.getCondVisibility("Window.IsVisible(home)"):
                 LogToXBMC("Close from HOME Window")
@@ -506,7 +507,7 @@ class WMainForm(xbmcgui.WindowXML):
 
     def showSimpleEpg(self, epg_id=None):
         controlEpg = self.getControl(WMainForm.LBL_FIRST_EPG)
-        if epg_id and self.epg[epg_id].__len__() > 0:
+        if epg_id and len(self.epg[epg_id]) > 0:
             ctime = time.time()
             try:
                 curepg = filter(lambda x: (float(x['etime']) > ctime), self.epg[epg_id])
@@ -527,7 +528,7 @@ class WMainForm(xbmcgui.WindowXML):
                     break
                 if ce == None:
                     break
-                if i >= curepg.__len__():
+                if i >= len(curepg):
                     break
                 sbt = time.localtime(float(curepg[i]['btime']))
                 set = time.localtime(float(curepg[i]['etime']))
@@ -596,14 +597,14 @@ class WMainForm(xbmcgui.WindowXML):
                 self.onFocus(WMainForm.CONTROL_LIST)
         elif action.getId() in WMainForm.DIGIT_BUTTONS:
             ############# IN PRESSING DIGIT KEYS ############
-            self.channel_number_str += str(action.getId() - 58)
-            self.setFocus(self.list)
-            self.channel_number = defines.tryStringToInt(self.channel_number_str)
-            self.list.selectItem(self.channel_number)
+            self.channel_number_str += str(action.getId() - 58)                     
+            self.select_channel()
+            self.setFocus(self.list)   
+            self.list.selectItem(self.selitem_id)
             if self.select_timer:
                 self.select_timer.cancel()
                 self.select_timer = None      
-            self.select_timer = threading.Timer(1, self.select_channel)
+            self.select_timer = threading.Timer(1, lambda: setattr(self, 'channel_number_str', ''))
             self.select_timer.start()
         else:
             super(WMainForm, self).onAction(action)
@@ -614,7 +615,7 @@ class WMainForm(xbmcgui.WindowXML):
 
     def updateList(self):
         self.showStatus("Получение списка каналов")
-        self.list = self.getControl(50)
+        self.list = self.getControl(WMainForm.CONTROL_LIST)
         self.initLists()
         thr = defines.MyThread(self.getChannels, 'channel', not (self.cur_category in (WMainForm.CHN_TYPE_TRANSLATION, WMainForm.CHN_TYPE_MODERATION, WMainForm.CHN_TYPE_FAVOURITE)))
         thr.daemon = False
