@@ -1,7 +1,8 @@
 ﻿# Copyright (c) 2013 Torrent-TV.RU
 # Writer (c) 2011, Welicobratov K.A., E-mail: 07pov23@gmail.com
+# Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-import os, sys
+import sys
 import defines
 
 # append pydev remote debugger
@@ -22,11 +23,6 @@ if defines.DEBUG:
         del tb
         sys.exit(0)
     
-
-import xbmc
-import xbmcaddon
-import cPickle
-
 
 import mainform 
 from okdialog import OkDialog

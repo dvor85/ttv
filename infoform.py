@@ -1,10 +1,7 @@
 ﻿# Copyright (c) 2010-2011 Torrent-TV.RU
 # Writer (c) 2011, Welicobratov K.A., E-mail: 07pov23@gmail.com
 import xbmcgui
-import xbmc
-from BeautifulSoup import BeautifulSoup, BeautifulStoneSoup
-
-import threading
+from BeautifulSoup import BeautifulSoup
 
 import defines
 

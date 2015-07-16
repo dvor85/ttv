@@ -1,10 +1,8 @@
 import xbmcgui
 import time
-import xbmcaddon
 import calendar
 import datetime
 
-import defines
 
 class DateForm(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):

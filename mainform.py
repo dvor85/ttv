@@ -1,18 +1,16 @@
 ﻿# Copyright (c) 2013 Torrent-TV.RU
 # Writer (c) 2013, Welicobratov K.A., E-mail: 07pov23@gmail.com
+# Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 # imports
 import xbmcgui
 import xbmc
-import xbmcaddon
 
 import json
-import urllib2
 import time
 import datetime
 import threading
 
-from ts import TSengine as tsengine
 from player import MyPlayer
 from adswnd import AdsForm
 from menu import MenuForm
@@ -21,7 +19,6 @@ from dateform import DateForm
 
 import uuid
 import os
-import socket
 import cPickle
 
 import defines
@@ -32,11 +29,9 @@ def LogToXBMC(text, type=1):
     if type == 2:
         ttext = 'ERROR:'
 
-    log = open(defines.ADDON_PATH + '/mainform.log', 'a')
-    print '[MainForm %s] %s %s\r' % (time.strftime('%X'), ttext, text)
-    log.write('[MainForm %s] %s %s\r' % (time.strftime('%X'), ttext, text))
-    log.close()
-    del log
+    with open(defines.ADDON_PATH + '/mainform.log', 'a') as log:
+        print '[MainForm %s] %s %s\r' % (time.strftime('%X'), ttext, text)
+        log.write('[MainForm %s] %s %s\r' % (time.strftime('%X'), ttext, text))
 
 class WMainForm(xbmcgui.WindowXML):
     CANCEL_DIALOG = (9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448,)
@@ -325,8 +320,9 @@ class WMainForm(xbmcgui.WindowXML):
         if self.hide_window_timer:
             self.hide_window_timer.cancel()
             self.hide_window_timer = None
-        self.hide_window_timer = threading.Timer(8, hide)
-        self.hide_window_timer.start()
+        if not self.IsCanceled() and self.player.TSPlayer and self.player.TSPlayer.playing:    
+            self.hide_window_timer = threading.Timer(9.9, hide)
+            self.hide_window_timer.start()
                 
             
     def emulate_startChannel(self):
@@ -639,6 +635,7 @@ class WMainForm(xbmcgui.WindowXML):
             thr1.join(10)
         else:
             thr.join(10)
+        LogToXBMC('updateList: Clear list')    
         self.list.reset()
         self.setFocus(self.getControl(WMainForm.BTN_CHANNELS_ID))
         self.img_progress.setVisible(False)
@@ -647,13 +644,13 @@ class WMainForm(xbmcgui.WindowXML):
         
         
 
-    def showStatus(self, str):
+    def showStatus(self, text):
         if self.img_progress: self.img_progress.setVisible(True)
-        if self.txt_progress: self.txt_progress.setLabel(str)
-        if self.infoform: self.infoform.printASStatus(str)
+        if self.txt_progress: self.txt_progress.setLabel(text)
+        if self.infoform: self.infoform.printASStatus(text)
 
-    def showInfoStatus(self, str):
-        if self.infoform: self.infoform.printASStatus(str)
+    def showInfoStatus(self, text):
+        if self.infoform: self.infoform.printASStatus(text)
 
     def hideStatus(self):
         if self.img_progress: self.img_progress.setVisible(False)
@@ -664,6 +661,7 @@ class WMainForm(xbmcgui.WindowXML):
         if not self.list:
             self.showStatus("Список не инициализирован")
             return
+        LogToXBMC('fillChannels: Clear list')
         self.list.reset()
         if len(self.category[self.cur_category]["channels"]) == 0:
             self.fillCategory()
@@ -680,6 +678,7 @@ class WMainForm(xbmcgui.WindowXML):
             self.showStatus("Список не инициализирован")
             return
         self.showStatus("Заполнение списка")
+        LogToXBMC('fillTranslation: Clear list')
         self.list.reset()
         for ch in self.translation:
             self.list.addItem(ch)
@@ -689,6 +688,7 @@ class WMainForm(xbmcgui.WindowXML):
         if not self.list:
             self.showStatus("Список не инициализирован")
             return
+        LogToXBMC('fillArchive: Clear list')
         self.list.reset()
         for ch in self.archive:
             self.list.addItem(ch)
@@ -698,6 +698,7 @@ class WMainForm(xbmcgui.WindowXML):
         if not self.list:
             self.showStatus("Список не инициализирован")
             return
+        LogToXBMC('fillCategory: Clear list')
         self.list.reset()
         for gr in self.category:
             li = xbmcgui.ListItem(self.category[gr]["name"])
@@ -708,6 +709,7 @@ class WMainForm(xbmcgui.WindowXML):
     def fillRecords(self, li, date=time.localtime()):
         self.showStatus("Загрузка архива")
         LogToXBMC("Show records")
+        LogToXBMC('fillRecords: Clear list')
         self.list.reset()
         const_li = xbmcgui.ListItem("..")
         self.list.addItem(const_li)

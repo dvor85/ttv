@@ -1,16 +1,15 @@
 ﻿# Copyright (c) 20131 Torrent-TV.RU
 # Writer (c) 2014, Welicobratov K.A., E-mail: 07pov23@gmail.com
+# Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 #imports
 import xbmc
-import xbmcaddon
 import xbmcgui
 
 import sys
 import socket
 import os
 import threading
-import subprocess
 import random
 import json
 import urllib
@@ -19,7 +18,6 @@ import time
 
 import defines
 
-#from player import MyPlayer
 from adswnd import AdsForm
 
 #defines
@@ -31,11 +29,9 @@ def LogToXBMC(text, type = 1):
     if type == 2:
         ttext = 'ERROR:'
 
-    log = open(defines.ADDON_PATH + '/ts.log', 'a')
-    print '[TSEngine %s] %s %s\r' % (time.strftime('%X'),ttext, text)
-    log.write('[TSEngine %s] %s %s\r' % (time.strftime('%X'),ttext, text))
-    log.close()
-    del log
+    with open(defines.ADDON_PATH + '/ts.log', 'a') as log:
+        print '[TSEngine %s] %s %s\r' % (time.strftime('%X'),ttext, text)
+        log.write('[TSEngine %s] %s %s\r' % (time.strftime('%X'),ttext, text))
 
 #classes
 class TSengine(xbmc.Player):

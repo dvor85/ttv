@@ -1,8 +1,9 @@
-﻿import xbmcaddon
+﻿# Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
+
+import xbmcaddon
 import xbmc
 import sys
 import urllib2
-import urllib
 import threading
 import os
 from BeautifulSoup import BeautifulSoup

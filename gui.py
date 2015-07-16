@@ -1,13 +1,10 @@
 ﻿# Copyright (c) 2010-2011 Torrent-TV.RU
 # Writer (c) 2011, Welicobratov K.A., E-mail: 07pov23@gmail.com
+# Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 # imports
 import os
-import xbmcaddon
 import xbmc
-import time
-import xbmcgui
-import threading
 from mainform import WMainForm
 #from player import MyPlayer
 #from TSCore import TSengine as tsengine
@@ -23,9 +20,8 @@ BTN_CLOSE = 101
 
 try:
     if defines.PTR_FILE:  
-        gf = open(defines.PTR_FILE, 'r')
-        ACE_PORT=int(gf.read())
-        gf.close()
+        with open(defines.PTR_FILE, 'r') as gf:
+            ACE_PORT=int(gf.read())
 except: PTR_FILE=None
 if not PTR_FILE:
     try:
