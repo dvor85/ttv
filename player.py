@@ -34,6 +34,7 @@ class MyPlayer(xbmcgui.WindowXML):
     CONTROL_BUTTON_STOP = 200
     ACTION_RBC = 101
     ARROW_ACTIONS = (1, 2, 3, 4)
+    PAGE_UP_DOWN = (5, 6)
     DIGIT_BUTTONS = range(58, 68)
     CH_NAME_ID = 399
     DLG_SWITCH_ID = 299
@@ -237,9 +238,9 @@ class MyPlayer(xbmcgui.WindowXML):
         elif action.getId() == MyPlayer.ACTION_RBC:
             LogToXBMC('CLOSE PLAYER 101 %s %s' % (action.getId(), action.getButtonCode()))
             self.close()
-        elif action.getId() in (3, 4): 
+        elif action.getId() in (3, 4, 5, 6): 
             ############### IF ARROW UP AND DOWN PRESSED - SWITCH CHANNEL ###############
-            if action.getId() == 3:
+            if action.getId() in (3, 5):
                 self.channel_number += 1
                 if self.channel_number >= self.parent.list.size():
                     self.channel_number = 1
@@ -259,17 +260,24 @@ class MyPlayer(xbmcgui.WindowXML):
             self.select_timer.start()
         elif action.getId() in MyPlayer.DIGIT_BUTTONS:
             ############# IF PRESSED DIGIT KEYS - SWITCH CHANNEL #######################
-            self.channel_number_str += str(action.getId() - 58)  
-            self.swinfo.setVisible(True) 
-            self.channel_number = defines.tryStringToInt(self.channel_number_str) 
-            li = self.parent.list.getListItem(self.channel_number)                            
-            self.chinfo.setLabel(li.getLabel())
-            defines.MyThread(self.UpdateEpg, li).start()
-            if self.select_timer: 
-                self.select_timer.cancel() 
-                self.select_timer = None
-            self.select_timer = threading.Timer(5, self.run_selected_channel)
-            self.select_timer.start()   
+            digit_pressed = action.getId() - 58 
+            if digit_pressed < self.parent.list.size():
+                                
+                self.channel_number_str += str(digit_pressed)                 
+                self.channel_number = defines.tryStringToInt(self.channel_number_str) 
+                if not 0 < self.channel_number < self.parent.list.size():   
+                    self.channel_number_str = str(digit_pressed) 
+                    self.channel_number = defines.tryStringToInt(self.channel_number_str)                   
+                
+                li = self.parent.list.getListItem(self.channel_number)                            
+                self.chinfo.setLabel(li.getLabel())
+                self.swinfo.setVisible(True)
+                defines.MyThread(self.UpdateEpg, li).start()
+                if self.select_timer: 
+                    self.select_timer.cancel() 
+                    self.select_timer = None
+                self.select_timer = threading.Timer(5, self.run_selected_channel)
+                self.select_timer.start()   
         elif action.getId() == 0 and action.getButtonCode() == 61530:
             xbmc.executebuiltin('Action(FullScreen)')
             xbmc.sleep(4000)
