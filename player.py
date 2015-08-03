@@ -179,7 +179,7 @@ class MyPlayer(xbmcgui.WindowXML):
             self.parent.showStatus("Неизвестный тип контента")
             return
         if not data:
-            self.parent.showStatus("Неизвестный тип контента")
+            self.parent.showStatus("Ошибка Torrent-TV.RU")
             return
         jdata = json.loads(data)
         print jdata
@@ -227,8 +227,17 @@ class MyPlayer(xbmcgui.WindowXML):
         self.channel_number = self.parent.selitem_id  
         self.chinfo.setLabel(self.parent.list.getListItem(self.parent.selitem_id).getLabel()) 
         self.channel_number_str = ''
-        
-
+    
+    def inc_channel_number(self):
+        self.channel_number += 1
+        if self.channel_number >= self.parent.list.size():
+            self.channel_number = 1
+    
+    def dec_channel_number(self):
+        self.channel_number -= 1
+        if self.channel_number <= 0:
+            self.channel_number = self.parent.list.size() - 1
+            
     def onAction(self, action):
         LogToXBMC('Action {} | ButtonCode {}'.format(action.getId(), action.getButtonCode()))
             
@@ -241,13 +250,10 @@ class MyPlayer(xbmcgui.WindowXML):
         elif action.getId() in (3, 4, 5, 6): 
             ############### IF ARROW UP AND DOWN PRESSED - SWITCH CHANNEL ###############
             if action.getId() in (3, 5):
-                self.channel_number += 1
-                if self.channel_number >= self.parent.list.size():
-                    self.channel_number = 1
+                self.inc_channel_number()
             else:
-                self.channel_number -= 1
-                if self.channel_number <= 0:
-                    self.channel_number = self.parent.list.size() - 1
+                self.dec_channel_number()
+                
             self.channel_number_str = str(self.channel_number)
             self.swinfo.setVisible(True) 
             li = self.parent.list.getListItem(self.channel_number)                            

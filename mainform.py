@@ -482,10 +482,8 @@ class WMainForm(xbmcgui.WindowXML):
             
         # xbmc.executebuiltin('SendClick(12345,%s)' % self.seltab)
         elif controlID == WMainForm.BTN_FULLSCREEN:
-            if defines.ADDON.getSetting("winmode") == "true":
-                self.player.show()
-            else:
-                xbmc.executebuiltin("Action(FullScreen)")
+            self.player.show()
+
 
         elif controlID == WMainForm.BTN_INFO:
             self.showInfoWindow()
