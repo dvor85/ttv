@@ -13,9 +13,9 @@ def LogToXBMC(text, type = 1):
     if type == 2:
         ttext = 'ERROR:'
  
-    with open(defines.ADDON_PATH + '/menuform.log', 'a') as log:
+    with open(defines.TEMP_PATH + '/menuform.log', 'a') as log:
         print '[MenuForm %s] %s %s\r' % (time.strftime('%X'),ttext, text)
-        log.write('[MenuForm %s] %s %s\r' % (time.strftime('%X'),ttext, text))
+        log.write('[MenuForm %s] %s %s\n' % (time.strftime('%X'),ttext, text))
 
 class MenuForm(xbmcgui.WindowXMLDialog):
     CMD_ADD_FAVOURITE = 'favourite_add.php'

@@ -29,9 +29,9 @@ def LogToXBMC(text, type=1):
     if type == 2:
         ttext = 'ERROR:'
 
-    with open(defines.ADDON_PATH + '/ts.log', 'a') as log:
+    with open(defines.TEMP_PATH + '/ts.log', 'a') as log:
         print '[TSEngine %s] %s %s\r' % (time.strftime('%X'), ttext, text)
-        log.write('[TSEngine %s] %s %s\r' % (time.strftime('%X'), ttext, text))
+        log.write('[TSEngine %s] %s %s\n' % (time.strftime('%X'), ttext, text))
 
 # classes
 class TSengine(xbmc.Player):

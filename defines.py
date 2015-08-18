@@ -15,6 +15,9 @@ ADDON_ICON = ADDON.getAddonInfo('icon')
 ADDON_ID = ADDON.getAddonInfo('id')
 PTR_FILE = ADDON.getSetting('port_path')
 DATA_PATH = xbmc.translatePath(os.path.join("special://profile/addon_data", ADDON_ID))
+TEMP_PATH = xbmc.translatePath(os.path.join("special://temp", ADDON_ID))
+if not os.path.exists(TEMP_PATH):
+    os.makedirs(TEMP_PATH)
 TTV_VERSION = '1.5.3'
 AUTOSTART = ADDON.getSetting('startlast') == 'true'
 DEBUG = ADDON.getSetting('debug') == 'true'
@@ -56,7 +59,7 @@ def Autostart(state):
             os.unlink(autoexec)
     except:
         t, v, tb = sys.exc_info()        
-        sys.stderr.write("Error while write autoexec.py: {}:{}.".format(t, v))
+        sys.stderr.write("Error while write autoexec.py: {0}:{1}.".format(t, v))
         del tb
         
         
@@ -76,6 +79,8 @@ class MyThread(threading.Thread):
         
 if (sys.platform == 'win32') or (sys.platform == 'win64'):
     ADDON_PATH = ADDON_PATH.decode('utf-8')
+    DATA_PATH = DATA_PATH.decode('utf-8')
+    TEMP_PATH = TEMP_PATH.decode('utf-8')
 
 def showMessage(message='', heading='Torrent-TV.RU', times=6789):
     try: 

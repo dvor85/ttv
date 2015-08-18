@@ -29,9 +29,9 @@ def LogToXBMC(text, type=1):
     if type == 2:
         ttext = 'ERROR:'
 
-    with open(defines.ADDON_PATH + '/mainform.log', 'a') as log:
+    with open(defines.TEMP_PATH + '/mainform.log', 'a') as log:
         print '[MainForm %s] %s %s\r' % (time.strftime('%X'), ttext, text)
-        log.write('[MainForm %s] %s %s\r' % (time.strftime('%X'), ttext, text))
+        log.write('[MainForm %s] %s %s\n' % (time.strftime('%X'), ttext, text))
 
 class WMainForm(xbmcgui.WindowXML):
     CANCEL_DIALOG = (9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448,)
@@ -334,7 +334,7 @@ class WMainForm(xbmcgui.WindowXML):
         LogToXBMC('onClickChannels')
         self.fillChannels()
         if self.seltab != WMainForm.BTN_CHANNELS_ID:
-            LogToXBMC('size of list is: {}'.format(self.list.size()))
+            LogToXBMC('size of list is: {0}'.format(self.list.size()))
             self.checkButton(WMainForm.BTN_CHANNELS_ID)
             
         
@@ -442,7 +442,7 @@ class WMainForm(xbmcgui.WindowXML):
             
             if not selItem:
                 return
-            LogToXBMC("selItem is {}".format(selItem.getLabel()))
+            LogToXBMC("selItem is {0}".format(selItem.getLabel()))
             if selItem.getLabel() == '..':
                 if self.seltab == WMainForm.BTN_CHANNELS_ID:
                     self.fillCategory()
@@ -544,7 +544,7 @@ class WMainForm(xbmcgui.WindowXML):
         if not action:
             super(WMainForm, self).onAction(action)
             return
-        LogToXBMC('Событие {}'.format(action.getId()))        
+        LogToXBMC('Событие {0}'.format(action.getId()))        
         if action.getButtonCode() == 61513:
             return
         if action in WMainForm.CANCEL_DIALOG:

@@ -19,9 +19,9 @@ def LogToXBMC(text, type=1):
     if type == 2:
         ttext = 'ERROR:'
 
-    with open(defines.ADDON_PATH + '/player.log', 'a') as log:
+    with open(defines.TEMP_PATH + '/player.log', 'a') as log:
         print '[MyPlayer %s] %s %s\r' % (time.strftime('%X'), ttext, text)
-        log.write('[MyPlayer %s] %s %s\r' % (time.strftime('%X'), ttext, text))
+        log.write('[MyPlayer %s] %s %s\n' % (time.strftime('%X'), ttext, text))
 
 
 class MyPlayer(xbmcgui.WindowXML):
@@ -239,7 +239,7 @@ class MyPlayer(xbmcgui.WindowXML):
             self.channel_number = self.parent.list.size() - 1
             
     def onAction(self, action):
-        LogToXBMC('Action {} | ButtonCode {}'.format(action.getId(), action.getButtonCode()))
+        LogToXBMC('Action {0} | ButtonCode {1}'.format(action.getId(), action.getButtonCode()))
             
         if action in CANCEL_DIALOG:
             LogToXBMC('Closes player %s %s' % (action.getId(), action.getButtonCode()))
