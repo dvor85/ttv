@@ -1,4 +1,5 @@
-﻿# Copyright (c) 2010-2011 Torrent-TV.RU
+﻿# -*- coding: utf-8 -*-
+# Copyright (c) 2010-2011 Torrent-TV.RU
 # Writer (c) 2011, Welicobratov K.A., E-mail: 07pov23@gmail.com
 # Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 

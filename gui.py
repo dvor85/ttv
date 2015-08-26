@@ -1,4 +1,5 @@
-﻿# Copyright (c) 2010-2011 Torrent-TV.RU
+﻿# -*- coding: utf-8 -*-
+# Copyright (c) 2010-2011 Torrent-TV.RU
 # Writer (c) 2011, Welicobratov K.A., E-mail: 07pov23@gmail.com
 # Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
@@ -11,6 +12,8 @@ from mainform import WMainForm
 
 # defines
 import defines
+
+LogToXBMC = defines.Logger('GUI')
 
 ACE_PORT = 62062
 CANCEL_DIALOG = (9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448,)
@@ -30,7 +33,7 @@ if not PTR_FILE:
         with open(pfile, 'r') as gf:
             ACE_PORT = int(gf.read())
         defines.ADDON.setSetting('port_path', pfile)
-        print ACE_PORT
+        LogToXBMC(ACE_PORT, xbmc.LOGDEBUG)
     except: ACE_PORT = 62062
 
 # functions
@@ -39,7 +42,7 @@ def showMessage(message='', heading='Torrent-TV.RU', times=3000, pics=defines.AD
     except Exception, e:
         try: xbmc.executebuiltin('XBMC.Notification("%s", "%s", %s, "%s")' % (heading, message, times, pics))
         except Exception, e:
-            xbmc.log('showMessage: exec failed [%s]' % e)
+            LogToXBMC('showMessage: exec failed [%s]' % e, xbmc.LOGERROR)
 
 
 def main():

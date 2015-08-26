@@ -1,1 +1,1 @@
-git archive --format=zip --prefix="$(basename `pwd`)/" -o ../$(basename `pwd`)-$(git tag --contains).zip HEAD
+git archive --worktree-attributes --format=zip --prefix="$(basename `pwd`)/" -o ../$(basename `pwd`)-$(git tag --contains).zip HEAD

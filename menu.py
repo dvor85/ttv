@@ -1,21 +1,15 @@
-﻿# Copyright (c) 2013 Torrent-TV.RU
+﻿# -*- coding: utf-8 -*-
+# Copyright (c) 2013 Torrent-TV.RU
 # Writer (c) 2013, Welicobratov K.A., E-mail: 07pov23@gmail.com
 # Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 import xbmcgui
-import time
+import xbmc
 import json
 
 import defines
 
-def LogToXBMC(text, type = 1):
-    ttext = ''
-    if type == 2:
-        ttext = 'ERROR:'
- 
-    with open(defines.TEMP_PATH + '/menuform.log', 'a') as log:
-        print '[MenuForm %s] %s %s\r' % (time.strftime('%X'),ttext, text)
-        log.write('[MenuForm %s] %s %s\n' % (time.strftime('%X'),ttext, text))
+LogToXBMC = defines.Logger('MenuForm')
 
 class MenuForm(xbmcgui.WindowXMLDialog):
     CMD_ADD_FAVOURITE = 'favourite_add.php'
@@ -51,21 +45,21 @@ class MenuForm(xbmcgui.WindowXMLDialog):
                 elif c == MenuForm.CMD_CLOSE_TS:
                     title = 'Завершить TS'
                 list.addItem(xbmcgui.ListItem(title, c))
-            list.setHeight(cmds.__len__()*38)
+            list.setHeight(cmds.__len__() * 38)
             list.selectItem(0)
             self.setFocusId(MenuForm.CONTROL_CMD_LIST)
-            LogToXBMC('Focus Controld %s' % self.getFocusId())
+            LogToXBMC('Focus Controld %s' % self.getFocusId(), xbmc.LOGDEBUG)
         except Exception, e: 
-            LogToXBMC("В списке нет комманд %s" % e)
+            LogToXBMC("В списке нет комманд %s" % e, xbmc.LOGERROR)
             pass
 
     def onClick(self, controlId):
-        LogToXBMC('ControlID = %s' % controlId)
+        LogToXBMC('ControlID = %s' % controlId, xbmc.LOGDEBUG)
         if controlId == MenuForm.CONTROL_CMD_LIST:
             lt = self.getControl(MenuForm.CONTROL_CMD_LIST)
             li = lt.getSelectedItem()
             cmd = li.getLabel2()
-            LogToXBMC("cmd=%s" % cmd)
+            LogToXBMC("cmd=%s" % cmd, xbmc.LOGDEBUG)
     
             if cmd == MenuForm.CMD_CLOSE_TS: 
                 self.CloseTS()
@@ -75,8 +69,8 @@ class MenuForm(xbmcgui.WindowXMLDialog):
 
     def _sendCmd(self, cmd):
         channel_id = self.li.getLabel2()
-        res = self.get_method('http://api.torrent-tv.ru/v3/%s?session=%s&channel_id=%s&typeresult=json' % (cmd, self.session, channel_id), cookie = self.session)
-        LogToXBMC(res)
+        res = self.get_method('http://api.torrent-tv.ru/v3/%s?session=%s&channel_id=%s&typeresult=json' % (cmd, self.session, channel_id), cookie=self.session)
+        LogToXBMC(res, xbmc.LOGDEBUG)
         LogToXBMC('http://api.torrent-tv.ru/v3/%s?session=%s&channel_id=%s&typeresult=json' % (cmd, self.session, channel_id))
         jdata = json.loads(res)
         if jdata['success'] == '0':

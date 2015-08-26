@@ -1,9 +1,12 @@
-﻿# Copyright (c) 2010-2011 Torrent-TV.RU
+﻿# -*- coding: utf-8 -*-
+# Copyright (c) 2010-2011 Torrent-TV.RU
 # Writer (c) 2011, Welicobratov K.A., E-mail: 07pov23@gmail.com
 import xbmcgui
 from BeautifulSoup import BeautifulSoup
 
 import defines
+
+LogToXBMC = defines.Logger('InfoForm')
 
 class InfoForm(xbmcgui.WindowXMLDialog):
     LABEL_USER_LOGIN = 101
@@ -19,7 +22,7 @@ class InfoForm(xbmcgui.WindowXMLDialog):
         self.parent = None
         self.portLabel = None
         self.ASLabel = None
-        print 'init infoform'
+        LogToXBMC('init infoform')
         pass
 
     def onInit(self):
@@ -30,7 +33,7 @@ class InfoForm(xbmcgui.WindowXMLDialog):
         self.outport = defines.ADDON.getSetting("outport")
         self.ASLabel = self.getControl(self.LABEL_AS_STATUS)
 
-        print 'OnInit infoform %s' % self.parent
+        LogToXBMC('OnInit infoform %s' % self.parent)
         if self.parent and self.parent.user:
             userLabel.setLabel(self.parent.user["login"])
             if float(self.parent.user["ballance"]) > 7:
@@ -57,7 +60,7 @@ class InfoForm(xbmcgui.WindowXMLDialog):
         addr = addr.string
         self.addrLabel.setLabel(addr)
         
-        print "InfoForm адрес получен"
+        LogToXBMC("InfoForm адрес получен")
         
 
     def checkPort(self, params):

@@ -2,4 +2,5 @@
 .gitignore export-ignore
 .project export-ignore
 .pydevproject export-ignore
+.settings/ export-ignore
 makezip.sh export-ignore

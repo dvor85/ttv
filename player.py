@@ -1,4 +1,5 @@
-﻿# Copyright (c) 2014 Torrent-TV.RU
+﻿# -*- coding: utf-8 -*-
+# Copyright (c) 2014 Torrent-TV.RU
 # Writer (c) 2014, Welicobratov K.A., E-mail: 07pov23@gmail.com
 # Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
@@ -14,15 +15,7 @@ from ts import TSengine as tsengine
 # defines
 CANCEL_DIALOG = (9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448,)
 
-def LogToXBMC(text, type=1):
-    ttext = ''
-    if type == 2:
-        ttext = 'ERROR:'
-
-    with open(defines.TEMP_PATH + '/player.log', 'a') as log:
-        print '[MyPlayer %s] %s %s\r' % (time.strftime('%X'), ttext, text)
-        log.write('[MyPlayer %s] %s %s\n' % (time.strftime('%X'), ttext, text))
-
+LogToXBMC = defines.Logger('MyPlayer')
 
 class MyPlayer(xbmcgui.WindowXML):
     CONTROL_EPG_ID = 109
@@ -79,8 +72,8 @@ class MyPlayer(xbmcgui.WindowXML):
         if not self.select_timer:
             self.init_channel_number()
         
-        LogToXBMC("channel_number = %i" % self.channel_number)
-        LogToXBMC("selitem_id = %i" % self.parent.selitem_id)    
+        LogToXBMC("channel_number = %i" % self.channel_number, xbmc.LOGDEBUG)
+        LogToXBMC("selitem_id = %i" % self.parent.selitem_id, xbmc.LOGDEBUG)    
         
         defines.MyThread(self.UpdateEpg, self.li).start()
         self.control_window.setVisible(True)
@@ -154,13 +147,13 @@ class MyPlayer(xbmcgui.WindowXML):
                
 
     def Stop(self):
-        print 'CLOSE STOP'
+        LogToXBMC('CLOSE STOP')
         xbmc.executebuiltin('PlayerControl(Stop)')
 
     def Start(self, li):
-        print "Start play "
+        LogToXBMC("Start play")
         if not self.TSPlayer:
-            LogToXBMC('InitTS')
+            LogToXBMC('InitTS', xbmc.LOGDEBUG)
             self.TSPlayer = tsengine(parent=self.parent)
 
         self.li = li
@@ -169,8 +162,8 @@ class MyPlayer(xbmcgui.WindowXML):
         
         self.parent.showStatus("Получение ссылки...")
         data = None
-        print li.getProperty("type")
-        print li.getProperty("id")
+        LogToXBMC(li.getProperty("type"), xbmc.LOGDEBUG)
+        LogToXBMC(li.getProperty("id"), xbmc.LOGDEBUG)
         if (li.getProperty("type") == "channel"):
             data = defines.GET("http://api.torrent-tv.ru/v3/translation_stream.php?session=%s&channel_id=%s&typeresult=json" % (self.parent.session, li.getProperty("id")))
         elif (li.getProperty("type") == "record"):
@@ -182,7 +175,7 @@ class MyPlayer(xbmcgui.WindowXML):
             self.parent.showStatus("Ошибка Torrent-TV.RU")
             return
         jdata = json.loads(data)
-        print jdata
+        LogToXBMC(jdata, xbmc.LOGDEBUG)
         if not jdata["success"]:
             self.parent.showStatus("Канал временно не доступен")
             return
@@ -219,7 +212,7 @@ class MyPlayer(xbmcgui.WindowXML):
             
     def run_selected_channel(self):
         self.channel_number = defines.tryStringToInt(self.channel_number_str)        
-        LogToXBMC('CHANNEL NUMBER IS: %i' % self.channel_number)              
+        LogToXBMC('CHANNEL NUMBER IS: %i' % self.channel_number, xbmc.LOGDEBUG)              
         if 0 < self.channel_number < self.parent.list.size() and self.parent.selitem_id != self.channel_number:            
             self.parent.selitem_id = self.channel_number
             self.Stop()    
@@ -239,7 +232,7 @@ class MyPlayer(xbmcgui.WindowXML):
             self.channel_number = self.parent.list.size() - 1
             
     def onAction(self, action):
-        LogToXBMC('Action {0} | ButtonCode {1}'.format(action.getId(), action.getButtonCode()))
+        LogToXBMC('Action {0} | ButtonCode {1}'.format(action.getId(), action.getButtonCode()), xbmc.LOGDEBUG)
             
         if action in CANCEL_DIALOG:
             LogToXBMC('Closes player %s %s' % (action.getId(), action.getButtonCode()))

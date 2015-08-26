@@ -1,4 +1,5 @@
-﻿# Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
+﻿# -*- coding: utf-8 -*-
+# Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 import xbmcaddon
 import xbmc
@@ -8,27 +9,44 @@ import threading
 import os
 from BeautifulSoup import BeautifulSoup
 
-ADDON = xbmcaddon.Addon(id='script.torrent-tv.ru.pp')
+ADDON_ID = 'script.torrent-tv.ru.pp'
+ADDON = xbmcaddon.Addon(id=ADDON_ID)
 ADDON_ICON = ADDON.getAddonInfo('icon')
 ADDON_PATH = ADDON.getAddonInfo('path')
 ADDON_ICON = ADDON.getAddonInfo('icon')
-ADDON_ID = ADDON.getAddonInfo('id')
 PTR_FILE = ADDON.getSetting('port_path')
 DATA_PATH = xbmc.translatePath(os.path.join("special://profile/addon_data", ADDON_ID))
-TEMP_PATH = xbmc.translatePath(os.path.join("special://temp", ADDON_ID))
-if not os.path.exists(TEMP_PATH):
-    os.makedirs(TEMP_PATH)
+#TEMP_PATH = xbmc.translatePath(os.path.join("special://temp", ADDON_ID))
+#if not os.path.exists(TEMP_PATH):
+#    os.makedirs(TEMP_PATH)
 TTV_VERSION = '1.5.3'
 AUTOSTART = ADDON.getSetting('startlast') == 'true'
-DEBUG = ADDON.getSetting('debug') == 'true'
+try:
+    DEBUG = int(ADDON.getSetting('debug'))
+except:
+    DEBUG = xbmc.LOGNOTICE
+    ADDON.setSetting('debug', str(DEBUG))
 skin = ADDON.getSetting('skin')
 SKIN_PATH = ADDON_PATH
 
-print skin
 if (skin != None) and (skin != "") and (skin != 'st.anger'):
     SKIN_PATH = DATA_PATH
     
-
+class Logger():
+    
+    def __init__(self, tag, minlevel=DEBUG):
+        self.tag = tag
+        self.minlevel = minlevel
+        
+    def __call__(self, mess, level=xbmc.LOGNOTICE):
+        self.log(mess, level)
+        
+    def log(self, mess, level):
+        if level >= self.minlevel:
+            xbmc.log("*** [{0}]: {1}".format(self.tag, mess), level)
+            
+LogToXBMC = Logger('DEFINES')
+        
     
 def Autostart(state):
     userdata = xbmc.translatePath("special://masterprofile")
@@ -59,7 +77,7 @@ def Autostart(state):
             os.unlink(autoexec)
     except:
         t, v, tb = sys.exc_info()        
-        sys.stderr.write("Error while write autoexec.py: {0}:{1}.".format(t, v))
+        LogToXBMC("Error while write autoexec.py: {0}:{1}.".format(t, v), xbmc.LOGWARNING)
         del tb
         
         
@@ -80,23 +98,23 @@ class MyThread(threading.Thread):
 if (sys.platform == 'win32') or (sys.platform == 'win64'):
     ADDON_PATH = ADDON_PATH.decode('utf-8')
     DATA_PATH = DATA_PATH.decode('utf-8')
-    TEMP_PATH = TEMP_PATH.decode('utf-8')
+    #TEMP_PATH = TEMP_PATH.decode('utf-8')
 
 def showMessage(message='', heading='Torrent-TV.RU', times=6789):
+    LogToXBMC('showMessage: %s' % message)
     try: 
         xbmc.executebuiltin('XBMC.Notification("%s", "%s", %s, %s)' % (heading.encode('utf-8'), message.encode('utf-8'), times, ADDON_ICON))
     except Exception, e:
         try: 
             xbmc.executebuiltin('XBMC.Notification("%s", "%s", %s, %s)' % (heading, message, times, ADDON_ICON))
-        except Exception, e:
-            xbmc.log('showMessage: exec failed [%s]' % e, 3)
+        except Exception, e:            
+            LogToXBMC('showMessage: exec failed [%s]' % e, xbmc.LOGWARNING)
 
 def GET(target, post=None, cookie=None):
     t = 0
     while True:
         t += 1
         try:
-            print target
             req = urllib2.Request(url=target, data=post)
             req.add_header('User-Agent', 'XBMC (script.torrent-tv.ru)')
             if cookie:
@@ -110,7 +128,7 @@ def GET(target, post=None, cookie=None):
             
         except Exception, e:
             if t % 10 == 0:
-                xbmc.log('GET EXCEPT [%s]' % (e), 4)
+                LogToXBMC('GET EXCEPT [%s]' % (e), xbmc.LOGERROR)
                 xbmc.sleep(30000)       
 
 def checkPort(params):

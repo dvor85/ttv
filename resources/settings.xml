@@ -7,7 +7,7 @@
 		<setting id="skin" label="Обложка" type="labelenum" values="st.anger" />
 		<setting default="8621" id="outport" label="Внеший порт AceStream" type="number" />
 		<setting default="false" id="startlast" label="Автозапуск аддона" type="bool" />
-		<setting default="false" id="debug" label="Debug" type="bool" visible="false" />
+		<setting default="2" id="debug" label="Debug" type="enum" values="DEBUG|INFO|NOTICE|WARNING|ERROR|SEVERE|FATAL|NONE"/>
 		<setting default="" id="uuid" type="text" visible="false" />
 		
 	</category>
