@@ -373,36 +373,12 @@ class WMainForm(xbmcgui.WindowXML):
             self.player.Start(buf)
                    
             if not self.IsCanceled():
-                xbmc.sleep(1000)   
+                xbmc.sleep(123)   
                 self.channel_number_str = str(self.selitem_id)
                 self.select_channel()  
                 self.channel_number_str = ''    
             
-            if xbmc.getCondVisibility("Window.IsVisible(home)"):
-                LogToXBMC("Close from HOME Window")
-                self.close()
-            elif xbmc.getCondVisibility("Window.IsVisible(video)"):
-                self.close()
-                LogToXBMC("Is Video Window")
-            elif xbmc.getCondVisibility("Window.IsVisible(programs)"):
-                self.close()
-                LogToXBMC("Is programs Window")
-            elif xbmc.getCondVisibility("Window.IsVisible(addonbrowser)"):
-                self.close()
-                LogToXBMC("Is addonbrowser Window")
-            elif xbmc.getCondVisibility("Window.IsMedia"):
-                self.close()
-                LogToXBMC("Is media Window")
-            elif xbmc.getCondVisibility("Window.IsVisible(12346)"):
-                self.close()
-                LogToXBMC("Is plugin Window")
-            else:
-                jrpc = json.loads(xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"GUI.GetProperties","params":{"properties":["currentwindow"]},"id":1}'))
-                if jrpc["result"]["currentwindow"]["id"] == 10025:
-                    LogToXBMC("Is video plugins window")
-                    self.close()
-                
-                LogToXBMC("Is Other Window")
+            
 
             LogToXBMC('CUR SELTAB %s' % self.seltab, xbmc.LOGDEBUG)
             
@@ -472,6 +448,32 @@ class WMainForm(xbmcgui.WindowXML):
                     return
             
             self.LoopPlay()
+            
+            if xbmc.getCondVisibility("Window.IsVisible(home)"):
+                LogToXBMC("Close from HOME Window")
+                self.close()
+            elif xbmc.getCondVisibility("Window.IsVisible(video)"):
+                self.close()
+                LogToXBMC("Is Video Window")
+            elif xbmc.getCondVisibility("Window.IsVisible(programs)"):
+                self.close()
+                LogToXBMC("Is programs Window")
+            elif xbmc.getCondVisibility("Window.IsVisible(addonbrowser)"):
+                self.close()
+                LogToXBMC("Is addonbrowser Window")
+            elif xbmc.getCondVisibility("Window.IsMedia"):
+                self.close()
+                LogToXBMC("Is media Window")
+            elif xbmc.getCondVisibility("Window.IsVisible(12346)"):
+                self.close()
+                LogToXBMC("Is plugin Window")
+            else:
+                jrpc = json.loads(xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"GUI.GetProperties","params":{"properties":["currentwindow"]},"id":1}'))
+                if jrpc["result"]["currentwindow"]["id"] == 10025:
+                    LogToXBMC("Is video plugins window")
+                    self.close()
+                
+                LogToXBMC("Is Other Window")
             
         # xbmc.executebuiltin('SendClick(12345,%s)' % self.seltab)
         elif controlID == WMainForm.BTN_FULLSCREEN:
@@ -729,4 +731,4 @@ class WMainForm(xbmcgui.WindowXML):
         self.hideStatus()
 
     def IsCanceled(self):
-        return self.isCanceled
+        return self.isCanceled or xbmc.abortRequested

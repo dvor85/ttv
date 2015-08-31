@@ -38,12 +38,12 @@ class Logger():
         self.tag = tag
         self.minlevel = minlevel
         
-    def __call__(self, mess, level=xbmc.LOGNOTICE):
-        self.log(mess, level)
+    def __call__(self, msg, level=xbmc.LOGNOTICE):
+        self.log(msg, level)
         
-    def log(self, mess, level):
+    def log(self, msg, level):
         if level >= self.minlevel:
-            xbmc.log("*** [{0}]: {1}".format(self.tag, mess), level)
+            xbmc.log("[{id}::{tag}] {msg}".format(**{'id':ADDON_ID, 'tag':self.tag, 'msg': msg}), level)
             
 LogToXBMC = Logger('DEFINES')
         
@@ -112,7 +112,7 @@ def showMessage(message='', heading='Torrent-TV.RU', times=6789):
 
 def GET(target, post=None, cookie=None):
     t = 0
-    while True:
+    while not xbmc.abortRequested:
         t += 1
         try:
             req = urllib2.Request(url=target, data=post)

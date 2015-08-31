@@ -409,7 +409,6 @@ class TSengine(xbmc.Player):
 
     def loop(self):
         # xbmc.sleep(500)
-        a = 0
         while self.playing:
             # if not self.isPlayingVideo():
             #    break
@@ -536,8 +535,8 @@ class SockThread(threading.Thread):
                 self.lastRecv = self.lastRecv + self.sock.recv(self.buffer)
                 if self.lastRecv.find('\r\n') > -1:
                     cmds = self.lastRecv.split('\r\n')
-                    for cmd in cmds:
-                        if cmd.replace(' ', '').__len__() > 0:
+                    for cmd in cmds:                        
+                        if cmd.replace(' ', '').__len__() > 0 and self.active and not self.error and not xbmc.abortRequested:
                             LogToXBMC('RUN Получена комманда = ' + cmd, xbmc.LOGDEBUG)
                             self._constructMsg(cmd)
                     self.lastRecv = ''
@@ -650,4 +649,4 @@ class SockThread(threading.Thread):
 
     def end(self):
         self.active = False
-        self.daemon = False
+        #self.daemon = False
