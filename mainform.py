@@ -341,7 +341,7 @@ class WMainForm(xbmcgui.WindowXML):
         if self.seltab != WMainForm.BTN_ARCHIVE_ID:
             self.checkButton(WMainForm.BTN_ARCHIVE_ID)
             
-    def LoopPlay(self, *args):        
+    def LoopPlay(self, *args):   
         while not self.IsCanceled():
             selItem = self.list.getListItem(self.selitem_id)
             
@@ -537,8 +537,6 @@ class WMainForm(xbmcgui.WindowXML):
             self.progress.setPercent(1)
             
     def onAction(self, action):                
-        if not action:
-            return
         LogToXBMC('Событие {0}'.format(action.getId()), xbmc.LOGDEBUG)        
         if action.getButtonCode() == 61513:
             return
@@ -599,8 +597,6 @@ class WMainForm(xbmcgui.WindowXML):
             super(WMainForm, self).onAction(action)
             
         self.hide_main_window()
-        
-        
 
     def updateList(self):
         self.showStatus("Получение списка каналов")

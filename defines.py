@@ -9,28 +9,41 @@ import threading
 import os
 from BeautifulSoup import BeautifulSoup
 
+
+
 ADDON_ID = 'script.torrent-tv.ru.pp'
 ADDON = xbmcaddon.Addon(id=ADDON_ID)
 ADDON_ICON = ADDON.getAddonInfo('icon')
 ADDON_PATH = ADDON.getAddonInfo('path')
 ADDON_ICON = ADDON.getAddonInfo('icon')
 PTR_FILE = ADDON.getSetting('port_path')
+CACHE_TYPE = ADDON.getSetting('cache_type')
+CACHE_DIR = ADDON.getSetting('cache_dir')
+CACHE_SIZE = ADDON.getSetting('cache_size')
 DATA_PATH = xbmc.translatePath(os.path.join("special://profile/addon_data", ADDON_ID))
-#TEMP_PATH = xbmc.translatePath(os.path.join("special://temp", ADDON_ID))
-#if not os.path.exists(TEMP_PATH):
-#    os.makedirs(TEMP_PATH)
 TTV_VERSION = '1.5.3'
 AUTOSTART = ADDON.getSetting('startlast') == 'true'
+
 try:
     DEBUG = int(ADDON.getSetting('debug'))
 except:
     DEBUG = xbmc.LOGNOTICE
     ADDON.setSetting('debug', str(DEBUG))
+    
+if (sys.platform == 'win32') or (sys.platform == 'win64'):
+    ADDON_PATH = ADDON_PATH.decode('utf-8')
+    DATA_PATH = DATA_PATH.decode('utf-8')
+    CACHE_DIR = CACHE_DIR.decode('utf-8')
+    
 skin = ADDON.getSetting('skin')
-SKIN_PATH = ADDON_PATH
-
 if (skin != None) and (skin != "") and (skin != 'st.anger'):
     SKIN_PATH = DATA_PATH
+else:
+    SKIN_PATH = ADDON_PATH
+
+
+
+
     
 class Logger():
     
@@ -95,10 +108,7 @@ class MyThread(threading.Thread):
     def stop(self):
         self.isCanceled = True
         
-if (sys.platform == 'win32') or (sys.platform == 'win64'):
-    ADDON_PATH = ADDON_PATH.decode('utf-8')
-    DATA_PATH = DATA_PATH.decode('utf-8')
-    #TEMP_PATH = TEMP_PATH.decode('utf-8')
+
 
 def showMessage(message='', heading='Torrent-TV.RU', times=6789):
     LogToXBMC('showMessage: %s' % message)
@@ -139,6 +149,8 @@ def checkPort(params):
             return False
         else:
             return True
+        
+
 
 def tryStringToInt(str_val):
     try:

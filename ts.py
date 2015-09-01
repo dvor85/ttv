@@ -77,7 +77,14 @@ class TSengine(xbmc.Player):
             self.sock.setblocking(0)
             self.sock.settimeout(32)
         except Exception, e:
+            import subprocess
             LogToXBMC('Ошибка подключения %s' % e, xbmc.LOGWARNING)
+            acestream_params = ["--live-cache-type", defines.CACHE_TYPE]
+            if defines.tryStringToInt(defines.CACHE_SIZE) > 0:
+                acestream_params += ["--live-cache-size", defines.CACHE_SIZE]
+            if defines.CACHE_TYPE == 'disk' and defines.CACHE_DIR != '':
+                acestream_params += ['--cache-dir', defines.CACHE_DIR]
+            
             if ((sys.platform == 'win32') or (sys.platform == 'win64')) and self.server_ip == '127.0.0.1':
                 try:
                     if self.pfile != '' and os.path.exists(self.pfile):
@@ -107,7 +114,9 @@ class TSengine(xbmc.Player):
                         LogToXBMC('Запуск TS path:%s' % self.pfile.encode("utf-8"), xbmc.LOGDEBUG)
                         if self.parent: self.parent.showStatus("Запуск TS")
                         a = 0
-                        self.startTS(self.ts_path)
+                        subprocess.Popen([self.ts_path] + acestream_params)
+                        
+                        #self.startTS(self.ts_path)
                         while not os.path.exists(self.pfile):
                             a = a + 1
                             if self.parent: self.parent.showStatus("Запуск TS")
@@ -126,11 +135,10 @@ class TSengine(xbmc.Player):
                 except Exception, e:
                     LogToXBMC('connectToTS: %s' % e, xbmc.LOGERROR)
                     return
-            else:
-                import subprocess
+            else:                
                 try:
-                    if self.parent: self.parent.showStatus("Запуск TS")
-                    proc = subprocess.Popen(["acestreamengine", "--client-console"])
+                    if self.parent: self.parent.showStatus("Запуск TS")                    
+                    subprocess.Popen(["acestreamengine"] + acestream_params + ["--client-console"])
                     i = 0
                     while True:
                         try:
@@ -213,6 +221,7 @@ class TSengine(xbmc.Player):
         self.paused = False
         self.closed = False
         self.trys = 0
+        self.thr = None
        
         LogToXBMC(defines.ADDON.getSetting('ip_addr'), xbmc.LOGDEBUG)
         if defines.ADDON.getSetting('ip_addr'):
