@@ -536,7 +536,7 @@ class SockThread(threading.Thread):
                 if self.lastRecv.find('\r\n') > -1:
                     cmds = self.lastRecv.split('\r\n')
                     for cmd in cmds:                        
-                        if cmd.replace(' ', '').__len__() > 0 and self.active and not self.error and not xbmc.abortRequested:
+                        if len(cmd.replace(' ', '')) > 0 and self.active and not self.error and not xbmc.abortRequested:
                             LogToXBMC('RUN Получена комманда = ' + cmd, xbmc.LOGDEBUG)
                             self._constructMsg(cmd)
                     self.lastRecv = ''

@@ -79,6 +79,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.channel_number_str = ''
         self.select_timer = None
         self.hide_window_timer = None
+        self.play_thr = None
         
     def onInit(self):
         try:
@@ -137,12 +138,9 @@ class WMainForm(xbmcgui.WindowXML):
                     self.showSimpleEpg(epg_id)
                 else:
                     self.showStatus('Загрузка программы')
-                    thr = defines.MyThread(self.getEpg, epg_id)
-                    thr.start()
+                    defines.MyThread(self.getEpg, epg_id).start()
                 
-                
-                thr = defines.MyThread(self.showScreen, selItem.getLabel2())
-                thr.start()
+                defines.MyThread(self.showScreen, selItem.getLabel2()).start()
                 img = self.getControl(1111)
                 img.setImage(selItem.getProperty('icon'))
         
@@ -343,7 +341,7 @@ class WMainForm(xbmcgui.WindowXML):
         if self.seltab != WMainForm.BTN_ARCHIVE_ID:
             self.checkButton(WMainForm.BTN_ARCHIVE_ID)
             
-    def LoopPlay(self):        
+    def LoopPlay(self, *args):        
         while not self.IsCanceled():
             selItem = self.list.getListItem(self.selitem_id)
             
@@ -355,8 +353,7 @@ class WMainForm(xbmcgui.WindowXML):
                     defines.showMessage("Трансляция доступна для VIP пользователей")
                 else:
                     defines.showMessage("На данный момент трансляция не доступна")
-                xbmc.sleep(30000)
-                continue
+                break
                  
             buf = xbmcgui.ListItem(selItem.getLabel())
             buf.setProperty('epg_cdn_id', selItem.getProperty('epg_cdn_id'))
@@ -364,8 +361,8 @@ class WMainForm(xbmcgui.WindowXML):
             buf.setProperty("type", selItem.getProperty("type"))
             buf.setProperty("id", selItem.getProperty("id"))
             if selItem.getProperty("type") == "archive":
-                self.fillRecords(buf, datetime.datetime.today())
-                return
+                self.fillRecords(buf, datetime.datetime.today())                
+                break
             LogToXBMC(selItem.getProperty("type"), xbmc.LOGDEBUG)
             self.playditem = self.selitem_id
             self.dump_selitem_info(self.cur_category, self.selitem_id)
@@ -379,8 +376,32 @@ class WMainForm(xbmcgui.WindowXML):
                 self.channel_number_str = ''    
             
             
-
-            LogToXBMC('CUR SELTAB %s' % self.seltab, xbmc.LOGDEBUG)
+        self.play_thr = None
+            
+        if xbmc.getCondVisibility("Window.IsVisible(home)"):
+            LogToXBMC("Close from HOME Window")
+            self.close()
+        elif xbmc.getCondVisibility("Window.IsVisible(video)"):
+            self.close()
+            LogToXBMC("Is Video Window")
+        elif xbmc.getCondVisibility("Window.IsVisible(programs)"):
+            self.close()
+            LogToXBMC("Is programs Window")
+        elif xbmc.getCondVisibility("Window.IsVisible(addonbrowser)"):
+            self.close()
+            LogToXBMC("Is addonbrowser Window")
+        elif xbmc.getCondVisibility("Window.IsMedia"):
+            self.close()
+            LogToXBMC("Is media Window")
+        elif xbmc.getCondVisibility("Window.IsVisible(12346)"):
+            self.close()
+            LogToXBMC("Is plugin Window")
+        else:
+            jrpc = json.loads(xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"GUI.GetProperties","params":{"properties":["currentwindow"]},"id":1}'))
+            if jrpc["result"]["currentwindow"]["id"] == 10025:
+                LogToXBMC("Is video plugins window")
+                self.close()
+             
             
     def onClick(self, controlID):
         control = self.getControl(controlID)
@@ -430,7 +451,7 @@ class WMainForm(xbmcgui.WindowXML):
                     LogToXBMC("SELITEM EMPTY", xbmc.LOGDEBUG)
                 datefrm = DateForm("dateform.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
                 if datefrm == None:
-                    LogToXBMC("Form not created", xbmc.LOGWARNING)
+                    LogToXBMC('Form "{0}" not created'.format('dateform.xml'), xbmc.LOGWARNING)
 
                 stime = time.strptime(selItem.getProperty("date"), "%Y-%m-%d")
                 datefrm.date = datetime.date(stime.tm_year, stime.tm_mon, stime.tm_mday)
@@ -447,33 +468,13 @@ class WMainForm(xbmcgui.WindowXML):
                     self.fillRecords(self.archive[0], datefrm.date)
                     return
             
-            self.LoopPlay()
-            
-            if xbmc.getCondVisibility("Window.IsVisible(home)"):
-                LogToXBMC("Close from HOME Window")
-                self.close()
-            elif xbmc.getCondVisibility("Window.IsVisible(video)"):
-                self.close()
-                LogToXBMC("Is Video Window")
-            elif xbmc.getCondVisibility("Window.IsVisible(programs)"):
-                self.close()
-                LogToXBMC("Is programs Window")
-            elif xbmc.getCondVisibility("Window.IsVisible(addonbrowser)"):
-                self.close()
-                LogToXBMC("Is addonbrowser Window")
-            elif xbmc.getCondVisibility("Window.IsMedia"):
-                self.close()
-                LogToXBMC("Is media Window")
-            elif xbmc.getCondVisibility("Window.IsVisible(12346)"):
-                self.close()
-                LogToXBMC("Is plugin Window")
+            if not self.play_thr:
+                self.play_thr = defines.MyThread(self.LoopPlay, None)
+                self.play_thr.start()
             else:
-                jrpc = json.loads(xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"GUI.GetProperties","params":{"properties":["currentwindow"]},"id":1}'))
-                if jrpc["result"]["currentwindow"]["id"] == 10025:
-                    LogToXBMC("Is video plugins window")
-                    self.close()
-                
-                LogToXBMC("Is Other Window")
+                self.player.Stop()
+            
+
             
         # xbmc.executebuiltin('SendClick(12345,%s)' % self.seltab)
         elif controlID == WMainForm.BTN_FULLSCREEN:
@@ -537,7 +538,6 @@ class WMainForm(xbmcgui.WindowXML):
             
     def onAction(self, action):                
         if not action:
-            super(WMainForm, self).onAction(action)
             return
         LogToXBMC('Событие {0}'.format(action.getId()), xbmc.LOGDEBUG)        
         if action.getButtonCode() == 61513:
@@ -639,9 +639,12 @@ class WMainForm(xbmcgui.WindowXML):
 
     def showStatus(self, text):
         LogToXBMC("showStatus: %s" % text)
-        if self.img_progress: self.img_progress.setVisible(True)
-        if self.txt_progress: self.txt_progress.setLabel(text)
-        if self.infoform: self.infoform.printASStatus(text)
+        try:
+            if self.img_progress: self.img_progress.setVisible(True)
+            if self.txt_progress: self.txt_progress.setLabel(text)
+            if self.infoform: self.infoform.printASStatus(text)
+        except Exception as ex:
+            LogToXBMC("showStatus error: {0}". format(ex), xbmc.LOGWARNING)
 
     def showInfoStatus(self, text):
         if self.infoform: self.infoform.printASStatus(text)

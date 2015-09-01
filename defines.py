@@ -46,11 +46,10 @@ class Logger():
             xbmc.log("[{id}::{tag}] {msg}".format(**{'id':ADDON_ID, 'tag':self.tag, 'msg': msg}), level)
             
 LogToXBMC = Logger('DEFINES')
-        
+
     
 def Autostart(state):
-    userdata = xbmc.translatePath("special://masterprofile")
-    autoexec = os.path.join(userdata, 'autoexec.py')
+    autoexec = os.path.join(xbmc.translatePath("special://masterprofile"), 'autoexec.py')
 
     if os.path.isfile(autoexec): 
         mode = 'r+' 
@@ -88,6 +87,7 @@ class MyThread(threading.Thread):
         self.func = func
         self.params = params
         self.isCanceled = False
+        self.daemon = False
 
     def run(self):
         self.func(self.params)

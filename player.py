@@ -150,7 +150,6 @@ class MyPlayer(xbmcgui.WindowXML):
         LogToXBMC('CLOSE STOP')
         xbmc.executebuiltin('PlayerControl(Stop)')
         self.TSPlayer.tsstop()
-        #self.TSPlayer.onPlayBackStopped()
 
     def Start(self, li):
         LogToXBMC("Start play")
@@ -217,8 +216,9 @@ class MyPlayer(xbmcgui.WindowXML):
         LogToXBMC('CHANNEL NUMBER IS: %i' % self.channel_number, xbmc.LOGDEBUG)              
         if 0 < self.channel_number < self.parent.list.size() and self.parent.selitem_id != self.channel_number:            
             self.parent.selitem_id = self.channel_number
-            self.Stop()              
-        self.swinfo.setVisible(False)     
+            self.Stop()           
+        else:       
+            self.swinfo.setVisible(False)     
         self.channel_number = self.parent.selitem_id  
         self.chinfo.setLabel(self.parent.list.getListItem(self.parent.selitem_id).getLabel()) 
         self.channel_number_str = ''
