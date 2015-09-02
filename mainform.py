@@ -488,6 +488,7 @@ class WMainForm(xbmcgui.WindowXML):
     def close(self):
         xbmcgui.WindowXML.close(self)
         self.isCanceled = True
+        #defines.GET.exit = True
 
     def showInfoWindow(self):
         self.infoform = InfoForm("inform.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))

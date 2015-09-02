@@ -8,7 +8,6 @@ import threading
 import xbmc
 import time
 import json
-
 import defines
 
 from ts import TSengine as tsengine
@@ -204,11 +203,12 @@ class MyPlayer(xbmcgui.WindowXML):
         if self.TSPlayer:
             self.TSPlayer.end()
         import subprocess
-        import sys
+        import sys, os
+        
 
-        if sys.platform == 'win32' or sys.platform == 'win64':
+        if sys.platform.startswith('win'):
             LogToXBMC("Закрыть TS")
-            subprocess.Popen('taskkill /F /IM ace_engine.exe /T')
+            subprocess.Popen('taskkill /F /IM {0} /T'.format(os.path.basename(self.TSPlayer.ace_engine)))
             self.TSPlayer = None
             
     def run_selected_channel(self):

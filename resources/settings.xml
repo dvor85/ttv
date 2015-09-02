@@ -11,11 +11,13 @@
 	</category>
 	<category label="AceStream">
 		<setting id="gender" label="Пол" type="enum" values="Мужской|Женский" />
-		<setting id="age" label="Возраст" type="enum" values="Младше 13|13-17|18-24|25-34|35-44|45-54|55-64|Старше 64" />	
-		<setting default="disk" id="cache_type" label="Тип кэша" type="labelenum" values="disk|memory" />
-		<setting default="209715200" id="cache_size" label="Размер кэша (байт)" type="number" />
-		<setting default="" id="cache_dir" label="Папка кэша" type="folder" source="local" option="writeable" enable="eq(-2,0)" />	
-		
+		<setting id="age" label="Возраст" type="enum" values="Младше 13|13-17|18-24|25-34|35-44|45-54|55-64|Старше 64" />
+		<setting default="console" id="ace_client" label="AceStreamEngine клиент" type="labelenum" values="console|wx|gtk" />	
+		<setting default="disk" id="live_cache_type" label="Тип кэша" type="labelenum" values="disk|memory" />
+		<setting default="209715200" id="live_cache_size" label="Размер кэша (байт)" type="number" />
+		<setting default="" id="cache_dir" label="Папка кэша" type="folder" source="local" option="writeable" visible="eq(-2,0)" />	
+		<setting default="127.0.0.1" id="ip_addr" label="IP-адрес acestreamengine" visible="false"/>
+		<setting id="port" label="Порт acestreamengine" visible="false" />
 		
 	</category>
 </settings>

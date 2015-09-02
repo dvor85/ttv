@@ -17,9 +17,10 @@ ADDON_ICON = ADDON.getAddonInfo('icon')
 ADDON_PATH = ADDON.getAddonInfo('path')
 ADDON_ICON = ADDON.getAddonInfo('icon')
 PTR_FILE = ADDON.getSetting('port_path')
-CACHE_TYPE = ADDON.getSetting('cache_type')
+LIVE_CACHE_TYPE = ADDON.getSetting('live_cache_type')
+LIVE_CACHE_SIZE = ADDON.getSetting('live_cache_size')
 CACHE_DIR = ADDON.getSetting('cache_dir')
-CACHE_SIZE = ADDON.getSetting('cache_size')
+ACE_CLIENT = ADDON.getSetting('ace_client')
 DATA_PATH = xbmc.translatePath(os.path.join("special://profile/addon_data", ADDON_ID))
 TTV_VERSION = '1.5.3'
 AUTOSTART = ADDON.getSetting('startlast') == 'true'
@@ -30,7 +31,7 @@ except:
     DEBUG = xbmc.LOGNOTICE
     ADDON.setSetting('debug', str(DEBUG))
     
-if (sys.platform == 'win32') or (sys.platform == 'win64'):
+if sys.platform.startswith('win'):
     ADDON_PATH = ADDON_PATH.decode('utf-8')
     DATA_PATH = DATA_PATH.decode('utf-8')
     CACHE_DIR = CACHE_DIR.decode('utf-8')

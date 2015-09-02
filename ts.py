@@ -32,6 +32,48 @@ class TSengine(xbmc.Player):
     MODE_RAW = 'RAW'
     MODE_PID = 'PID'
     MODE_NONE = None
+    
+    def __init__(self, parent=None, ipaddr='127.0.0.1'):
+        LogToXBMC("Init TSEngine")
+        self.last_error = None
+        self.quid = 0
+        self.torrent = ''
+        self.amalker = False
+        self.parent = parent
+        self.stream = False
+        self.playing = False
+        self.ace_engine = ''
+        self.port_file = ''
+        self.paused = False
+        self.closed = False
+        self.trys = 0
+        self.thr = None
+       
+        LogToXBMC(defines.ADDON.getSetting('ip_addr'), xbmc.LOGDEBUG)
+        if defines.ADDON.getSetting('ip_addr'):
+            self.server_ip = defines.ADDON.getSetting('ip_addr')
+        else:
+            self.server_ip = ipaddr
+            defines.ADDON.setSetting('ip_addr', ipaddr)
+        if defines.ADDON.getSetting('web_port'):
+            self.webport = defines.ADDON.getSetting('webport')
+        else:
+            self.webport = '6878'
+        if defines.ADDON.getSetting('port'):
+            self.aceport = int(defines.ADDON.getSetting('port'))
+        else:
+            self.aceport = 62062
+
+        if not defines.ADDON.getSetting('age'):
+            defines.ADDON.setSetting('age', '1')
+        if not defines.ADDON.getSetting('gender'):
+            defines.ADDON.setSetting('gender', '1')
+        try:
+            LogToXBMC('Connect to AceEngine', xbmc.LOGDEBUG)
+            self.connectToTS()
+        except Exception, e:
+            LogToXBMC('ERROR Connect to AceEngine: %s' % e, xbmc.LOGFATAL)
+            return
 
     def onPlayBackStopped(self):
         LogToXBMC('onPlayBackStopped')
@@ -61,17 +103,25 @@ class TSengine(xbmc.Player):
             self.parent.amalkerWnd.show()
             LogToXBMC('END SHOW ADS Window', xbmc.LOGDEBUG)
 
-    def startTS(self, path):
-        if (sys.platform == 'win32') or (sys.platform == 'win64'):
-            try:
-                os.startfile(path)
-            except Exception, e: 
-                self.last_error = '%s' % e
-                LogToXBMC('RunProcess %s' % e, xbmc.LOGERROR)
+    def getAceEngine_exe(self):
+        LogToXBMC('Считываем путь к ace_engine.exe', xbmc.LOGDEBUG)      
+        import _winreg              
+        t = None
+        try:
+            LogToXBMC('ACEStream', xbmc.LOGDEBUG)
+            t = _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, 'Software\\ACEStream')
+            return _winreg.QueryValueEx(t , 'EnginePath')[0]           
+            
+        except Exception, e:
+            LogToXBMC('Error Opening acestream.port %s' % e, xbmc.LOGERROR)
+            return ''
+        finally:
+            if t:    
+                _winreg.CloseKey(t)
 
     def connectToTS(self):
         try:
-            LogToXBMC('Подключение к TS %s %s ' % (self.server_ip, self.aceport))
+            LogToXBMC('Подключение к AceEngine %s %s ' % (self.server_ip, self.aceport))
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.connect((self.server_ip, self.aceport))
             self.sock.setblocking(0)
@@ -79,74 +129,63 @@ class TSengine(xbmc.Player):
         except Exception, e:
             import subprocess
             LogToXBMC('Ошибка подключения %s' % e, xbmc.LOGWARNING)
-            acestream_params = ["--live-cache-type", defines.CACHE_TYPE]
-            if defines.tryStringToInt(defines.CACHE_SIZE) > 0:
-                acestream_params += ["--live-cache-size", defines.CACHE_SIZE]
-            if defines.CACHE_TYPE == 'disk' and defines.CACHE_DIR != '':
+            acestream_params = ["--live-cache-type", defines.LIVE_CACHE_TYPE]
+            if defines.tryStringToInt(defines.LIVE_CACHE_SIZE) > 0:
+                acestream_params += ["--live-cache-size", defines.LIVE_CACHE_SIZE]
+            if defines.LIVE_CACHE_TYPE == 'disk' and defines.CACHE_DIR != '':
                 acestream_params += ['--cache-dir', defines.CACHE_DIR]
+            acestream_params += ["--client-{0}".format(defines.ACE_CLIENT)]
             
-            if ((sys.platform == 'win32') or (sys.platform == 'win64')) and self.server_ip == '127.0.0.1':
+            if sys.platform.startswith('win') and self.server_ip == '127.0.0.1':
                 try:
-                    if self.pfile != '' and os.path.exists(self.pfile):
-                        os.remove(self.pfile)
-                    LogToXBMC('Считываем порт', xbmc.LOGDEBUG)
-                    import _winreg
-                    t = None
-                    path = ''
-                    
-                    try:
-                        LogToXBMC('ACEStream', xbmc.LOGDEBUG)
-                        t = _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, 'Software\\ACEStream')
-                        self.ts_path = _winreg.QueryValueEx(t , 'EnginePath')[0]
-                        LogToXBMC(self.ts_path.encode('utf-8'), xbmc.LOGDEBUG)
-                        path = self.ts_path.replace('ace_engine.exe', '')
-                        LogToXBMC(path.encode('utf-8'), xbmc.LOGDEBUG)
-                    except Exception, e:
-                        LogToXBMC('Error Opening acestream.port %s' % e, xbmc.LOGERROR)
-                        return
-                        
-                    
-                    _winreg.CloseKey(t)
-                    LogToXBMC('1', xbmc.LOGDEBUG)
-                    self.pfile = os.path.join(path, 'acestream.port')
-                    LogToXBMC('Пытаюсь открыть acestream.port %s' % self.pfile.encode('utf-8'))
-                    if not os.path.exists(self.pfile):
-                        LogToXBMC('Запуск TS path:%s' % self.pfile.encode("utf-8"), xbmc.LOGDEBUG)
-                        if self.parent: self.parent.showStatus("Запуск TS")
-                        a = 0
-                        subprocess.Popen([self.ts_path] + acestream_params)
-                        
-                        #self.startTS(self.ts_path)
-                        while not os.path.exists(self.pfile):
-                            a = a + 1
-                            if self.parent: self.parent.showStatus("Запуск TS")
-                            if a >= 30:
-                                LogToXBMC('Не возможно запустить TS', xbmc.LOGWARNING)
-                                raise Exception("Не возможно запустить TS")
+                    if self.port_file != '' and os.path.exists(self.port_file):
+                        os.remove(self.port_file)
+                   
+                    self.ace_engine = self.getAceEngine_exe()
+                    ace_console = os.path.join(os.path.dirname(self.ace_engine), "ace_console.exe")
+                    if os.path.isfile(ace_console):
+                        self.ace_engine = ace_console 
+                    LogToXBMC("AceEngine path: {0}".format(self.ace_engine.encode('utf-8'), xbmc.LOGDEBUG))       
+                       
+                    self.port_file = os.path.join(os.path.dirname(self.ace_engine), 'acestream.port')
+                    LogToXBMC('Пытаюсь открыть acestream.port %s' % self.port_file.encode('utf-8'))
+                    if not os.path.exists(self.port_file):
+                        LogToXBMC('Запуск AceEngine path:%s' % self.ace_engine.encode("utf-8"), xbmc.LOGDEBUG)
+                        if self.parent: self.parent.showStatus("Запуск AceEngine")
+                        i = 0
+                        subprocess.Popen([self.ace_engine] + acestream_params)
+                        while not os.path.exists(self.port_file):
+                            i += 1
+                            if self.parent: self.parent.showStatus("Запуск AceEngine")
+                            if i >= 30:
+                                msg = 'Невозможно запустить AceEngine'
+                                LogToXBMC(msg, xbmc.LOGERROR)
+                                raise Exception(msg)
                             xbmc.sleep(986)
-                            LogToXBMC('3', xbmc.LOGDEBUG)
-                    LogToXBMC('2', xbmc.LOGDEBUG)
-                    if self.parent: self.parent.hideStatus()
-                    with open(self.pfile, 'r') as gf:
+                    if self.parent: 
+                        self.parent.hideStatus()
+                    LogToXBMC('Считываем порт', xbmc.LOGDEBUG)
+                    with open(self.port_file, 'r') as gf:
                         self.aceport = int(gf.read())
-                    defines.ADDON.setSetting('port', '%s' % self.aceport)
+                    defines.ADDON.setSetting('port', str(self.aceport))
                     self.connectToTS()
                     return
                 except Exception, e:
-                    LogToXBMC('connectToTS: %s' % e, xbmc.LOGERROR)
+                    LogToXBMC('connectToTS: %s' % e, xbmc.LOGFATAL)
                     return
             else:                
                 try:
-                    if self.parent: self.parent.showStatus("Запуск TS")                    
-                    subprocess.Popen(["acestreamengine"] + acestream_params + ["--client-console"])
+                    if self.parent: 
+                        self.parent.showStatus("Запуск acestreamengine")                    
+                    subprocess.Popen(["acestreamengine"] + acestream_params)
                     i = 0
                     while True:
                         try:
-                            i = i + 1
-                            if i > 30:
+                            i += 1
+                            if i >= 30:
                                 break
                             LogToXBMC("Попытка подлючения")
-                            if self.parent: self.parent.showStatus("Запуск TS %s" % i)
+                            if self.parent: self.parent.showStatus("Запуск acestreamengine %s" % i)
                             self.sock.connect((self.server_ip, self.aceport))
                             if self.parent: self.parent.hideStatus()
                             xbmc.sleep(1000)
@@ -158,8 +197,8 @@ class TSengine(xbmc.Player):
                     if i > 30:
                         msg = TSMessage()
                         msg.type = TSMessage.ERROR
-                        msg.params = "Не возможно запустить TS"
-                        LogToXBMC("Не возможно запустить TS", xbmc.LOGERROR)
+                        msg.params = "Невозможно запустить acestreamengine"
+                        LogToXBMC(msg.params, xbmc.LOGERROR)
                         self.showState(msg)
                         return
                     
@@ -178,7 +217,7 @@ class TSengine(xbmc.Player):
         msg = self.thr.getTSMessage()
         if msg.getType() == TSMessage.HELLOTS and not msg.getParams().has_key('key'):
             self.last_error = 'Incorrect msg from TS'
-            if self.parent: self.parent.showStatus("Неверный ответ от TS. Операция прервана")
+            if self.parent: self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
             LogToXBMC('Incorrect msg from TS %s' % msg.getType(), xbmc.LOGERROR)
             self.end()
             return
@@ -197,57 +236,17 @@ class TSengine(xbmc.Player):
                 self.end()
                 return
         else:
-            self.last_error = 'Incorrect msg from TS'
-            LogToXBMC('Incorrect msg from TS %s' % msg.getType(), xbmc.LOGERROR)
-            if self.parent: self.parent.showStatus("Неверный ответ от TS. Операция прервана")
+            self.last_error = 'Incorrect msg from AceEngine'
+            LogToXBMC('Incorrect msg from AceEngine %s' % msg.getType(), xbmc.LOGERROR)
+            if self.parent: self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
             self.end()
             return
 
         self.thr.msg = TSMessage()
-        LogToXBMC('End Init TSEngine', xbmc.LOGDEBUG)
+        LogToXBMC('End Init AceEngine', xbmc.LOGDEBUG)
         if self.parent: self.parent.hideStatus()
         
-    def __init__(self, parent=None, ipaddr='127.0.0.1'):
-        LogToXBMC("Init TSEngine")
-        self.last_error = None
-        self.quid = 0
-        self.torrent = ''
-        self.amalker = False
-        self.parent = parent
-        self.stream = False
-        self.playing = False
-        self.ts_path = ''
-        self.pfile = ''
-        self.paused = False
-        self.closed = False
-        self.trys = 0
-        self.thr = None
-       
-        LogToXBMC(defines.ADDON.getSetting('ip_addr'), xbmc.LOGDEBUG)
-        if defines.ADDON.getSetting('ip_addr'):
-            self.server_ip = defines.ADDON.getSetting('ip_addr')
-        else:
-            self.server_ip = ipaddr
-            defines.ADDON.setSetting('ip_addr', ipaddr)
-        if defines.ADDON.getSetting('web_port'):
-            self.webport = defines.ADDON.getSetting('webport')
-        else:
-            self.webport = '6878'
-        if defines.ADDON.getSetting('port'):
-            self.aceport = int(defines.ADDON.getSetting('port'))
-        else:
-            self.aceport = 62062
-
-        if not defines.ADDON.getSetting('age'):
-            defines.ADDON.setSetting('age', '1')
-        if not defines.ADDON.getSetting('gender'):
-            defines.ADDON.setSetting('gender', '1')
-        try:
-            LogToXBMC('Connetct to TS', xbmc.LOGDEBUG)
-            self.connectToTS()
-        except Exception, e:
-            LogToXBMC('ERROR Connect to TS: %s' % e, xbmc.LOGFATAL)
-            return
+    
         
     def sendCommand(self, cmd):
         try:
@@ -275,10 +274,10 @@ class TSengine(xbmc.Player):
                 if not self.stream: xbmc.sleep(DEFAULT_TIMEOUT)
                 a = a + 1
                 if a >= 249:
-                    LogToXBMC('TS is freeze', xbmc.LOGWARNING)
+                    LogToXBMC('AceEngine is freeze', xbmc.LOGWARNING)
                     if self.parent: self.parent.showStatus("Ошибка ожидания. Операция прервана")
                     self.tsstop()
-                    raise Exception('TS is freeze')
+                    raise Exception('AceEngine is freeze')
                     return
         except:
             self.tsstop()
@@ -325,9 +324,9 @@ class TSengine(xbmc.Player):
                 self.last_error = e
                 self.end()
         else:
-            self.last_error = 'Incorrect msg from TS'
-            if self.parent: self.parent.showStatus("Неверный ответ от TS. Операция прервана")
-            LogToXBMC('Incorrect msg from TS %s' % msg.getType(), xbmc.LOGFATAL)
+            self.last_error = 'Incorrect msg from AceEngine'
+            if self.parent: self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
+            LogToXBMC('Incorrect msg from AceEngine %s' % msg.getType(), xbmc.LOGFATAL)
             self.tsstop()
             return
 
@@ -381,8 +380,8 @@ class TSengine(xbmc.Player):
             try:
                 _params = msg.getParams()
                 if not _params.has_key('url'):
-                    if self.parent: self.parent.showStatus("Неверный ответ от TS. Операция прервана")
-                    raise Exception('Incorrect msg from TS %s' % msg.getType())
+                    if self.parent: self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
+                    raise Exception('Incorrect msg from AceEngine %s' % msg.getType())
 
                 self.amalker = _params.has_key('ad') and not _params.has_key('interruptable')
                 self.link = _params['url'].replace('127.0.0.1', self.server_ip).replace('6878', self.webport)
@@ -411,9 +410,9 @@ class TSengine(xbmc.Player):
                 if self.parent: self.parent.showStatus("Ошибка. Операция прервана")
                 self.tsstop()
         else:
-            self.last_error = 'Incorrect msg from TS %s' % msg.getType()
+            self.last_error = 'Incorrect msg from AceEngine %s' % msg.getType()
             LogToXBMC(self.last_error, xbmc.LOGERROR)
-            if self.parent: self.parent.showStatus("Неверный ответ от TS. Операция прервана")
+            if self.parent: self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
             self.tsstop()
 
     def loop(self):
@@ -448,7 +447,7 @@ class TSengine(xbmc.Player):
                 try:
                     _params = msg.getParams()
                     if not _params.has_key('url'):
-                        raise Exception('Incorrect msg from TS %s' % msg.getType())
+                        raise Exception('Incorrect msg from AceEngine %s' % msg.getType())
                     if _params.has_key('stream') and _params['stream'] == '1':
                         self.stream = True
                     else:
@@ -469,8 +468,8 @@ class TSengine(xbmc.Player):
                     if self.parent: self.parent.showStatus("Ошибка. Операция прервана")
                     self.tsstop()
             else:
-                self.last_error = 'Incorrect msg from TS %s' % msg.getType()
-                if self.parent: self.parent.showStatus("Неверный ответ от TS. Операция прервана")
+                self.last_error = 'Incorrect msg from AceEngine %s' % msg.getType()
+                if self.parent: self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
                 LogToXBMC(self.last_error, xbmc.LOGERROR)
                 self.tsstop()
 
@@ -479,8 +478,9 @@ class TSengine(xbmc.Player):
         self.sendCommand('SHUTDOWN')
         self.last_error = None
         LogToXBMC("Request to close connection")
-        self.thr.msg = TSMessage()
-        self.thr.active = False
+        if self.thr:
+            self.thr.msg = TSMessage()
+            self.thr.active = False
         self.playing = False
         self.paused = False
         self.sock.close()
@@ -488,8 +488,9 @@ class TSengine(xbmc.Player):
     def tsstop(self):
         self.sendCommand('STOP')
         self.playing = False
-        self.thr.active = False
-        self.thr.join()
+        if self.thr:
+            self.thr.active = False
+            self.thr.join()
         self.last_error = None
         self.paused = False
 
@@ -658,4 +659,3 @@ class SockThread(threading.Thread):
 
     def end(self):
         self.active = False
-        #self.daemon = False

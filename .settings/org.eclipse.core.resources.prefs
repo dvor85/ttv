@@ -2,7 +2,6 @@ eclipse.preferences.version=1
 encoding/autostart.py=utf-8
 encoding/default.py=utf-8
 encoding/defines.py=utf-8
-encoding/gui.py=utf-8
 encoding/infoform.py=utf-8
 encoding/mainform.py=utf-8
 encoding/menu.py=utf-8
