@@ -112,18 +112,19 @@ class MyPlayer(xbmcgui.WindowXML):
             if epg_id and self.parent.epg.has_key(epg_id) and len(self.parent.epg[epg_id]) > 0:
                 ctime = time.time()
                 self.curepg = filter(lambda x: (float(x['etime']) > ctime), self.parent.epg[epg_id])
-                bt = float(self.curepg[0]['btime'])
-                et = float(self.curepg[0]['etime'])
-                sbt = time.localtime(bt)
-                set = time.localtime(et)
-                progress.setPercent((ctime - bt) * 100 / (et - bt))
-                controlEpg.setLabel('%.2d:%.2d - %.2d:%.2d %s' % (sbt.tm_hour, sbt.tm_min, set.tm_hour, set.tm_min, self.curepg[0]['name']))
-                self.setNextEpg()
+                if self.curepg:
+                    bt = float(self.curepg[0]['btime'])
+                    et = float(self.curepg[0]['etime'])
+                    sbt = time.localtime(bt)
+                    set = time.localtime(et)
+                    progress.setPercent((ctime - bt) * 100 / (et - bt))
+                    controlEpg.setLabel('%.2d:%.2d - %.2d:%.2d %s' % (sbt.tm_hour, sbt.tm_min, set.tm_hour, set.tm_min, self.curepg[0]['name']))
+                    self.setNextEpg()
+                    return
                 
-            else:
-                controlEpg.setLabel('Нет программы')
-                controlEpg1.setLabel('')
-                progress.setPercent(1)
+            controlEpg.setLabel('Нет программы')
+            controlEpg1.setLabel('')
+            progress.setPercent(1)
         
             
     def setNextEpg(self):
@@ -148,7 +149,8 @@ class MyPlayer(xbmcgui.WindowXML):
     def Stop(self):
         LogToXBMC('CLOSE STOP')
         xbmc.executebuiltin('PlayerControl(Stop)')
-        self.TSPlayer.tsstop()
+        if self.TSPlayer:
+            self.TSPlayer.tsstop()
 
     def Start(self, li):
         LogToXBMC("Start play")

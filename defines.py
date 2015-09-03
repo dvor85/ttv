@@ -10,17 +10,12 @@ import os
 from BeautifulSoup import BeautifulSoup
 
 
-
 ADDON_ID = 'script.torrent-tv.ru.pp'
 ADDON = xbmcaddon.Addon(id=ADDON_ID)
 ADDON_ICON = ADDON.getAddonInfo('icon')
 ADDON_PATH = ADDON.getAddonInfo('path')
 ADDON_ICON = ADDON.getAddonInfo('icon')
 PTR_FILE = ADDON.getSetting('port_path')
-LIVE_CACHE_TYPE = ADDON.getSetting('live_cache_type')
-LIVE_CACHE_SIZE = ADDON.getSetting('live_cache_size')
-CACHE_DIR = ADDON.getSetting('cache_dir')
-ACE_CLIENT = ADDON.getSetting('ace_client')
 DATA_PATH = xbmc.translatePath(os.path.join("special://profile/addon_data", ADDON_ID))
 TTV_VERSION = '1.5.3'
 AUTOSTART = ADDON.getSetting('startlast') == 'true'
@@ -34,7 +29,6 @@ except:
 if sys.platform.startswith('win'):
     ADDON_PATH = ADDON_PATH.decode('utf-8')
     DATA_PATH = DATA_PATH.decode('utf-8')
-    CACHE_DIR = CACHE_DIR.decode('utf-8')
     
 skin = ADDON.getSetting('skin')
 if (skin != None) and (skin != "") and (skin != 'st.anger'):
@@ -42,7 +36,7 @@ if (skin != None) and (skin != "") and (skin != 'st.anger'):
 else:
     SKIN_PATH = ADDON_PATH
 
-
+closeRequested = threading.Event()
 
 
     
@@ -107,7 +101,7 @@ class MyThread(threading.Thread):
         self.func(self.params)
         
     def stop(self):
-        self.isCanceled = True
+        self.isCanceled = True        
         
 
 
@@ -123,7 +117,8 @@ def showMessage(message='', heading='Torrent-TV.RU', times=6789):
 
 def GET(target, post=None, cookie=None):
     t = 0
-    while not xbmc.abortRequested:
+    monitor = xbmc.Monitor()
+    while not monitor.abortRequested() and not closeRequested.isSet():
         t += 1
         try:
             req = urllib2.Request(url=target, data=post)
@@ -140,13 +135,13 @@ def GET(target, post=None, cookie=None):
         except Exception, e:
             if t % 10 == 0:
                 LogToXBMC('GET EXCEPT [%s]' % (e), xbmc.LOGERROR)
-                xbmc.sleep(30000)       
+                monitor.waitForAbort(30)       
 
 def checkPort(params):
         data = GET("http://2ip.ru/check-port/?port=%s" % params)
         beautifulSoup = BeautifulSoup(data)
         port = beautifulSoup.find('div', attrs={'class': 'ip-entry'}).text
-        if port.encode('utf-8').find("Порт закрыт") > -1:
+        if port.encode('utf-8').find("закрыт") > -1:
             return False
         else:
             return True

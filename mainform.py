@@ -89,7 +89,6 @@ class WMainForm(xbmcgui.WindowXML):
                 from okdialog import OkDialog
                 dialog = OkDialog("okdialog.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
                 dialog.setText("Текущая версия приложения (%s) не поддерживается. Последняя версия %s " % (defines.TTV_VERSION, jdata['last_version'].encode('utf-8')))
-                # dialog.setText('Hello World')
                 dialog.doModal()
                 self.close()
             self.img_progress = self.getControl(108)
@@ -486,9 +485,12 @@ class WMainForm(xbmcgui.WindowXML):
             return
     
     def close(self):
-        xbmcgui.WindowXML.close(self)
+        defines.closeRequested.set()
         self.isCanceled = True
-        #defines.GET.exit = True
+        if self.player.TSPlayer:
+            self.player.TSPlayer.closed = True
+            self.player.Stop()
+        xbmcgui.WindowXML.close(self)
 
     def showInfoWindow(self):
         self.infoform = InfoForm("inform.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
@@ -543,11 +545,6 @@ class WMainForm(xbmcgui.WindowXML):
             return
         if action in WMainForm.CANCEL_DIALOG:
             LogToXBMC('CLOSE FORM', xbmc.LOGDEBUG)
-            self.isCanceled = True
-            # xbmc.executebuiltin('Action(PreviousMenu)')
-            if self.player.TSPlayer:
-                self.player.TSPlayer.closed = True
-                self.player.Stop()
             self.close()
         elif action.getId() in WMainForm.ARROW_ACTIONS:
             LogToXBMC("ARROW_ACTION %s" % self.seltab, xbmc.LOGDEBUG)
@@ -731,4 +728,4 @@ class WMainForm(xbmcgui.WindowXML):
         self.hideStatus()
 
     def IsCanceled(self):
-        return self.isCanceled or xbmc.abortRequested
+        return self.isCanceled or xbmc.abortRequested or defines.closeRequested.isSet()
