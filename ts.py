@@ -166,7 +166,7 @@ class TSengine(xbmc.Player):
                         
                                             
             except Exception, e:
-                LogToXBMC('connectToAceStream: %s' % e, xbmc.LOGFATAL)
+                LogToXBMC('startAceEngine: %s' % e, xbmc.LOGFATAL)
                 return
         else:    
             acestream_params += ["--client-console"]            
@@ -176,7 +176,7 @@ class TSengine(xbmc.Player):
                 try:                    
                     subprocess.Popen(["acestreamengine"] + acestream_params)
                 except:
-                    xbmc.executebuiltin('XBMC.StartAndroidActivity("org.acestream.engine")')  
+                    xbmc.executebuiltin('XBMC.StartAndroidActivity("org.acestream.engine")') 
                     xbmc.executebuiltin('XBMC.StartAndroidActivity("org.xbmc.kodi")')               
             except Exception as e:
                 LogToXBMC('Cannot start AceEngine', xbmc.LOGFATAL)
@@ -194,11 +194,11 @@ class TSengine(xbmc.Player):
                     try:
                         LogToXBMC("Попытка подлючения")
                         if self.parent: 
-                            self.parent.showStatus("Попытка подлючения к AceStream %s" % i)
+                            self.parent.showStatus("Попытка подлючения к AceStream {0}".format(i))
                         self.sockConnect()                            
                         break
                     except Exception, e:
-                        LogToXBMC("Подключение не удалось %s" % e, xbmc.LOGERROR)
+                        LogToXBMC("Подключение не удалось {0}".format(e), xbmc.LOGERROR)
                         xbmc.sleep(995)
                         continue
                 else:
@@ -217,10 +217,7 @@ class TSengine(xbmc.Player):
 
         LogToXBMC('Все ок', xbmc.LOGDEBUG)
         self.trys = 0
-        self.thr = SockThread(self.sock)
-        self.thr.state_method = self.showState
-        self.thr.owner = self
-        self.thr.start()
+        #self.createThread()
         # Общаемся
         self.sendCommand('HELLOBG version=4')
         self.Wait(TSMessage.HELLOTS)
@@ -262,7 +259,7 @@ class TSengine(xbmc.Player):
     def sendCommand(self, cmd):
         try:
             LogToXBMC('Send command %s' % cmd, xbmc.LOGDEBUG)
-            if not self.thr.active:
+            if not self.thr or not self.thr.active:
                 self.createThread()
             self.sock.send(cmd + '\r\n')
         except Exception, e:
@@ -270,8 +267,7 @@ class TSengine(xbmc.Player):
             try:
                 self.trys += 1
                 if self.trys >= 3:
-                    msg = "Can't sendCommand: {0}".format(cmd)
-                    LogToXBMC(msg, xbmc.LOGFATAL)
+                    raise Exception("Can't sendCommand: {0}".format(cmd))
                 if cmd not in ("STOP", "SHUTDOWN"):
                     self.connectToTS()                
                     self.sendCommand(cmd)
@@ -300,11 +296,10 @@ class TSengine(xbmc.Player):
     
     def createThread(self):
         self.thr = SockThread(self.sock)
-        self.thr.active = True
         self.thr.state_method = self.showState
         self.thr.owner = self
         self.thr.start()
-
+        
     def load_torrent(self, torrent, mode):
 
         cmdparam = ''

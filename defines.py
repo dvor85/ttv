@@ -9,9 +9,8 @@ import threading
 import os
 from BeautifulSoup import BeautifulSoup
 
-
-ADDON_ID = 'script.torrent-tv.ru.pp'
-ADDON = xbmcaddon.Addon(id=ADDON_ID)
+ADDON = xbmcaddon.Addon()
+ADDON_ID = ADDON.getAddonInfo('id')
 ADDON_ICON = ADDON.getAddonInfo('icon')
 ADDON_PATH = ADDON.getAddonInfo('path')
 ADDON_ICON = ADDON.getAddonInfo('icon')
@@ -29,17 +28,14 @@ except:
 if sys.platform.startswith('win'):
     ADDON_PATH = ADDON_PATH.decode('utf-8')
     DATA_PATH = DATA_PATH.decode('utf-8')
-    
+
+SKIN_PATH = ADDON_PATH
 skin = ADDON.getSetting('skin')
 if (skin != None) and (skin != "") and (skin != 'st.anger'):
     SKIN_PATH = DATA_PATH
-else:
-    SKIN_PATH = ADDON_PATH
 
 closeRequested = threading.Event()
 
-
-    
 class Logger():
     
     def __init__(self, tag, minlevel=DEBUG):

@@ -7,8 +7,9 @@ import sys
 import defines
 import xbmc
 
-# append pydev remote debugger
+
 if defines.DEBUG == xbmc.LOGDEBUG:
+    # append pydev remote debugger
     # Make pydev debugger works for auto reload.
     # Note pydevd module need to be copied in XBMC\system\python\Lib\pysrc
     #Add "sys.path.append(os.path.normpath(os.path.join(os.path.dirname(__file__), '..')))" to 
@@ -31,15 +32,16 @@ if defines.DEBUG == xbmc.LOGDEBUG:
         del tb
     
 
-import mainform 
+
 
 def checkPort(params):
     if not defines.checkPort(params):
         mess = "Порт %s закрыт. Для стабильной работы сервиса и трансляций, настоятельно рекомендуется его открыть." % defines.ADDON.getSetting('outport')
         defines.showMessage(mess)
         defines.LogToXBMC(mess)
-
-if __name__ == '__main__':
+        
+def main():
+    import mainform 
     if not defines.ADDON.getSetting('skin'):
         defines.ADDON.setSetting('skin', 'st.anger')
     if defines.ADDON.getSetting("skin") == "default":
@@ -56,4 +58,8 @@ if __name__ == '__main__':
     w.doModal()
     defines.showMessage('Close plugin')
     del w
+
+if __name__ == '__main__':
+    main()
+    
     
