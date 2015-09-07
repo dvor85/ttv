@@ -103,28 +103,28 @@ class TSengine(xbmc.Player):
             self.parent.amalkerWnd.show()
             LogToXBMC('END SHOW ADS Window', xbmc.LOGDEBUG)
 
-    def getAceEngine_exe(self):
-        LogToXBMC('Считываем путь к ace_engine.exe', xbmc.LOGDEBUG)      
-        import _winreg              
-        t = None
-        try:
-            LogToXBMC('ACEStream', xbmc.LOGDEBUG)
-            t = _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, 'Software\\ACEStream')
-            return _winreg.QueryValueEx(t , 'EnginePath')[0]           
-            
-        except Exception, e:
-            LogToXBMC('Error Opening acestream.port %s' % e, xbmc.LOGERROR)
-            return ''
-        finally:
-            if t:    
-                _winreg.CloseKey(t)
-                
     def sockConnect(self):        
         self.sock.connect((self.server_ip, self.aceport))
         self.sock.setblocking(0)
-        self.sock.settimeout(32)
+        self.sock.settimeout(3)
                 
     def startEngine(self):
+        def getAceEngine_exe(self):
+            LogToXBMC('Считываем путь к ace_engine.exe', xbmc.LOGDEBUG)      
+            import _winreg              
+            t = None
+            try:
+                LogToXBMC('ACEStream', xbmc.LOGDEBUG)
+                t = _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, 'Software\\ACEStream')
+                return _winreg.QueryValueEx(t , 'EnginePath')[0]           
+                
+            except Exception, e:
+                LogToXBMC('Error Opening acestream.port %s' % e, xbmc.LOGERROR)
+                return ''
+            finally:
+                if t:    
+                    _winreg.CloseKey(t)
+        
         def getWinPort():
             for i in range(10):
                 if os.path.exists(self.port_file):
@@ -182,6 +182,18 @@ class TSengine(xbmc.Player):
                 LogToXBMC('Cannot start AceEngine', xbmc.LOGFATAL)
                 return
         return True
+    
+    def get_key(self, key):
+        try:
+            import hashlib
+            pkey = 'n51LvQoTlJzNGaFxseRK-uvnvX-sD4Vm5Axwmc4UcoD-jruxmKsuJaH0eVgE'
+            sha1 = hashlib.sha1()
+            sha1.update(key + pkey)
+            key = sha1.hexdigest()
+            pk = pkey.split('-')[0]
+            return "%s-%s" % (pk, key)
+        except:
+            return defines.GET("http://api.torrent-tv.ru/xbmc_get_key.php?key=" + key)
         
     def connectToTS(self):
         try:
@@ -216,8 +228,6 @@ class TSengine(xbmc.Player):
             self.parent.hideStatus()
 
         LogToXBMC('Все ок', xbmc.LOGDEBUG)
-        self.trys = 0
-        #self.createThread()
         # Общаемся
         self.sendCommand('HELLOBG version=4')
         self.Wait(TSMessage.HELLOTS)
@@ -229,11 +239,9 @@ class TSengine(xbmc.Player):
             self.end()
             return
         
-        reqk = defines.GET("http://api.torrent-tv.ru/xbmc_get_key.php?key=" + msg.getParams()['key'])
-        
         self.thr.msg = TSMessage()
         LogToXBMC('Send READY', xbmc.LOGDEBUG)
-        self.sendCommand('READY key=' + reqk)
+        self.sendCommand('READY key=' + self.get_key(msg.getParams()['key']))
         self.Wait(TSMessage.AUTH)
         msg = self.thr.getTSMessage()
         if msg.getType() == TSMessage.AUTH:
@@ -262,6 +270,7 @@ class TSengine(xbmc.Player):
             if not self.thr or not self.thr.active:
                 self.createThread()
             self.sock.send(cmd + '\r\n')
+            self.trys = 0
         except Exception, e:
             LogToXBMC('sendCommand Error: {0}'.format(e), xbmc.LOGWARNING)
             try:
@@ -281,13 +290,15 @@ class TSengine(xbmc.Player):
     def Wait(self, msg):
         a = 0
         try:
-            while self.thr.getTSMessage().getType() != msg and not self.thr.error and not self.closed and not defines.closeRequested.isSet():
+            while self.thr.getTSMessage().getType() != msg and not self.thr.error and not self.closed and not defines.closeRequested.isSet() and not xbmc.abortRequested:
                 xbmc.sleep(DEFAULT_TIMEOUT)
-                if not self.stream: xbmc.sleep(DEFAULT_TIMEOUT)
-                a = a + 1
+                if not self.stream: 
+                    xbmc.sleep(DEFAULT_TIMEOUT)
+                a += 1
                 if a >= 249:
                     LogToXBMC('AceStream is freeze', xbmc.LOGWARNING)
-                    if self.parent: self.parent.showStatus("Ошибка ожидания. Операция прервана")
+                    if self.parent: 
+                        self.parent.showStatus("Ошибка ожидания. Операция прервана")
                     self.tsstop()
                     raise Exception('AceStream is freeze')
                     return
@@ -391,7 +402,8 @@ class TSengine(xbmc.Player):
             try:
                 _params = msg.getParams()
                 if not _params.has_key('url'):
-                    if self.parent: self.parent.showStatus("Неверный ответ от AceStream. Операция прервана")
+                    if self.parent: 
+                        self.parent.showStatus("Неверный ответ от AceStream. Операция прервана")
                     raise Exception('Incorrect msg from AceStream %s' % msg.getType())
 
                 self.amalker = _params.has_key('ad') and not _params.has_key('interruptable')
@@ -539,7 +551,7 @@ class SockThread(threading.Thread):
         threading.Thread.__init__(self)
         self.daemon = True
         self.sock = _sock
-        self.buffer = 65025
+        self.buffer = 65020
         self.isRecv = False
         self.lastRecv = ''
         self.lstCmd = ''
@@ -559,7 +571,7 @@ class SockThread(threading.Thread):
         while not isCancel():
             try:
                 xbmc.sleep(32)
-                self.lastRecv = self.lastRecv + self.sock.recv(self.buffer)
+                self.lastRecv += self.sock.recv(self.buffer)
                 if self.lastRecv.find('\r\n') > -1:
                     cmds = self.lastRecv.split('\r\n')
                     for cmd in cmds:                        

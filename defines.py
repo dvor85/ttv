@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+﻿  # -*- coding: utf-8 -*-
 # Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 import xbmcaddon
@@ -18,12 +18,7 @@ PTR_FILE = ADDON.getSetting('port_path')
 DATA_PATH = xbmc.translatePath(os.path.join("special://profile/addon_data", ADDON_ID))
 TTV_VERSION = '1.5.3'
 AUTOSTART = ADDON.getSetting('startlast') == 'true'
-
-try:
-    DEBUG = int(ADDON.getSetting('debug'))
-except:
-    DEBUG = xbmc.LOGNOTICE
-    ADDON.setSetting('debug', str(DEBUG))
+DEBUG = ADDON.getSetting('debug') == 'true'
     
 if sys.platform.startswith('win'):
     ADDON_PATH = ADDON_PATH.decode('utf-8')
@@ -38,16 +33,14 @@ closeRequested = threading.Event()
 
 class Logger():
     
-    def __init__(self, tag, minlevel=DEBUG):
+    def __init__(self, tag):
         self.tag = tag
-        self.minlevel = minlevel
         
     def __call__(self, msg, level=xbmc.LOGNOTICE):
         self.log(msg, level)
         
     def log(self, msg, level):
-        if level >= self.minlevel:
-            xbmc.log("[{id}::{tag}] {msg}".format(**{'id':ADDON_ID, 'tag':self.tag, 'msg': msg}), level)
+        xbmc.log("[{id}::{tag}] {msg}".format(**{'id':ADDON_ID, 'tag':self.tag, 'msg': msg}), level)
             
 LogToXBMC = Logger('DEFINES')
 
@@ -113,8 +106,7 @@ def showMessage(message='', heading='Torrent-TV.RU', times=6789):
 
 def GET(target, post=None, cookie=None):
     t = 0
-    monitor = xbmc.Monitor()
-    while not monitor.abortRequested() and not closeRequested.isSet():
+    while not xbmc.abortRequested and not closeRequested.isSet():
         t += 1
         try:
             req = urllib2.Request(url=target, data=post)
@@ -131,7 +123,7 @@ def GET(target, post=None, cookie=None):
         except Exception, e:
             if t % 10 == 0:
                 LogToXBMC('GET EXCEPT [%s]' % (e), xbmc.LOGERROR)
-                monitor.waitForAbort(30)       
+                xbmc.sleep(3000)       
 
 def checkPort(params):
         data = GET("http://2ip.ru/check-port/?port=%s" % params)

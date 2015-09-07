@@ -8,7 +8,7 @@ import defines
 import xbmc
 
 
-if defines.DEBUG == xbmc.LOGDEBUG:
+if defines.DEBUG:
     # append pydev remote debugger
     # Make pydev debugger works for auto reload.
     # Note pydevd module need to be copied in XBMC\system\python\Lib\pysrc
