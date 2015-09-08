@@ -52,7 +52,7 @@ def main():
 
     
     #defines.MyThread(checkPort, defines.ADDON.getSetting("outport")).start()
-    defines.MyThread(defines.Autostart, defines.AUTOSTART).start()
+    #defines.MyThread(defines.Autostart, defines.AUTOSTART).start()
     
     w = mainform.WMainForm("mainform.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
     w.doModal()

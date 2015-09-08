@@ -23,4 +23,9 @@ if os.path.exists(defines.DATA_PATH + '/resources/skins/'):
         dom.write(defines.ADDON_PATH + '/resources/settings.xml', 'utf-8')   
 elif xset.attrib['values'] != "st.anger":
     xset.attrib['values'] = "st.anger"
-    dom.write(defines.ADDON_PATH + '/resources/settings.xml', 'utf-8')         
+    dom.write(defines.ADDON_PATH + '/resources/settings.xml', 'utf-8')
+    
+if defines.AUTOSTART:
+    import xbmc
+    defines.AutostartViaAutoexec(False)
+    xbmc.executebuiltin('RunAddon({0})'.format(defines.ADDON_ID))         

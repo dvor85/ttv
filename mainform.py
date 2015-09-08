@@ -4,6 +4,7 @@
 # Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 # imports
+import defines
 import xbmcgui
 import xbmc
 
@@ -17,13 +18,7 @@ from adswnd import AdsForm
 from menu import MenuForm
 from infoform import InfoForm
 from dateform import DateForm
-
 import uuid
-import os
-import cPickle
-
-import defines
-from unicodedata import category
 
 LogToXBMC = defines.Logger('MainForm')
 
@@ -71,7 +66,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.player = MyPlayer("player.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
         self.player.parent = self
         self.amalkerWnd = AdsForm("adsdialog.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
-        self.cur_category, self.selitem_id = self.load_selitem_info()               
+        self.load_selitem_info()            
         self.playditem = -1
         self.user = None
         self.infoform = None
@@ -143,25 +138,16 @@ class WMainForm(xbmcgui.WindowXML):
                 img = self.getControl(1111)
                 img.setImage(selItem.getProperty('icon'))
         
-    def load_selitem_info(self):
-        try:
-            lastch = os.path.join(defines.DATA_PATH, 'lastch')
-            with open(lastch, 'rb') as lastch_obj:
-                category = cPickle.load(lastch_obj)
-                selitem_id = cPickle.load(lastch_obj)                    
-                return (category, selitem_id)
-        except:
-            LogToXBMC('lastch can''t load', xbmc.LOGWARNING)
-        return (WMainForm.CHN_TYPE_FAVOURITE, -1)
-            
-    def dump_selitem_info(self, category, selitem_id):
-        try:
-            lastch = os.path.join(defines.DATA_PATH, 'lastch')
-            with open(lastch, 'wb') as lastch_obj:
-                cPickle.dump(category, lastch_obj)
-                cPickle.dump(selitem_id, lastch_obj)
-        except:
-            LogToXBMC('Can''t save lastch', xbmc.LOGWARNING)    
+    def load_selitem_info(self):        
+        self.cur_category = defines.ADDON.getSetting('cur_category')
+        self.selitem_id = defines.ADDON.getSetting('cur_channel')
+        if self.cur_category == '':
+            self.cur_category = WMainForm.CHN_TYPE_FAVOURITE
+        
+        if self.selitem_id == '':
+            self.selitem_id = -1 
+        else:
+            self.selitem_id = defines.tryStringToInt(self.selitem_id)          
 
     def initLists(self):
         self.category = {}
@@ -364,7 +350,8 @@ class WMainForm(xbmcgui.WindowXML):
                 break
             LogToXBMC(selItem.getProperty("type"), xbmc.LOGDEBUG)
             self.playditem = self.selitem_id
-            self.dump_selitem_info(self.cur_category, self.selitem_id)
+            defines.ADDON.setSetting('cur_category', self.cur_category)
+            defines.ADDON.setSetting('cur_channel', str(self.selitem_id))
         
             self.player.Start(buf)
                    
@@ -601,13 +588,10 @@ class WMainForm(xbmcgui.WindowXML):
         self.list = self.getControl(WMainForm.CONTROL_LIST)
         self.initLists()
         thr = defines.MyThread(self.getChannels, 'channel', not (self.cur_category in (WMainForm.CHN_TYPE_TRANSLATION, WMainForm.CHN_TYPE_MODERATION, WMainForm.CHN_TYPE_FAVOURITE)))
-        thr.daemon = False
         thr.start()
         thr1 = defines.MyThread(self.getChannels, 'translation', self.cur_category == WMainForm.CHN_TYPE_TRANSLATION)
-        thr1.daemon = False
         thr1.start()
         thr2 = defines.MyThread(self.getChannels, 'moderation', self.cur_category == WMainForm.CHN_TYPE_MODERATION)
-        thr2.daemon = False
         thr2.start()
         thr3 = defines.MyThread(self.getChannels, 'favourite', self.cur_category == WMainForm.CHN_TYPE_FAVOURITE)
         thr3.start()

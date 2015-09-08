@@ -73,7 +73,7 @@ class TSengine(xbmc.Player):
             self.connectToTS()
         except Exception, e:
             LogToXBMC('ERROR Connect to AceStream: %s' % e, xbmc.LOGFATAL)
-            return
+            raise
 
     def onPlayBackStopped(self):
         LogToXBMC('onPlayBackStopped')
@@ -109,7 +109,7 @@ class TSengine(xbmc.Player):
         self.sock.settimeout(3)
                 
     def startEngine(self):
-        def getAceEngine_exe(self):
+        def getAceEngine_exe():
             LogToXBMC('Считываем путь к ace_engine.exe', xbmc.LOGDEBUG)      
             import _winreg              
             t = None
@@ -143,13 +143,13 @@ class TSengine(xbmc.Player):
 
         if sys.platform.startswith('win') and self.server_ip == '127.0.0.1':
             try:
-                if self.port_file != '' and os.path.exists(self.port_file):
-                    os.remove(self.port_file)
-               
-                self.ace_engine = self.getAceEngine_exe()
-                    
+                self.ace_engine = getAceEngine_exe()
                 LogToXBMC("AceEngine path: {0}".format(self.ace_engine.encode('utf-8'), xbmc.LOGDEBUG))     
                 self.port_file = os.path.join(os.path.dirname(self.ace_engine), 'acestream.port')
+                
+                if self.port_file != '' and os.path.exists(self.port_file):
+                    os.remove(self.port_file)
+                
                 LogToXBMC('Пытаюсь открыть %s' % self.port_file.encode('utf-8'))
                 if not os.path.exists(self.port_file):
                     LogToXBMC('Запуск AceStream path: %s' % self.ace_engine.encode("utf-8"), xbmc.LOGDEBUG)
@@ -202,7 +202,7 @@ class TSengine(xbmc.Player):
             self.sockConnect()
         except Exception, e:
             if self.startEngine():
-                for i in range(10):
+                for i in range(15):
                     try:
                         LogToXBMC("Попытка подлючения")
                         if self.parent: 
@@ -216,10 +216,11 @@ class TSengine(xbmc.Player):
                 else:
                     msg = 'Ошибка подключения к AceStream: {0}'.format(e)
                     LogToXBMC(msg, xbmc.LOGFATAL)
+                    self.parent.showStatus('Ошибка подключения к AceStream!')
                     raise Exception(msg)  
             else:
-                msg = "Не удалось запустить AceStream. Возможно он не установлен!"
-                LogToXBMC(msg, xbmc.LOGFATAL)
+                msg = "Не удалось запустить AceStream!"
+                self.parent.showStatus(msg)
                 raise Exception(msg)
             
                 
@@ -229,40 +230,35 @@ class TSengine(xbmc.Player):
 
         LogToXBMC('Все ок', xbmc.LOGDEBUG)
         # Общаемся
-        self.sendCommand('HELLOBG version=4')
-        self.Wait(TSMessage.HELLOTS)
-        msg = self.thr.getTSMessage()
-        if msg.getType() == TSMessage.HELLOTS and not msg.getParams().has_key('key'):
-            self.last_error = 'Incorrect msg from AceStream'
-            if self.parent: self.parent.showStatus("Неверный ответ от AceStream. Операция прервана")
-            LogToXBMC('Incorrect msg from TS %s' % msg.getType(), xbmc.LOGERROR)
-            self.end()
-            return
-        
-        self.thr.msg = TSMessage()
-        LogToXBMC('Send READY', xbmc.LOGDEBUG)
-        self.sendCommand('READY key=' + self.get_key(msg.getParams()['key']))
-        self.Wait(TSMessage.AUTH)
-        msg = self.thr.getTSMessage()
-        if msg.getType() == TSMessage.AUTH:
-            if msg.getParams() == '0':
-                self.last_error = 'Пользователь не зарегестрирован'
-                LogToXBMC(self.last_error, xbmc.LOGFATAL)                
-                self.end()
-                return
-        else:
-            self.last_error = 'Incorrect msg from AceStream'
-            LogToXBMC('Incorrect msg from AceEngine %s' % msg.getType(), xbmc.LOGERROR)
-            if self.parent: self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
+        try:
+            self.sendCommand('HELLOBG version=4')
+            self.Wait(TSMessage.HELLOTS)
+            msg = self.thr.getTSMessage()
+            if msg.getType() == TSMessage.HELLOTS and not msg.getParams().has_key('key'):
+                raise IOError('Incorrect msg from AceStream')
+            
+            self.thr.msg = TSMessage()
+            LogToXBMC('Send READY', xbmc.LOGDEBUG)
+            self.sendCommand('READY key=' + self.get_key(msg.getParams()['key']))
+            self.Wait(TSMessage.AUTH)
+            msg = self.thr.getTSMessage()
+            if msg.getType() == TSMessage.AUTH:
+                if msg.getParams() == '0':
+                    raise IOError('Пользователь не зарегистрирован')
+            else:
+                raise IOError('Incorrect msg from AceStream')
+            
+        except IOError as io:
+            self.last_error = str(io)
+            if self.parent: 
+                self.parent.showStatus("Неверный ответ от AceStream. Операция прервана")
             self.end()
             return
 
-        self.thr.msg = TSMessage()
         LogToXBMC('End Init AceStream', xbmc.LOGDEBUG)
         if self.parent: 
             self.parent.hideStatus()
         
-    
         
     def sendCommand(self, cmd):
         try:
@@ -320,7 +316,8 @@ class TSengine(xbmc.Player):
         self.quid = str(random.randint(0, 0x7fffffff))
         self.torrent = torrent
         comm = 'LOADASYNC ' + self.quid + ' ' + mode + ' ' + torrent + cmdparam
-        if self.parent: self.parent.showStatus("Загрузка торрента")
+        if self.parent: 
+            self.parent.showStatus("Загрузка торрента")
         self.tsstop()
         
         self.sendCommand(comm)
@@ -347,7 +344,8 @@ class TSengine(xbmc.Player):
                 self.end()
         else:
             self.last_error = 'Incorrect msg from AceStream'
-            if self.parent: self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
+            if self.parent: 
+                self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
             LogToXBMC('Incorrect msg from AceStream %s' % msg.getType(), xbmc.LOGFATAL)
             self.tsstop()
             return
@@ -435,7 +433,8 @@ class TSengine(xbmc.Player):
         else:
             self.last_error = 'Incorrect msg from AceStream %s' % msg.getType()
             LogToXBMC(self.last_error, xbmc.LOGERROR)
-            if self.parent: self.parent.showStatus("Неверный ответ от AceStream. Операция прервана")
+            if self.parent: 
+                self.parent.showStatus("Неверный ответ от AceStream. Операция прервана")
             self.tsstop()
 
     def loop(self):

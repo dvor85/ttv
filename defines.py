@@ -45,7 +45,7 @@ class Logger():
 LogToXBMC = Logger('DEFINES')
 
     
-def Autostart(state):
+def AutostartViaAutoexec(state):
     autoexec = os.path.join(xbmc.translatePath("special://masterprofile"), 'autoexec.py')
 
     if os.path.isfile(autoexec): 
