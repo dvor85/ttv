@@ -75,6 +75,8 @@ class WMainForm(xbmcgui.WindowXML):
         self.select_timer = None
         self.hide_window_timer = None
         self.play_thr = None
+        self.islocalfav = False
+        self.is_fav_sync = False
         
     def onInit(self):
         try:
@@ -155,6 +157,12 @@ class WMainForm(xbmcgui.WindowXML):
         self.category[WMainForm.CHN_TYPE_FAVOURITE] = { "name" : WMainForm.CHN_TYPE_FAVOURITE, "channels": []}
         self.translation = []
         
+    def search_ch(self, id):
+        for cat in self.category:
+            for ch in self.category[cat]["channels"]:
+                if ch.getProperty('id') == id:
+                    return ch 
+        
     def getChannels(self, param):
         data = defines.GET('http://api.torrent-tv.ru/v3/translation_list.php?session=%s&type=%s&typeresult=json' % (self.session, param), cookie=self.session)
         jdata = json.loads(data)
@@ -211,6 +219,21 @@ class WMainForm(xbmcgui.WindowXML):
                 li.setProperty('commands', "%s,%s,%s,%s" % (MenuForm.CMD_DEL_FAVOURITE, MenuForm.CMD_UP_FAVOURITE, MenuForm.CMD_DOWN_FAVOURITE, MenuForm.CMD_CLOSE_TS))
                 self.category[WMainForm.CHN_TYPE_FAVOURITE]["channels"].append(li)
                 
+        if param == 'favourite' and len(self.category[WMainForm.CHN_TYPE_FAVOURITE]["channels"]) == 0:
+            xbmc.sleep(1000)
+            self.islocalfav = True
+            import favdb
+            f = favdb.FavDB()
+            
+            for i in f.getChannels():
+                li = self.search_ch(i)
+                if li:
+                    chname = li.getLabel().split('. ')[1]
+                    chname = "%i. %s" % ((len(self.category[WMainForm.CHN_TYPE_FAVOURITE]["channels"]) + 1), chname)
+                    li.setLabel(chname)
+                    li.setProperty('commands', "%s,%s,%s,%s" % (MenuForm.CMD_DEL_FAVOURITE, MenuForm.CMD_UP_FAVOURITE, MenuForm.CMD_DOWN_FAVOURITE, MenuForm.CMD_CLOSE_TS))
+                    self.category[WMainForm.CHN_TYPE_FAVOURITE]["channels"].append(li)
+                    
 
     def getArcChannels(self, param):
         data = defines.GET('http://api.torrent-tv.ru/v3/arc_list.php?session=%s&typeresult=json' % self.session, cookie=self.session)
@@ -638,15 +661,21 @@ class WMainForm(xbmcgui.WindowXML):
             return
         LogToXBMC('fillChannels: Clear list', xbmc.LOGDEBUG)
         self.list.reset()
-        if len(self.category[self.cur_category]["channels"]) == 0:
-            self.fillCategory()
+        if len(self.category[self.cur_category]["channels"]) == 0:            
+            self.fillCategory()          
             self.hideStatus()
         else:
             li = xbmcgui.ListItem('..')
             self.list.addItem(li)
             for ch in self.category[self.cur_category]["channels"]:
                 self.list.addItem(ch)
+            if self.cur_category == WMainForm.CHN_TYPE_FAVOURITE and self.list.size() > 1 and not self.islocalfav and not self.is_fav_sync:                
+                import favdb
+                f=favdb.FavDB()
+                f.putChannels(self.category[self.cur_category]["channels"])
+                self.is_fav_sync = True
             self.hideStatus()
+        
 
     def fillTranslation(self):
         if not self.list:
