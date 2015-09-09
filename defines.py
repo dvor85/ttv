@@ -41,8 +41,20 @@ class Logger():
         
     def log(self, msg, level):
         xbmc.log("[{id}::{tag}] {msg}".format(**{'id':ADDON_ID, 'tag':self.tag, 'msg': msg}), level)
+        
+    def e(self, msg):
+        self.log(msg, xbmc.LOGERROR)
+        
+    def d(self, msg):
+        self.log(msg, xbmc.LOGDEBUG)
+    
+    def f(self, msg):
+        self.log(msg, xbmc.LOGFATAL)
+        
+    def w(self, msg):
+        self.log(msg, xbmc.LOGWARNING)
             
-LogToXBMC = Logger('DEFINES')
+log = Logger('DEFINES')
 
     
 def AutostartViaAutoexec(state):
@@ -73,7 +85,7 @@ def AutostartViaAutoexec(state):
             os.unlink(autoexec)
     except:
         t, v, tb = sys.exc_info()        
-        LogToXBMC("Error while write autoexec.py: {0}:{1}.".format(t, v), xbmc.LOGWARNING)
+        log.w("Error while write autoexec.py: {0}:{1}.".format(t, v))
         del tb
         
         
@@ -95,14 +107,14 @@ class MyThread(threading.Thread):
 
 
 def showMessage(message='', heading='Torrent-TV.RU', times=6789):
-    LogToXBMC('showMessage: %s' % message)
+    log('showMessage: %s' % message)
     try: 
         xbmc.executebuiltin('XBMC.Notification("%s", "%s", %s, %s)' % (heading.encode('utf-8'), message.encode('utf-8'), times, ADDON_ICON))
     except Exception, e:
         try: 
             xbmc.executebuiltin('XBMC.Notification("%s", "%s", %s, %s)' % (heading, message, times, ADDON_ICON))
         except Exception, e:            
-            LogToXBMC('showMessage: exec failed [%s]' % e, xbmc.LOGWARNING)
+            log.w('showMessage: exec failed [{0}]'.format(e))
 
 def GET(target, post=None, cookie=None):
     t = 0
@@ -122,7 +134,7 @@ def GET(target, post=None, cookie=None):
             
         except Exception, e:
             if t % 10 == 0:
-                LogToXBMC('GET EXCEPT [%s]' % (e), xbmc.LOGERROR)
+                log.e('GET EXCEPT [{0}]'.format(e))
                 xbmc.sleep(3000)       
 
 def checkPort(params):

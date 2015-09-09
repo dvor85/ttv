@@ -5,7 +5,6 @@
 
 import sys
 import defines
-import xbmc
 
 
 if defines.DEBUG:
@@ -25,20 +24,17 @@ if defines.DEBUG:
         pydevd.settrace('localhost', stdoutToServer=True, stderrToServer=True)
     except:
         t, v, tb = sys.exc_info()        
-        defines.LogToXBMC("{0}:{1} | For remote debug in eclipse you must add org.python.pydev.debug.pysrc to your PYTHONPATH or install script.module.pydevd addon.".format(t, v), xbmc.LOGERROR)
-        defines.LogToXBMC("CONTINUE WITHOUT DEBUGING", xbmc.LOGERROR)
+        defines.log.e("{0}:{1} | For remote debug in eclipse you must add org.python.pydev.debug.pysrc to your PYTHONPATH or install script.module.pydevd addon.".format(t, v))
+        defines.log.e("CONTINUE WITHOUT DEBUGING")
         import traceback
         traceback.print_tb(tb)
         del tb
     
-
-
-
 def checkPort(params):
     if not defines.checkPort(params):
         mess = "Порт %s закрыт. Для стабильной работы сервиса и трансляций, настоятельно рекомендуется его открыть." % defines.ADDON.getSetting('outport')
         defines.showMessage(mess)
-        defines.LogToXBMC(mess)
+        defines.log(mess)
         
 def main():
     import mainform 

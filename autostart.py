@@ -3,8 +3,8 @@ import defines
 import os
 from xml.etree.ElementTree import ElementTree
 
-LogToXBMC = defines.Logger('STARTUP')
-LogToXBMC("{0} v.{1}".format(defines.ADDON_ID, defines.ADDON.getAddonInfo('version')))
+log = defines.Logger('STARTUP')
+log("{0} v.{1}".format(defines.ADDON_ID, defines.ADDON.getAddonInfo('version')))
 dom = ElementTree()
 dom.parse(defines.ADDON_PATH + '/resources/settings.xml')
 xset = None

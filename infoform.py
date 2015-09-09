@@ -6,7 +6,7 @@ from BeautifulSoup import BeautifulSoup
 
 import defines
 
-LogToXBMC = defines.Logger('InfoForm')
+log = defines.Logger('InfoForm')
 
 class InfoForm(xbmcgui.WindowXMLDialog):
     LABEL_USER_LOGIN = 101
@@ -22,7 +22,7 @@ class InfoForm(xbmcgui.WindowXMLDialog):
         self.parent = None
         self.portLabel = None
         self.ASLabel = None
-        LogToXBMC('init infoform')
+        log('init infoform')
         pass
 
     def onInit(self):
@@ -33,7 +33,7 @@ class InfoForm(xbmcgui.WindowXMLDialog):
         self.outport = defines.ADDON.getSetting("outport")
         self.ASLabel = self.getControl(self.LABEL_AS_STATUS)
 
-        LogToXBMC('OnInit infoform %s' % self.parent)
+        log('OnInit infoform %s' % self.parent)
         if self.parent and self.parent.user:
             userLabel.setLabel(self.parent.user["login"])
             if float(self.parent.user["ballance"]) > 7:
@@ -60,7 +60,7 @@ class InfoForm(xbmcgui.WindowXMLDialog):
         addr = addr.string
         self.addrLabel.setLabel(addr)
         
-        LogToXBMC("InfoForm адрес получен")
+        log("InfoForm адрес получен")
         
 
     def checkPort(self, params):
