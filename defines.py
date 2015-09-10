@@ -42,18 +42,21 @@ class Logger():
     def log(self, msg, level):
         xbmc.log("[{id}::{tag}] {msg}".format(**{'id':ADDON_ID, 'tag':self.tag, 'msg': msg}), level)
         
-    def e(self, msg):
-        self.log(msg, xbmc.LOGERROR)
-        
-    def d(self, msg):
-        self.log(msg, xbmc.LOGDEBUG)
-    
     def f(self, msg):
         self.log(msg, xbmc.LOGFATAL)
+        
+    def e(self, msg):
+        self.log(msg, xbmc.LOGERROR)
         
     def w(self, msg):
         self.log(msg, xbmc.LOGWARNING)
             
+    def i(self, msg):
+        self.log(msg, xbmc.LOGINFO)
+        
+    def d(self, msg):
+        self.log(msg, xbmc.LOGDEBUG)
+        
 log = Logger('DEFINES')
 
     

@@ -1,13 +1,13 @@
-﻿  # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 # Copyright (c) 2013 Torrent-TV.RU
 # Writer (c) 2013, Welicobratov K.A., E-mail: 07pov23@gmail.com
 # Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 import xbmcgui
 import xbmc
-import json
-import os
 import defines
+import favdb
+import json
 
 log = defines.Logger('MenuForm')
 
@@ -16,18 +16,17 @@ class MenuForm(xbmcgui.WindowXMLDialog):
     CMD_DEL_FAVOURITE = 'favourite_delete.php'
     CMD_UP_FAVOURITE = 'favourite_up.php'
     CMD_DOWN_FAVOURITE = 'favourite_down.php'
-    CMD_CLOSE_TS = 'close_ts'
     CONTROL_CMD_LIST = 301
+    
     def __init__(self, *args, **kwargs):
         self.li = None
-        self.get_method = None
-        self.session = None
-        self.result = 'None'
-        self.DB = os.path.join(defines.DATA_PATH, 'favdb.json')
-        pass
+        self.result = 'FAIL'
+        self.parent = None
+        
 
     def onInit(self):
-        if not self.li:
+        log.d('OnInit')
+        if not self.li or not self.parent:
             return
         try:
             cmds = self.li.getProperty('commands').split(',')
@@ -42,8 +41,6 @@ class MenuForm(xbmcgui.WindowXMLDialog):
                     title = 'Поднять вверх'
                 elif c == MenuForm.CMD_DOWN_FAVOURITE:
                     title = 'Опустить вниз'
-                elif c == MenuForm.CMD_CLOSE_TS:
-                    title = 'Завершить TS'
                 list.addItem(xbmcgui.ListItem(title, c))
             list.setHeight(cmds.__len__() * 38)
             list.selectItem(0)
@@ -51,66 +48,58 @@ class MenuForm(xbmcgui.WindowXMLDialog):
             log.d('Focus Controld %s' % self.getFocusId())
         except Exception, e: 
             log.e("В списке нет комманд %s" % e)
-            pass
         
     def onClick(self, controlId):
+        log.d('OnClick')
         log('ControlID = %s' % controlId, xbmc.LOGDEBUG)
         if controlId == MenuForm.CONTROL_CMD_LIST:
             lt = self.getControl(MenuForm.CONTROL_CMD_LIST)
             li = lt.getSelectedItem()
             cmd = li.getLabel2()
             log("cmd=%s" % cmd, xbmc.LOGDEBUG)
-    
-            if cmd == MenuForm.CMD_CLOSE_TS: 
-                self.CloseTS()
-            else:
-                self._sendCmd(cmd)
+            
+            self._sendCmd(cmd)
             self.close()
 
-    def _sendCmd(self, cmd):
+    def _sendCmd(self, cmd):        
+        log.d('sendCmd')
         channel_id = self.li.getLabel2()
-        res = self.get_method('http://api.torrent-tv.ru/v3/%s?session=%s&channel_id=%s&typeresult=json' % (cmd, self.session, channel_id), cookie=self.session)
-        log.d(res)
-        log('http://api.torrent-tv.ru/v3/%s?session=%s&channel_id=%s&typeresult=json' % (cmd, self.session, channel_id))
-        jdata = json.loads(res)
+        data = defines.GET('http://api.torrent-tv.ru/v3/%s?session=%s&channel_id=%s&typeresult=json' % (cmd, self.parent.session, channel_id), cookie=self.parent.session)
+        log.d(data)
+        log.d('http://api.torrent-tv.ru/v3/%s?session=%s&channel_id=%s&typeresult=json' % (cmd, self.parent.session, channel_id))
+        try:
+            jdata = json.loads(data)
+        except Exception as e:
+            log.e(e)
+            return
         if jdata['success'] == 0:
-            self.result = jdata['error']
-            self._execCmd(cmd)
+            self.result = jdata['error'].encode('utf-8')
+            if not self.parent.user["vip"]:
+                self._exec_in_favdb(cmd)
         else:
-            self.result = 'OK'
+            self.result = 'OK REMOTE'
             
-    def _execCmd(self, cmd):
-        jdata = []
-        def _find(chid):
-            for obj in jdata:
-                if obj['id'] == chid:
-                    return obj
-            
-        channel = {'id': int(self.li.getProperty('id')), 'type': self.li.getProperty('type'), 'logo': os.path.basename(self.li.getProperty('icon')), 'access_translation': "registred", 'access_user': 1, 'name': self.li.getProperty('name'), 'epg_id': int(self.li.getProperty('epg_cdn_id'))}
-        mode = 'w'
-        if os.path.exists(self.DB):
-            mode = 'r'
-            
-        with open(self.DB, mode) as fp:
-            try:
-                jdata = json.load(fp)
-            except Exception as e:
-                log.w(e)
-            if cmd == MenuForm.CMD_ADD_FAVOURITE:
-                jdata.append(channel)
-            elif cmd == MenuForm.CMD_DEL_FAVOURITE:
-                jdata.remove(_find(channel['id']))
-        with open(self.DB, 'w') as fp:
-            json.dump(jdata, fp)
-        self.result = 'OK'
-
-    def CloseTS(self):
-        log('Closet TS')
-        self.result = 'TSCLOSE'
+    def _exec_in_favdb(self, cmd):
+        log.d('exec in favdb')
+        fdb = favdb.FavDB()    
+        if cmd == MenuForm.CMD_ADD_FAVOURITE:
+            if fdb.add(self.li):
+                self.result = 'OK LOCAL'
+        elif cmd == MenuForm.CMD_DEL_FAVOURITE:
+            k = fdb.find(int(self.li.getProperty('id')))
+            if not k is None and fdb.delete(k):
+                self.result = 'OK LOCAL'
+        elif cmd == MenuForm.CMD_UP_FAVOURITE:
+            if fdb.up(self.li):
+                self.result = 'OK LOCAL'
+        elif cmd == MenuForm.CMD_DOWN_FAVOURITE:
+            if fdb.down(self.li):
+                self.result = 'OK LOCAL'
+                    
 
     def GetResult(self):
         if not self.result:
-            self.result = 'None'
+            self.result = 'FAIL'
         res = self.result
-        self.result = 'None'
-        return res.encode('utf-8')
+        self.result = 'FAIL'
+        return res

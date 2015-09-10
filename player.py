@@ -7,8 +7,8 @@ import xbmcgui
 import threading
 import xbmc
 import time
-import json
 import defines
+import json
 
 from ts import TSengine as tsengine
 # defines
@@ -98,6 +98,7 @@ class MyPlayer(xbmcgui.WindowXML):
         
         
     def UpdateEpg(self, li):
+        log.d('UpdateEPG')
         with self.update_epg_lock:
             if not li:
                 return
@@ -147,13 +148,13 @@ class MyPlayer(xbmcgui.WindowXML):
                
 
     def Stop(self):
-        log('CLOSE STOP')
+        log.d('CLOSE STOP')
         xbmc.executebuiltin('PlayerControl(Stop)')
         if self.TSPlayer:
             self.TSPlayer.tsstop()
 
     def Start(self, li):
-        log("Start play")       
+        log.d("Start play")       
 
         self.li = li
         self.channel_number = self.parent.selitem_id
@@ -188,12 +189,12 @@ class MyPlayer(xbmcgui.WindowXML):
         mode = jdata["type"].upper().replace("CONTENTID", "PID")
         self.parent.hideStatus()
         
-        log('Play torrent')
+        log.d('Play torrent')
         if not self.TSPlayer:
             log.d('InitTS')
             self.TSPlayer = tsengine(parent=self.parent)
         self.TSPlayer.play_url_ind(0, li.getLabel(), li.getProperty('icon'), li.getProperty('icon'), torrent=url, mode=mode)
-        log('End playing')
+        log.d('End playing')
         
     def hide(self):
         pass
@@ -210,7 +211,7 @@ class MyPlayer(xbmcgui.WindowXML):
         
 
         if sys.platform.startswith('win'):
-            log("Закрыть TS")
+            log.d("Закрыть TS")
             subprocess.Popen('taskkill /F /IM {0} /T'.format(os.path.basename(self.TSPlayer.ace_engine)))
             self.TSPlayer = None
             
@@ -240,10 +241,10 @@ class MyPlayer(xbmcgui.WindowXML):
         log.d('Action {0} | ButtonCode {1}'.format(action.getId(), action.getButtonCode()))
             
         if action in CANCEL_DIALOG:
-            log('Closes player %s %s' % (action.getId(), action.getButtonCode()))
+            log.d('Closes player %s %s' % (action.getId(), action.getButtonCode()))
             self.close()
         elif action.getId() == MyPlayer.ACTION_RBC:
-            log('CLOSE PLAYER 101 %s %s' % (action.getId(), action.getButtonCode()))
+            log.d('CLOSE PLAYER 101 %s %s' % (action.getId(), action.getButtonCode()))
             self.close()
         elif action.getId() in (3, 4, 5, 6): 
             ############### IF ARROW UP AND DOWN PRESSED - SWITCH CHANNEL ###############

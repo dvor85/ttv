@@ -12,11 +12,10 @@ import socket
 import os
 import threading
 import random
-import json
 import urllib
 import copy
-
 import defines
+import json
 
 from adswnd import AdsForm
 
@@ -34,7 +33,7 @@ class TSengine(xbmc.Player):
     MODE_NONE = None
     
     def __init__(self, parent=None, ipaddr='127.0.0.1'):
-        log("Init TSEngine")
+        log.d("Init TSEngine")
         self.last_error = None
         self.quid = 0
         self.torrent = ''
@@ -76,7 +75,7 @@ class TSengine(xbmc.Player):
             raise
 
     def onPlayBackStopped(self):
-        log('onPlayBackStopped')
+        log.d('onPlayBackStopped')
         if not self.amalker and self.playing:
             log.d('STOP')
             self.parent.player.close()
@@ -88,7 +87,7 @@ class TSengine(xbmc.Player):
             self.tsstop()
 
     def onPlayBackEnded(self):
-        log('onPlayBackEnded')
+        log.d('onPlayBackEnded')
         self.onPlayBackStopped()
 
     def onPlayBackStarted(self):
@@ -150,7 +149,7 @@ class TSengine(xbmc.Player):
                 if self.port_file != '' and os.path.exists(self.port_file):
                     os.remove(self.port_file)
                 
-                log('Пытаюсь открыть %s' % self.port_file.encode('utf-8'))
+                log.d('Пытаюсь открыть %s' % self.port_file.encode('utf-8'))
                 if not os.path.exists(self.port_file):
                     log.d('Запуск AceStream path: %s' % self.ace_engine.encode("utf-8"))
                     if self.parent: 
@@ -197,14 +196,14 @@ class TSengine(xbmc.Player):
         
     def connectToTS(self):
         try:
-            log('Подключение к AceStream %s %s ' % (self.server_ip, self.aceport))
+            log.d('Подключение к AceStream %s %s ' % (self.server_ip, self.aceport))
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sockConnect()
         except Exception, e:
             if self.startEngine():
                 for i in range(15):
                     try:
-                        log("Попытка подлючения")
+                        log.d("Попытка подлючения")
                         if self.parent: 
                             self.parent.showStatus("Попытка подлючения к AceStream {0}".format(i))
                         self.sockConnect()                            
@@ -323,7 +322,7 @@ class TSengine(xbmc.Player):
         self.sendCommand(comm)
         self.Wait(TSMessage.LOADRESP)
         msg = self.thr.getTSMessage()
-        log('load_torrent - %s' % msg.getType())
+        log.d('load_torrent - %s' % msg.getType())
         if msg.getType() == TSMessage.LOADRESP:
             try:
                 log.d('Compile file list')
@@ -359,7 +358,7 @@ class TSengine(xbmc.Player):
             if _params.has_key('main'):
                 _descr = _params['main'].split(';')
                 if _descr[0] == 'prebuf':
-                    log('showState: Пытаюсь показать состояние')
+                    log.d('showState: Пытаюсь показать состояние')
                     self.parent.showStatus('Пребуферизация %s' % _descr[1])
                 elif _descr[0] == 'check':
                     log.d('showState: Проверка %s' % _descr[1])
@@ -389,7 +388,7 @@ class TSengine(xbmc.Player):
         if self.mode != TSengine.MODE_PID:
             spons = ' 0 0 0'
         comm = 'START ' + self.mode + ' ' + self.torrent + ' ' + str(index) + spons
-        log("Запуск торрента")
+        log.d("Запуск торрента")
         self.stop()
         xbmc.sleep(4)
         self.sendCommand(comm)
@@ -448,7 +447,7 @@ class TSengine(xbmc.Player):
                 break
             try:
                 if xbmc.abortRequested:
-                    log("XBMC Shutdown")
+                    log.d("XBMC Shutdown")
                     break
                 xbmc.sleep(250)
                 # if not self.isPlaying() and self.playing:
@@ -500,7 +499,7 @@ class TSengine(xbmc.Player):
         self.sendCommand('STOP')
         self.sendCommand('SHUTDOWN')
         self.last_error = None
-        log("Request to close connection")
+        log.d("Request to close connection")
         if self.thr:
             self.thr.msg = TSMessage()
             self.thr.active = False
@@ -547,7 +546,7 @@ class TSMessage:
 
 class SockThread(threading.Thread):
     def __init__(self, _sock):
-        log('Init SockThread')
+        log.d('Init SockThread')
         threading.Thread.__init__(self)
         self.daemon = True
         self.sock = _sock
@@ -567,7 +566,7 @@ class SockThread(threading.Thread):
         def isCancel():
             return not self.active or self.error or xbmc.abortRequested or defines.closeRequested.isSet()
         
-        log('Start SockThread')
+        log.d('Start SockThread')
         while not isCancel():
             try:
                 xbmc.sleep(32)
@@ -591,7 +590,7 @@ class SockThread(threading.Thread):
                 # self.owner.end()
                 # self.owner.connectToTS()
                 # self.owner.parent.close()
-        log('Close from thread')
+        log.d('Close from thread')
         self.error = None
 
     def _constructMsg(self, strmsg):

@@ -23,7 +23,6 @@ class InfoForm(xbmcgui.WindowXMLDialog):
         self.portLabel = None
         self.ASLabel = None
         log('init infoform')
-        pass
 
     def onInit(self):
         userLabel = self.getControl(self.LABEL_USER_LOGIN)
@@ -36,10 +35,10 @@ class InfoForm(xbmcgui.WindowXMLDialog):
         log('OnInit infoform %s' % self.parent)
         if self.parent and self.parent.user:
             userLabel.setLabel(self.parent.user["login"])
-            if float(self.parent.user["ballance"]) > 7:
-                ballanceLabel.setLabel("[COLOR=blue]%sp.[/COLOR]" % self.parent.user["ballance"])
+            if float(self.parent.user["balance"]) > 7:
+                ballanceLabel.setLabel("[COLOR=blue]%sp.[/COLOR]" % self.parent.user["balance"])
             else:
-                ballanceLabel.setLabel("[COLOR=red]%sp.[/COLOR]" % self.parent.user["ballance"])
+                ballanceLabel.setLabel("[COLOR=red]%sp.[/COLOR]" % self.parent.user["balance"])
         
         self.portLabel.setLabel("%s (Проверяется)" % self.outport, "Проверка")
 

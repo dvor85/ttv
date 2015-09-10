@@ -8,7 +8,6 @@ import defines
 import xbmcgui
 import xbmc
 
-import json
 import time
 import datetime
 import threading
@@ -20,6 +19,8 @@ from infoform import InfoForm
 from dateform import DateForm
 import uuid
 import os
+import favdb
+import json
 
 log = defines.Logger('MainForm')
 
@@ -77,7 +78,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.hide_window_timer = None
         self.play_thr = None
         self.is_fav_sync = False
-        self.DB = os.path.join(defines.DATA_PATH, 'favdb.json')
+    
         
     def onInit(self):
         try:
@@ -159,8 +160,14 @@ class WMainForm(xbmcgui.WindowXML):
         self.translation = []
         
     def getChannels(self, param):
+        log.d('getChannels {0}'.format(param))
         data = defines.GET('http://api.torrent-tv.ru/v3/translation_list.php?session=%s&type=%s&typeresult=json' % (self.session, param), cookie=self.session)
-        jdata = json.loads(data)
+        try:       
+            jdata = json.loads(data)
+        except Exception as e:
+            log.e('getChannels error: {0}'.format(e))
+            return
+        
         if jdata['success'] == 0:
             self.showStatus(jdata['error'])
             return
@@ -168,70 +175,70 @@ class WMainForm(xbmcgui.WindowXML):
         for cat in jdata["categories"]:
             if not self.category.has_key('%s' % cat["id"]):
                 self.category['%s' % cat["id"]] = { "name": cat["name"], "channels": [] }
-        
-        if param == 'favourite':
+        fdb = favdb.FavDB()
+        if param == 'favourite':            
             if len(jdata['channels']) > 0 and self.user["vip"] and self.init:
-                with open(self.DB, 'w') as fp:
-                    json.dump(jdata['channels'], fp)
-            elif not self.user["vip"] and os.path.exists(self.DB):
-                with open(self.DB, 'r') as fp:
-                    try:
-                        jdata['channels'] = json.load(fp)
-                    except Exception as e:
-                        log.w(e)
-
-        for ch in jdata['channels']:
-            if not ch["name"]:
-                continue
-            if not ch['logo']:
-                ch['logo'] = ''
-            else:
-                ch['logo'] = 'http://torrent-tv.ru/uploads/' + ch['logo']    
-                        
-            li = xbmcgui.ListItem(ch["name"], '%s' % ch['id'], ch['logo'], ch['logo'])
-            li.setProperty('name', ch["name"])
-            li.setProperty('epg_cdn_id', '%s' % ch['epg_id'])
-            li.setProperty('icon', ch['logo'])
-            li.setProperty("type", "channel")
-            li.setProperty("id", '%s' % ch["id"])
-            li.setProperty("access_translation", '%s' % ch["access_translation"])
-            li.setProperty("access_user", '%s' % ch["access_user"])
-            
-            if param == 'channel':
-                chname = "%i. %s" % ((len(self.category['%s' % ch['group']]["channels"]) + 1), ch["name"])
-                if ch["access_user"] == 0:
-                    chname = "[COLOR FF646464]%s[/COLOR]" % chname
-                li.setLabel(chname)           
-                li.setProperty('commands', "%s,%s" % (MenuForm.CMD_ADD_FAVOURITE, MenuForm.CMD_CLOSE_TS))
-                self.category['%s' % ch['group']]["channels"].append(li)
+                fdb.save(jdata['channels'])
+            elif not self.user["vip"]:
+                jdata['channels'] = fdb.get()
+        if jdata['channels']:
+            for ch in jdata['channels']:
+                if not ch["name"]:
+                    continue
+                if not ch['logo']:
+                    ch['logo'] = ''
+                else:
+                    ch['logo'] = 'http://torrent-tv.ru/uploads/' + ch['logo']    
+                            
+                li = xbmcgui.ListItem(ch["name"], '%s' % ch['id'], ch['logo'], ch['logo'])
+                li.setProperty('name', ch["name"])
+                li.setProperty('epg_cdn_id', '%s' % ch['epg_id'])
+                li.setProperty('icon', ch['logo'])
+                li.setProperty("type", "channel")
+                li.setProperty("id", '%s' % ch["id"])
+                li.setProperty("access_translation", '%s' % ch["access_translation"])
+                li.setProperty("access_user", '%s' % ch["access_user"])
                 
-            elif param == 'moderation':
-                chname = "%i. %s" % ((len(self.category[WMainForm.CHN_TYPE_MODERATION]["channels"]) + 1), ch["name"])
-                if ch["access_user"] == 0:
-                    chname = "[COLOR FF646464]%s[/COLOR]" % chname
-                li.setLabel(chname) 
-                li.setProperty('commands', "%s,%s" % (MenuForm.CMD_ADD_FAVOURITE, MenuForm.CMD_CLOSE_TS))
-                self.category[WMainForm.CHN_TYPE_MODERATION]["channels"].append(li)
-                        
-            elif param == 'translation':
-                chname = "%i. %s" % ((len(self.translation) + 1), ch["name"])
-                if ch["access_user"] == 0:
-                    chname = "[COLOR FF646464]%s[/COLOR]" % chname
-                li.setLabel(chname)   
-                li.setProperty('commands', "%s,%s" % (MenuForm.CMD_ADD_FAVOURITE, MenuForm.CMD_CLOSE_TS))
-                self.translation.append(li)
-            elif param == 'favourite':
-                chname = "%i. %s" % ((len(self.category[WMainForm.CHN_TYPE_FAVOURITE]["channels"]) + 1), ch["name"])
-                if ch["access_user"] == 0:
-                    chname = "[COLOR FF646464]%s[/COLOR]" % chname
-                li.setLabel(chname) 
-                li.setProperty('commands', "%s,%s,%s,%s" % (MenuForm.CMD_DEL_FAVOURITE, MenuForm.CMD_UP_FAVOURITE, MenuForm.CMD_DOWN_FAVOURITE, MenuForm.CMD_CLOSE_TS))
-                self.category[WMainForm.CHN_TYPE_FAVOURITE]["channels"].append(li)
+                if param == 'channel':
+                    chname = "%i. %s" % ((len(self.category['%s' % ch['group']]["channels"]) + 1), ch["name"])
+                    if ch["access_user"] == 0:
+                        chname = "[COLOR FF646464]%s[/COLOR]" % chname
+                    li.setLabel(chname)           
+                    li.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
+                    self.category['%s' % ch['group']]["channels"].append(li)
+                    
+                elif param == 'moderation':
+                    chname = "%i. %s" % ((len(self.category[WMainForm.CHN_TYPE_MODERATION]["channels"]) + 1), ch["name"])
+                    if ch["access_user"] == 0:
+                        chname = "[COLOR FF646464]%s[/COLOR]" % chname
+                    li.setLabel(chname) 
+                    li.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
+                    self.category[WMainForm.CHN_TYPE_MODERATION]["channels"].append(li)
+                            
+                elif param == 'translation':
+                    chname = "%i. %s" % ((len(self.translation) + 1), ch["name"])
+                    if ch["access_user"] == 0:
+                        chname = "[COLOR FF646464]%s[/COLOR]" % chname
+                    li.setLabel(chname)   
+                    li.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
+                    self.translation.append(li)
+                elif param == 'favourite':
+                    chname = "%i. %s" % ((len(self.category[WMainForm.CHN_TYPE_FAVOURITE]["channels"]) + 1), ch["name"])
+                    if ch["access_user"] == 0:
+                        chname = "[COLOR FF646464]%s[/COLOR]" % chname
+                    li.setLabel(chname) 
+                    li.setProperty('commands', "%s,%s,%s" % (MenuForm.CMD_DEL_FAVOURITE, MenuForm.CMD_UP_FAVOURITE, MenuForm.CMD_DOWN_FAVOURITE))
+                    self.category[WMainForm.CHN_TYPE_FAVOURITE]["channels"].append(li)
                 
                     
     def getArcChannels(self, param):
+        log.d('getArcChannels')
         data = defines.GET('http://api.torrent-tv.ru/v3/arc_list.php?session=%s&typeresult=json' % self.session, cookie=self.session)
-        jdata = json.loads(data)
+        try:       
+            jdata = json.loads(data)
+        except Exception as e:
+            log.e('getArcChannels error: {0}'.format(e))
+            return
         self.archive = []
         if jdata['success'] == 0:
             self.showStatus(jdata['error'])
@@ -252,8 +259,13 @@ class WMainForm(xbmcgui.WindowXML):
             self.archive.append(li)
 
     def getEpg(self, param):
+        log.d('getEpg')
         data = defines.GET('http://api.torrent-tv.ru/v3/translation_epg.php?session=%s&epg_id=%s&typeresult=json' % (self.session, param), cookie=self.session)
-        jdata = json.loads(data)
+        try:       
+            jdata = json.loads(data)
+        except Exception as e:
+            log.e('getEpg error: {0}'.format(e))
+            return
         if jdata['success'] == 0:
             self.epg[param] = []
             self.showSimpleEpg(param)
@@ -278,7 +290,7 @@ class WMainForm(xbmcgui.WindowXML):
             log.w('showScreen: скрин не найден')
             return
         else:
-            log('showScreen: %s' % jdata['screens'][0]['filename'])
+            log.d('showScreen: %s' % jdata['screens'][0]['filename'])
             img.setImage(jdata['screens'][0]['filename'])
 
             
@@ -330,8 +342,6 @@ class WMainForm(xbmcgui.WindowXML):
             log.d('size of list is: {0}'.format(self.list.size()))
             self.checkButton(WMainForm.BTN_CHANNELS_ID)
             
-        
-
     def onClickTranslations(self):
         self.fillTranslation()
         if self.seltab != WMainForm.BTN_TRANSLATIONS_ID:
@@ -380,27 +390,27 @@ class WMainForm(xbmcgui.WindowXML):
                     self.channel_number_str = ''    
                 
             if xbmc.getCondVisibility("Window.IsVisible(home)"):
-                log("Close from HOME Window")
+                log.d("Close from HOME Window")
                 self.close()
             elif xbmc.getCondVisibility("Window.IsVisible(video)"):
                 self.close()
-                log("Is Video Window")
+                log.d("Is Video Window")
             elif xbmc.getCondVisibility("Window.IsVisible(programs)"):
                 self.close()
-                log("Is programs Window")
+                log.d("Is programs Window")
             elif xbmc.getCondVisibility("Window.IsVisible(addonbrowser)"):
                 self.close()
-                log("Is addonbrowser Window")
+                log.d("Is addonbrowser Window")
             elif xbmc.getCondVisibility("Window.IsMedia"):
                 self.close()
-                log("Is media Window")
+                log.d("Is media Window")
             elif xbmc.getCondVisibility("Window.IsVisible(12346)"):
                 self.close()
-                log("Is plugin Window")
+                log.d("Is plugin Window")
             else:
                 jrpc = json.loads(xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"GUI.GetProperties","params":{"properties":["currentwindow"]},"id":1}'))
                 if jrpc["result"]["currentwindow"]["id"] == 10025:
-                    log("Is video plugins window")
+                    log.d("Is video plugins window")
                     self.close()
                     
         except Exception as e:
@@ -561,15 +571,14 @@ class WMainForm(xbmcgui.WindowXML):
                 return
             mnu = MenuForm("menu.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
             mnu.li = self.getFocus().getSelectedItem()
+            mnu.parent = self
             log.d("mnu.li = %s" % mnu.li.getProperty("commands"))
-            mnu.get_method = defines.GET
-            mnu.session = self.session
             log.d('Выполнить комманду')
             mnu.doModal()
             log.d('Комманда выполнена')
             res = mnu.GetResult()
             log.d('Результат комманды %s' % res)
-            if res == 'OK':
+            if res.startswith('OK'):
                 self.updateList()
             elif res == WMainForm.API_ERROR_INCORRECT:
                 self.showStatus('Пользователь не опознан по сессии')
@@ -581,9 +590,7 @@ class WMainForm(xbmcgui.WindowXML):
                 self.showStatus('Ошибка входных параметров')
             elif res == WMainForm.API_ERROR_NOFAVOURITE:
                 self.showStatus('Канал не найден в избранном')
-            elif res == 'TSCLOSE':
-                log("Закрыть TS")
-                self.player.EndTS()
+            
         elif action.getId() == WMainForm.ACTION_MOUSE:
             if (self.getFocusId() == WMainForm.CONTROL_LIST):
                 self.onFocus(WMainForm.CONTROL_LIST)
@@ -636,7 +643,7 @@ class WMainForm(xbmcgui.WindowXML):
         
 
     def showStatus(self, text):
-        log("showStatus: %s" % text)
+        log.d("showStatus: %s" % text)
         try:
             if self.img_progress: self.img_progress.setVisible(True)
             if self.txt_progress: self.txt_progress.setLabel(text)
@@ -645,7 +652,8 @@ class WMainForm(xbmcgui.WindowXML):
             log.w("showStatus error: {0}". format(ex))
 
     def showInfoStatus(self, text):
-        if self.infoform: self.infoform.printASStatus(text)
+        if self.infoform: 
+            self.infoform.printASStatus(text)
 
     def hideStatus(self):
         if self.img_progress: self.img_progress.setVisible(False)
@@ -687,7 +695,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.list.reset()
         for ch in self.archive:
             self.list.addItem(ch)
-        log("fillArchive")
+        log.d("fillArchive")
 
     def fillCategory(self):
         if not self.list:
