@@ -175,8 +175,9 @@ class WMainForm(xbmcgui.WindowXML):
         for cat in jdata["categories"]:
             if not self.category.has_key('%s' % cat["id"]):
                 self.category['%s' % cat["id"]] = { "name": cat["name"], "channels": [] }
-        fdb = favdb.FavDB()
-        if param == 'favourite':            
+        
+        if param == 'favourite':  
+            fdb = favdb.LocalFDB()          
             if len(jdata['channels']) > 0 and self.user["vip"] and self.init:
                 fdb.save(jdata['channels'])
             elif not self.user["vip"]:
@@ -339,7 +340,6 @@ class WMainForm(xbmcgui.WindowXML):
         log.d('onClickChannels')
         self.fillChannels()
         if self.seltab != WMainForm.BTN_CHANNELS_ID:
-            log.d('size of list is: {0}'.format(self.list.size()))
             self.checkButton(WMainForm.BTN_CHANNELS_ID)
             
     def onClickTranslations(self):
@@ -354,8 +354,8 @@ class WMainForm(xbmcgui.WindowXML):
             self.checkButton(WMainForm.BTN_ARCHIVE_ID)
             
     def LoopPlay(self, *args):  
-        try: 
-            while not self.IsCanceled():
+        while not self.IsCanceled():
+            try: 
                 selItem = self.list.getListItem(self.selitem_id)
                 
                 if selItem.getProperty("access_user") == 0:
@@ -387,36 +387,41 @@ class WMainForm(xbmcgui.WindowXML):
                     xbmc.sleep(123)   
                     self.channel_number_str = str(self.selitem_id)
                     self.select_channel()  
-                    self.channel_number_str = ''    
-                
-            if xbmc.getCondVisibility("Window.IsVisible(home)"):
-                log.d("Close from HOME Window")
-                self.close()
-            elif xbmc.getCondVisibility("Window.IsVisible(video)"):
-                self.close()
-                log.d("Is Video Window")
-            elif xbmc.getCondVisibility("Window.IsVisible(programs)"):
-                self.close()
-                log.d("Is programs Window")
-            elif xbmc.getCondVisibility("Window.IsVisible(addonbrowser)"):
-                self.close()
-                log.d("Is addonbrowser Window")
-            elif xbmc.getCondVisibility("Window.IsMedia"):
-                self.close()
-                log.d("Is media Window")
-            elif xbmc.getCondVisibility("Window.IsVisible(12346)"):
-                self.close()
-                log.d("Is plugin Window")
-            else:
-                jrpc = json.loads(xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"GUI.GetProperties","params":{"properties":["currentwindow"]},"id":1}'))
-                if jrpc["result"]["currentwindow"]["id"] == 10025:
-                    log.d("Is video plugins window")
-                    self.close()
-                    
-        except Exception as e:
-            log.e(e)
+                    self.channel_number_str = ''
+                     
+            except Exception as e:
+                log.e(e)
+                xbmc.sleep(1000)
             
-        self.play_thr = None
+        self.play_thr = None  
+          
+        if xbmc.getCondVisibility("Window.IsVisible(home)"):
+            log.d("Close from HOME Window")
+            self.close()
+        elif xbmc.getCondVisibility("Window.IsVisible(video)"):
+            self.close()
+            log.d("Is Video Window")
+        elif xbmc.getCondVisibility("Window.IsVisible(programs)"):
+            self.close()
+            log.d("Is programs Window")
+        elif xbmc.getCondVisibility("Window.IsVisible(addonbrowser)"):
+            self.close()
+            log.d("Is addonbrowser Window")
+        elif xbmc.getCondVisibility("Window.IsMedia"):
+            self.close()
+            log.d("Is media Window")
+        elif xbmc.getCondVisibility("Window.IsVisible(12346)"):
+            self.close()
+            log.d("Is plugin Window")
+        else:
+            jrpc = json.loads(xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"GUI.GetProperties","params":{"properties":["currentwindow"]},"id":1}'))
+            if jrpc["result"]["currentwindow"]["id"] == 10025:
+                log.d("Is video plugins window")
+                self.close()
+                    
+   
+            
+        
              
             
     def onClick(self, controlID):
@@ -572,12 +577,12 @@ class WMainForm(xbmcgui.WindowXML):
             mnu = MenuForm("menu.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
             mnu.li = self.getFocus().getSelectedItem()
             mnu.parent = self
-            log.d("mnu.li = %s" % mnu.li.getProperty("commands"))
-            log.d('Выполнить комманду')
+            
+            log.d('Выполнить команду')
             mnu.doModal()
             log.d('Комманда выполнена')
             res = mnu.GetResult()
-            log.d('Результат комманды %s' % res)
+            log.d('Результат команды %s' % res)
             if res.startswith('OK'):
                 self.updateList()
             elif res == WMainForm.API_ERROR_INCORRECT:

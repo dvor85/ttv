@@ -105,7 +105,7 @@ class TSengine(xbmc.Player):
     def sockConnect(self):        
         self.sock.connect((self.server_ip, self.aceport))
         self.sock.setblocking(0)
-        self.sock.settimeout(3)
+        self.sock.settimeout(10)
                 
     def startEngine(self):
         def getAceEngine_exe():
