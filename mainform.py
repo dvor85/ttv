@@ -81,39 +81,48 @@ class WMainForm(xbmcgui.WindowXML):
     
         
     def onInit(self):
+        data = defines.GET('http://api.torrent-tv.ru/v3/version.php?application=xbmc&version=%s' % defines.TTV_VERSION)
         try:
-            data = defines.GET('http://api.torrent-tv.ru/v3/version.php?application=xbmc&version=%s' % defines.TTV_VERSION)
             jdata = json.loads(data)
-            if jdata['support'] == 0:
-                from okdialog import OkDialog
-                dialog = OkDialog("okdialog.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
-                dialog.setText("Текущая версия приложения (%s) не поддерживается. Последняя версия %s " % (defines.TTV_VERSION, jdata['last_version'].encode('utf-8')))
-                dialog.doModal()
-                self.close()
-            self.img_progress = self.getControl(108)
-            self.txt_progress = self.getControl(107)
-            self.progress = self.getControl(WMainForm.PROGRESS_BAR)
-            self.showStatus("Авторизация")
-            guid = defines.ADDON.getSetting("uuid")
-            if guid == '':
-                guid = str(uuid.uuid1())
-                defines.ADDON.setSetting("uuid", guid)
-            guid = guid.replace('-', '')
-            log.d(guid)
-            data = defines.GET('http://api.torrent-tv.ru/v3/auth.php?username=%s&password=%s&typeresult=json&application=xbmc&guid=%s' % (defines.ADDON.getSetting('login'), defines.ADDON.getSetting('password'), guid))
+        except Exception as e:
+            log.e('onInit error: {0}'.format(e))
+            msg = "Ошибка Torrent-TV.RU"
+            self.showStatus(msg)                
+            return
+        if jdata['support'] == 0:
+            from okdialog import OkDialog
+            dialog = OkDialog("okdialog.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
+            dialog.setText("Текущая версия приложения (%s) не поддерживается. Последняя версия %s " % (defines.TTV_VERSION, jdata['last_version'].encode('utf-8')))
+            dialog.doModal()
+            self.close()
+        self.img_progress = self.getControl(108)
+        self.txt_progress = self.getControl(107)
+        self.progress = self.getControl(WMainForm.PROGRESS_BAR)
+        self.showStatus("Авторизация")
+        guid = defines.ADDON.getSetting("uuid")
+        if guid == '':
+            guid = str(uuid.uuid1())
+            defines.ADDON.setSetting("uuid", guid)
+        guid = guid.replace('-', '')
+        log.d(guid)
+        data = defines.GET('http://api.torrent-tv.ru/v3/auth.php?username=%s&password=%s&typeresult=json&application=xbmc&guid=%s' % (defines.ADDON.getSetting('login'), defines.ADDON.getSetting('password'), guid))
+        try:
             jdata = json.loads(data)
-            if jdata['success'] == 0:
-                self.showStatus(jdata['error'])
-                return
+        except Exception as e:
+            log.e('onInit error: {0}'.format(e))
+            msg = "Ошибка Torrent-TV.RU"
+            self.showStatus(msg)
+            return
+        if jdata['success'] == 0:
+            self.showStatus(jdata['error'])
+            return
 
-            self.user = {"login" : defines.ADDON.getSetting('login'), "balance" : jdata["balance"], "vip":jdata["balance"] > 1}
+        self.user = {"login" : defines.ADDON.getSetting('login'), "balance" : jdata["balance"], "vip":jdata["balance"] > 1}
+        
+        self.session = jdata['session']
+        self.updateList()
+        self.hide_main_window()
             
-            self.session = jdata['session']
-            self.updateList()
-            self.hide_main_window()
-            
-        except Exception, e:
-            log.e('OnInit: %s' % e)
 
     def onFocus(self, ControlID):
         if ControlID == WMainForm.CONTROL_LIST:
@@ -162,10 +171,12 @@ class WMainForm(xbmcgui.WindowXML):
     def getChannels(self, param):
         log.d('getChannels {0}'.format(param))
         data = defines.GET('http://api.torrent-tv.ru/v3/translation_list.php?session=%s&type=%s&typeresult=json' % (self.session, param), cookie=self.session)
-        try:       
+        try:
             jdata = json.loads(data)
         except Exception as e:
             log.e('getChannels error: {0}'.format(e))
+            msg = "Ошибка Torrent-TV.RU"
+            self.showStatus(msg)
             return
         
         if jdata['success'] == 0:
@@ -235,11 +246,14 @@ class WMainForm(xbmcgui.WindowXML):
     def getArcChannels(self, param):
         log.d('getArcChannels')
         data = defines.GET('http://api.torrent-tv.ru/v3/arc_list.php?session=%s&typeresult=json' % self.session, cookie=self.session)
-        try:       
+        try:
             jdata = json.loads(data)
         except Exception as e:
             log.e('getArcChannels error: {0}'.format(e))
+            msg = "Ошибка Torrent-TV.RU"
+            self.showStatus(msg)
             return
+        
         self.archive = []
         if jdata['success'] == 0:
             self.showStatus(jdata['error'])
@@ -262,11 +276,14 @@ class WMainForm(xbmcgui.WindowXML):
     def getEpg(self, param):
         log.d('getEpg')
         data = defines.GET('http://api.torrent-tv.ru/v3/translation_epg.php?session=%s&epg_id=%s&typeresult=json' % (self.session, param), cookie=self.session)
-        try:       
+        try:
             jdata = json.loads(data)
         except Exception as e:
             log.e('getEpg error: {0}'.format(e))
+            msg = "Ошибка Torrent-TV.RU"
+            self.showStatus(msg)
             return
+
         if jdata['success'] == 0:
             self.epg[param] = []
             self.showSimpleEpg(param)
@@ -284,7 +301,14 @@ class WMainForm(xbmcgui.WindowXML):
             return
 
         data = defines.GET('http://api.torrent-tv.ru/v3/translation_screen.php?session=%s&channel_id=%s&typeresult=json&count=1' % (self.session, cdn), cookie=self.session)
-        jdata = json.loads(data)
+        try:
+            jdata = json.loads(data)
+        except Exception as e:
+            log.e('showScreen error: {0}'.format(e))
+            msg = "Ошибка Torrent-TV.RU"
+            self.showStatus(msg)
+            return
+        
         img = self.getControl(WMainForm.IMG_SCREEN)
         img.setImage("")
         if jdata['success'] == 0:
@@ -726,7 +750,14 @@ class WMainForm(xbmcgui.WindowXML):
         const_li.setProperty("date", "%s-%s-%s" % (date.year, date.month, date.day))
         self.list.addItem(const_li)
         data = defines.GET("http://api.torrent-tv.ru/v3/arc_records.php?session=%s&date=%d-%d-%s&epg_id=%s&typeresult=json" % (self.session, date.day, date.month, date.year, li.getProperty("epg_cdn_id")), cookie=self.session)
-        jdata = json.loads(data)
+        try:
+            jdata = json.loads(data)
+        except Exception as e:
+            log.e('fillRecords error: {0}'.format(e))
+            msg = "Ошибка Torrent-TV.RU"
+            self.showStatus(msg)
+            return
+        
         if jdata["success"] == 0:
             self.showStatus(jdata["error"])
             return

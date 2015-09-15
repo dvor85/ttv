@@ -17,7 +17,7 @@ ADDON_ICON = ADDON.getAddonInfo('icon')
 PTR_FILE = ADDON.getSetting('port_path')
 DATA_PATH = xbmc.translatePath(os.path.join("special://profile/addon_data", ADDON_ID))
 TTV_VERSION = '1.5.3'
-AUTOSTART = ADDON.getSetting('startlast') == 'true'
+AUTOSTART = ADDON.getSetting('autostart') == 'true'
 DEBUG = ADDON.getSetting('debug') == 'true'
     
 if sys.platform.startswith('win'):

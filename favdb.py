@@ -132,9 +132,9 @@ class RemoteFDB(FDB):
         try:
             jdata = json.loads(data)
         except Exception as e:
-            msg = 'Error load json object {0}'.format(e)
+            msg = 'exec_cmd error: {0}'.format(e)
             log.e(msg)
-            return 'Error load json object'
+            return msg
         if jdata['success'] == 0:
             return jdata['error'].encode('utf-8')
         return True

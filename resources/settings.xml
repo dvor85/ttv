@@ -4,7 +4,7 @@
 		<setting default="" id="password" label="Пароль" option="hidden" type="text" />		
 		<setting id="skin" label="Обложка" type="labelenum" values="st.anger" />
 		<setting default="8621" id="outport" label="Внеший порт AceStream" type="number" />		
-		<setting default="false" id="startlast" label="Автозапуск аддона" type="bool" />
+		<setting default="false" id="autostart" label="Автозапуск аддона" type="bool" />
 		<setting default="false" id="debug" label="Debug" type="bool" visible="false" />
 		<setting default="" id="uuid" type="text" visible="false" />
 		

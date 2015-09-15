@@ -158,7 +158,7 @@ class MyPlayer(xbmcgui.WindowXML):
 
         self.li = li
         self.channel_number = self.parent.selitem_id
-        log('Load Torrent')
+        log.d('Load Torrent')
         
         self.parent.showStatus("Получение ссылки...")
         data = None
@@ -173,12 +173,14 @@ class MyPlayer(xbmcgui.WindowXML):
             self.parent.showStatus(msg)
             raise Exception(msg)
             
-        if not data:
+        try:
+            jdata = json.loads(data)
+        except Exception as e:
+            log.e(e)
             msg = "Ошибка Torrent-TV.RU"
             self.parent.showStatus(msg)
-            raise Exception(msg)
+            raise
         
-        jdata = json.loads(data)
         log.d(jdata)
         if not jdata["success"] or jdata["success"] == 0 or not jdata["source"]:
             msg = "Канал временно не доступен"
