@@ -120,6 +120,7 @@ def showMessage(message='', heading='Torrent-TV.RU', times=6789):
             log.w('showMessage: exec failed [{0}]'.format(e))
 
 def GET(target, post=None, cookie=None):
+    log.d('try to get: {0} with cookie={1}'.format(target, cookie))
     t = 0
     while not xbmc.abortRequested and not closeRequested.isSet():
         t += 1
