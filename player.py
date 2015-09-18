@@ -307,3 +307,9 @@ class MyPlayer(xbmcgui.WindowXML):
             self.close()
         if controlID == self.CONTROL_BUTTON_INFOWIN:
             self.parent.showInfoWindow()
+            
+    #def close(self):
+        #log.d('player close')
+        
+        #xbmcgui.WindowXML.close(self)
+        #self.Stop()

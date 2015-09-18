@@ -78,6 +78,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.hide_window_timer = None
         self.play_thr = None
         self.is_fav_sync = False
+        self.stopped = True
     
         
     def onInit(self):
@@ -342,17 +343,24 @@ class WMainForm(xbmcgui.WindowXML):
             self.setFocus(self.list)
             self.list.selectItem(self.selitem_id)
         
-    def hide_main_window(self):
+    def hide_main_window(self, timeout=10):
+        log.d('hide main window in {0} sec'.format(timeout))
+        
+        def isPlaying():
+            return not self.IsCanceled() and self.player.TSPlayer and (self.player.TSPlayer.playing or self.player.TSPlayer.isPlaying())
+        
         def hide():
-            if not self.IsCanceled() and self.player.TSPlayer and self.player.TSPlayer.playing:
-                self.onClick(WMainForm.BTN_FULLSCREEN)
+            log.d('isPlaying={0}'.format(isPlaying()))
+            if isPlaying():
+                log.d('hide main window')
+                self.player.show()
         
         if self.hide_window_timer:
             self.hide_window_timer.cancel()
             self.hide_window_timer = None
-        if not self.IsCanceled() and self.player.TSPlayer and self.player.TSPlayer.playing:    
-            self.hide_window_timer = threading.Timer(9.9, hide)
-            self.hide_window_timer.start()
+        
+        self.hide_window_timer = threading.Timer(timeout, hide)
+        self.hide_window_timer.start()
                 
             
     def emulate_startChannel(self):
@@ -406,12 +414,15 @@ class WMainForm(xbmcgui.WindowXML):
                 defines.ADDON.setSetting('cur_channel', str(self.selitem_id))
             
                 self.player.Start(buf)
-                       
+                
+                if self.stopped:
+                    break       
                 if not self.IsCanceled():
                     xbmc.sleep(123)   
                     self.channel_number_str = str(self.selitem_id)
                     self.select_channel()  
                     self.channel_number_str = ''
+                
                      
             except Exception as e:
                 log.e(e)
