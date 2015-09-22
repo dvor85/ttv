@@ -103,10 +103,6 @@ class TSengine(xbmc.Player):
             log.d('END SHOW ADS Window')
         self.parent.stopped = False
         self.parent.hide_main_window(0)
-        
-    def onPlayBackResumed(self):
-        log.d('onPlayBackResumed')
-        self.onPlayBackStarted()
 
     def sockConnect(self):        
         self.sock.connect((self.server_ip, self.aceport))

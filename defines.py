@@ -40,7 +40,10 @@ class Logger():
         self.log(msg, level)
         
     def log(self, msg, level):
-        xbmc.log("[{id}::{tag}] {msg}".format(**{'id':ADDON_ID, 'tag':self.tag, 'msg': msg}), level)
+        m = "[{id}::{tag}] {msg}".format(**{'id':ADDON_ID, 'tag':self.tag, 'msg': msg})
+        if DEBUG:
+            print m        
+        xbmc.log(m, level)
         
     def f(self, msg):
         self.log(msg, xbmc.LOGFATAL)
