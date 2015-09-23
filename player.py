@@ -149,9 +149,17 @@ class MyPlayer(xbmcgui.WindowXML):
 
     def Stop(self):
         log.d('CLOSE STOP')
+#         if self.TSPlayer:
+#             self.TSPlayer.stop()
+        
         xbmc.executebuiltin('PlayerControl(Stop)')
+        #self.close()
+        self.parent.manual_stopped = False
         if self.TSPlayer:
             self.TSPlayer.tsstop()
+        
+        
+        
 
     def Start(self, li):
         log.d("Start play")       

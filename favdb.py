@@ -36,7 +36,7 @@ class LocalFDB(FDB):
                     self.channels = json.load(fp) 
                     return self.channels
                 except Exception as e:
-                    log.w('get error: {0}'.format(e))
+                    log.w(u'get error: {0}'.format(e))
                 
     def save(self, obj=None):
         log.d('save channels')
@@ -48,11 +48,11 @@ class LocalFDB(FDB):
                 self.channels = obj
                 return True
         except Exception as e:
-            log.w('save error: {0}'.format(e))
+            log.w(u'save error: {0}'.format(e))
     
     def add(self, li):
         chid = int(li.getProperty('id'))
-        log.d('add channels {0}'.format(chid))
+        log.d(u'add channels {0}'.format(chid))
         channel = {'id': chid,
                    'type': li.getProperty('type'),
                    'logo': os.path.basename(li.getProperty('icon')),
@@ -69,7 +69,7 @@ class LocalFDB(FDB):
             return True
     
     def find(self, chid):
-        log.d('find channel by id={0}'.format(chid))
+        log.d(u'find channel by id={0}'.format(chid))
         if not self.channels:
             self.get()
         if self.channels:
@@ -79,7 +79,7 @@ class LocalFDB(FDB):
             
     def delete(self, li):
         chid = int(li.getProperty('id'))
-        log.d('delete channel id={0}'.format(chid))
+        log.d(u'delete channel id={0}'.format(chid))
         k = self.find(chid)
         if not k is None:            
             if not self.channels:
@@ -89,7 +89,7 @@ class LocalFDB(FDB):
                 return self.save()
         
     def swap(self, i1, i2):
-        log.d('swap channels with indexes={0},{1}'.format(i1, i2))
+        log.d(u'swap channels with indexes={0},{1}'.format(i1, i2))
         ch = self.channels[i1]
         self.channels[i1] = self.channels[i2]
         self.channels[i2] = ch
@@ -97,7 +97,7 @@ class LocalFDB(FDB):
         
     def up(self, li):
         chid = int(li.getProperty('id'))
-        log.d('up channel with id={0}'.format(chid))
+        log.d(u'up channel with id={0}'.format(chid))
         if not self.channels:
             self.get()
         if self.channels:
@@ -107,7 +107,7 @@ class LocalFDB(FDB):
             
     def down(self, li):
         chid = int(li.getProperty('id'))
-        log.d('down channel with id={0}'.format(chid))
+        log.d(u'down channel with id={0}'.format(chid))
         if not self.channels:
             self.get()
         if self.channels:
@@ -132,7 +132,7 @@ class RemoteFDB(FDB):
         try:
             jdata = json.loads(data)
         except Exception as e:
-            msg = 'exec_cmd error: {0}'.format(e)
+            msg = u'exec_cmd error: {0}'.format(e)
             log.e(msg)
             return msg
         if jdata['success'] == 0:

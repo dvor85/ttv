@@ -84,8 +84,18 @@ class TSengine(xbmc.Player):
 
     def onPlayBackStopped(self):
         log.d('onPlayBackStopped')
+        self.parent.manual_stopped = False
         self.onPlayBackEnded()
-        self.parent.stopped = True
+        
+        xbmc.Player.onPlayBackStopped(self)
+        
+    def stop(self):
+        log.d('stop player method')
+        
+        self.playing = False
+        self.tsstop()
+        xbmc.Player.stop(self)
+        self.parent.manual_stopped = False
         
 
     def onPlayBackEnded(self):
@@ -101,6 +111,7 @@ class TSengine(xbmc.Player):
         else:
             log.d("STOP")
             self.tsstop()
+        xbmc.Player.onPlayBackEnded(self)
 
     def onPlayBackStarted(self):    
         try:
@@ -114,8 +125,9 @@ class TSengine(xbmc.Player):
             log.d('SHOW ADS Window')
             self.parent.amalkerWnd.show()
             log.d('END SHOW ADS Window')
-        self.parent.stopped = False
+        self.parent.manual_stopped = False
         self.parent.hide_main_window(0)
+        xbmc.Player.onPlayBackStarted(self)
 
     def sockConnect(self):        
         self.sock.connect((self.server_ip, self.aceport))
@@ -521,6 +533,7 @@ class TSengine(xbmc.Player):
         if self.thr:
             self.thr.msg = TSMessage()
             self.thr.active = False
+            self.thr = None
         self.sock.close()
         self.parent.close()
 
@@ -530,14 +543,10 @@ class TSengine(xbmc.Player):
         self.sendCommand('STOP')        
         if self.thr:
             self.thr.active = False
-            self.thr.join()
+            #self.thr.join()
+            self.thr = None
         self.last_error = None
         
-    def stop(self):
-        log.d('stop playing')
-        self.playing = False
-        xbmc.Player.stop(self)
-
 class TSMessage:
     ERROR = 'ERROR'
     HELLOTS = 'HELLOTS'

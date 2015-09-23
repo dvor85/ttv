@@ -78,7 +78,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.hide_window_timer = None
         self.play_thr = None
         self.is_fav_sync = False
-        self.stopped = True
+        self.manual_stopped = True
     
         
     def onInit(self):
@@ -213,7 +213,7 @@ class WMainForm(xbmcgui.WindowXML):
                 li.setProperty("access_user", '%s' % ch["access_user"])
                 
                 if param == 'channel':
-                    chname = "%i. %s" % ((len(self.category['%s' % ch['group']]["channels"]) + 1), ch["name"])
+                    chname = u"{0}. {1}".format((len(self.category['%s' % ch['group']]["channels"]) + 1), ch["name"])
                     if ch["access_user"] == 0:
                         chname = "[COLOR FF646464]%s[/COLOR]" % chname
                     li.setLabel(chname)           
@@ -221,7 +221,7 @@ class WMainForm(xbmcgui.WindowXML):
                     self.category['%s' % ch['group']]["channels"].append(li)
                     
                 elif param == 'moderation':
-                    chname = "%i. %s" % ((len(self.category[WMainForm.CHN_TYPE_MODERATION]["channels"]) + 1), ch["name"])
+                    chname = u"{0}. {1}".format((len(self.category[WMainForm.CHN_TYPE_MODERATION]["channels"]) + 1), ch["name"])
                     if ch["access_user"] == 0:
                         chname = "[COLOR FF646464]%s[/COLOR]" % chname
                     li.setLabel(chname) 
@@ -229,14 +229,14 @@ class WMainForm(xbmcgui.WindowXML):
                     self.category[WMainForm.CHN_TYPE_MODERATION]["channels"].append(li)
                             
                 elif param == 'translation':
-                    chname = "%i. %s" % ((len(self.translation) + 1), ch["name"])
+                    chname = u"{0}. {1}".format((len(self.translation) + 1), ch["name"])
                     if ch["access_user"] == 0:
                         chname = "[COLOR FF646464]%s[/COLOR]" % chname
                     li.setLabel(chname)   
                     li.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
                     self.translation.append(li)
                 elif param == 'favourite':
-                    chname = "%i. %s" % ((len(self.category[WMainForm.CHN_TYPE_FAVOURITE]["channels"]) + 1), ch["name"])
+                    chname = u"{0}. {1}".format((len(self.category[WMainForm.CHN_TYPE_FAVOURITE]["channels"]) + 1), ch["name"])
                     if ch["access_user"] == 0:
                         chname = "[COLOR FF646464]%s[/COLOR]" % chname
                     li.setLabel(chname) 
@@ -416,7 +416,7 @@ class WMainForm(xbmcgui.WindowXML):
             
                 self.player.Start(buf)
                 
-                if self.stopped:
+                if self.manual_stopped:
                     break       
                 if not self.IsCanceled():
                     xbmc.sleep(223)   

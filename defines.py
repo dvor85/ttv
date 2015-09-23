@@ -1,4 +1,4 @@
-﻿  # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 # Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 import xbmcaddon
@@ -41,6 +41,8 @@ class Logger():
         self.log(msg, level)
         
     def log(self, msg, level):
+        if isinstance(msg, unicode):
+            msg = msg.encode('utf-8')
         m = "[{id}::{tag}] {msg}".format(**{'id':ADDON_ID, 'tag':self.tag, 'msg': msg})
         xbmc.log(m, level)
         if DEBUG:
@@ -123,10 +125,10 @@ def showMessage(message='', heading='Torrent-TV.RU', times=6789):
         try: 
             xbmc.executebuiltin('XBMC.Notification("%s", "%s", %s, %s)' % (heading, message, times, ADDON_ICON))
         except Exception, e:            
-            log.w('showMessage: exec failed [{0}]'.format(e))
+            log.w(u'showMessage: exec failed [{0}]'.format(e))
 
 def GET(target, post=None, cookie=None):
-    log.d('try to get: {0} with cookie={1}'.format(target, cookie))
+    log.d(u'try to get: {0} with cookie={1}'.format(target, cookie))
     t = 0
     while not xbmc.abortRequested and not closeRequested.isSet():
         t += 1
@@ -144,7 +146,7 @@ def GET(target, post=None, cookie=None):
             
         except Exception, e:
             if t % 10 == 0:
-                log.e('GET EXCEPT [{0}]'.format(e))
+                log.e(u'GET EXCEPT [{0}]'.format(e))
                 xbmc.sleep(3000)       
 
 def checkPort(params):
