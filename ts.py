@@ -43,9 +43,9 @@ class TSengine(xbmc.Player):
         self.playing = False
         self.ace_engine = ''
         self.port_file = ''
-        self.closed = False
         self.trys = 0
         self.thr = None
+        self.link = None
        
         log.d(defines.ADDON.getSetting('ip_addr'))
         if defines.ADDON.getSetting('ip_addr'):
@@ -72,6 +72,15 @@ class TSengine(xbmc.Player):
         except Exception, e:
             log.f('ERROR Connect to AceEngine: %s' % e)
             raise
+        
+    def getPlayingFile(self):
+        if self.isPlaying():
+            if self.link:
+                return self.link
+        return xbmc.Player.getPlayingFile(self)
+    
+    def isPlaying(self):
+        return xbmc.Player.isPlaying(self) or self.playing
 
     def onPlayBackStopped(self):
         log.d('onPlayBackStopped')
@@ -82,7 +91,7 @@ class TSengine(xbmc.Player):
     def onPlayBackEnded(self):
         log.d('onPlayBackEnded')
         log.d('playing={0}'.format(self.playing))
-        if not self.amalker and self.playing:
+        if not self.amalker and self.isPlaying():
             log.d('STOP')
             self.tsstop()
             self.parent.player.close()
@@ -94,7 +103,11 @@ class TSengine(xbmc.Player):
             self.tsstop()
 
     def onPlayBackStarted(self):    
-        log.d('onPlayBackStarted: {0} {1} {2}'.format(xbmcgui.getCurrentWindowId(), self.amalker, self.getPlayingFile()))
+        try:
+            log.d('onPlayBackStarted: {0} {1} {2}'.format(xbmcgui.getCurrentWindowId(), self.amalker, self.getPlayingFile()))
+        except Exception as e:
+            log.e('onPlayBackStarted: {0}'.format(e))
+        
         if not self.amalker:
             self.parent.player.show()
         elif self.amalker:
@@ -285,14 +298,17 @@ class TSengine(xbmc.Player):
                 log.e('ERROR Send command: %s' % e)
                 self.end()
                 self.parent.close()                 
-                raise      
+                raise   
+            
+    def isCancel(self):
+        return defines.closeRequested.isSet() or xbmc.abortRequested   
                 
     
     def Wait(self, msg):
         log.d('wait message: {0}'.format(msg))
         a = 0
         try:
-            while self.thr.getTSMessage().getType() != msg and not self.thr.error and not self.closed and not defines.closeRequested.isSet() and not xbmc.abortRequested:
+            while self.thr.getTSMessage().getType() != msg and not self.thr.error and not self.isCancel():
                 xbmc.sleep(DEFAULT_TIMEOUT)
                 if not self.stream: 
                     xbmc.sleep(DEFAULT_TIMEOUT)
@@ -428,6 +444,7 @@ class TSengine(xbmc.Player):
                 lit = xbmcgui.ListItem(title, iconImage=icon, thumbnailImage=thumb)
                 self.play(self.link, lit, windowed=True)
                 self.playing = True
+                self.onPlayBackStarted()
                 self.loop()
             except Exception, e:
                 log.e(e)
@@ -443,8 +460,8 @@ class TSengine(xbmc.Player):
             self.tsstop()
 
     def loop(self):
-        while self.playing and not defines.closeRequested.isSet():
-            if self.isPlayingVideo() and self.amalker and (self.getTotalTime() - self.getTime()) < 0.5:
+        while self.isPlaying() and not self.isCancel():
+            if self.isPlaying() and self.amalker and (self.getTotalTime() - self.getTime()) < 0.5:
                 self.parent.amalkerWnd.close()
                 break
             try:
@@ -496,6 +513,7 @@ class TSengine(xbmc.Player):
 
     def end(self):
         self.playing = False
+        self.link = None
         self.sendCommand('STOP')
         self.sendCommand('SHUTDOWN')
         self.last_error = None
@@ -508,6 +526,7 @@ class TSengine(xbmc.Player):
 
     def tsstop(self):  
         self.playing = False
+        self.link = None
         self.sendCommand('STOP')        
         if self.thr:
             self.thr.active = False
@@ -550,7 +569,7 @@ class SockThread(threading.Thread):
     def __init__(self, _sock):
         log.d('Init SockThread')
         threading.Thread.__init__(self)
-        self.daemon = True
+        self.daemon = False
         self.sock = _sock
         self.buffer = 65020
         self.isRecv = False
@@ -565,7 +584,7 @@ class SockThread(threading.Thread):
 
     def run(self):
         def isCancel():
-            return not self.active or self.error or xbmc.abortRequested or defines.closeRequested.isSet()
+            return not self.active or self.error or self.owner.isCancel()
         
         log.d('Start SockThread')
         while not isCancel():
@@ -576,7 +595,7 @@ class SockThread(threading.Thread):
                     cmds = self.lastRecv.split('\r\n')
                     for cmd in cmds:                        
                         if len(cmd.replace(' ', '')) > 0 and not isCancel():
-                            log.d('RUN Получена комманда = ' + cmd)
+                            #log.d('RUN Получена комманда = ' + cmd)
                             self._constructMsg(cmd)
                     self.lastRecv = ''
             except Exception, e:

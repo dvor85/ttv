@@ -7,6 +7,7 @@ import sys
 import urllib2
 import threading
 import os
+import time
 from BeautifulSoup import BeautifulSoup
 
 ADDON = xbmcaddon.Addon()
@@ -41,9 +42,11 @@ class Logger():
         
     def log(self, msg, level):
         m = "[{id}::{tag}] {msg}".format(**{'id':ADDON_ID, 'tag':self.tag, 'msg': msg})
-        if DEBUG:
-            print m        
         xbmc.log(m, level)
+        if DEBUG:
+            m = '{0} {1}'.format(time.strftime('%X'), m)
+            print m        
+       
         
     def f(self, msg):
         self.log(msg, xbmc.LOGFATAL)

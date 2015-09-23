@@ -43,7 +43,6 @@ class MyPlayer(xbmcgui.WindowXML):
         
         self.select_timer = None
         self.hide_control_timer = None
-        self.select_timer = None
         self.hide_swinfo_timer = None
         self.update_epg_lock = threading.RLock()
         
@@ -94,12 +93,13 @@ class MyPlayer(xbmcgui.WindowXML):
             self.hide_control_timer.cancel()
             self.hide_control_timer = None
         self.hide_control_timer = threading.Timer(4.9, hide)
+        self.hide_control_timer.daemon = False
         self.hide_control_timer.start()
         
         
-    def UpdateEpg(self, li):
-        log.d('UpdateEPG')
+    def UpdateEpg(self, li):        
         with self.update_epg_lock:
+            log.d('UpdateEPG')
             if not li:
                 return
             cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
@@ -240,7 +240,7 @@ class MyPlayer(xbmcgui.WindowXML):
             self.channel_number = self.parent.list.size() - 1
             
     def onAction(self, action):
-        log.d('Action {0} | ButtonCode {1}'.format(action.getId(), action.getButtonCode()))
+        #log.d('Action {0} | ButtonCode {1}'.format(action.getId(), action.getButtonCode()))
             
         if action in CANCEL_DIALOG:
             log.d('Closes player %s %s' % (action.getId(), action.getButtonCode()))
@@ -308,8 +308,14 @@ class MyPlayer(xbmcgui.WindowXML):
         if controlID == self.CONTROL_BUTTON_INFOWIN:
             self.parent.showInfoWindow()
             
-    #def close(self):
-        #log.d('player close')
+    def close(self):
+        log.d('player close')
+        if self.select_timer:
+            self.select_timer.cancel()
+        if self.hide_control_timer:
+            self.hide_control_timer.cancel()
+        if self.hide_swinfo_timer:
+            self.hide_swinfo_timer.cancel()
+            
+        xbmcgui.WindowXML.close(self)
         
-        #xbmcgui.WindowXML.close(self)
-        #self.Stop()

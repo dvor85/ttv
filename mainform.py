@@ -347,7 +347,7 @@ class WMainForm(xbmcgui.WindowXML):
         log.d('hide main window in {0} sec'.format(timeout))
         
         def isPlaying():
-            return not self.IsCanceled() and self.player.TSPlayer and (self.player.TSPlayer.playing or self.player.TSPlayer.isPlaying())
+            return not self.IsCanceled() and self.player.TSPlayer and self.player.TSPlayer.isPlaying()
         
         def hide():
             log.d('isPlaying={0}'.format(isPlaying()))
@@ -360,6 +360,7 @@ class WMainForm(xbmcgui.WindowXML):
             self.hide_window_timer = None
         
         self.hide_window_timer = threading.Timer(timeout, hide)
+        self.hide_window_timer.daemon = False
         self.hide_window_timer.start()
                 
             
@@ -418,7 +419,7 @@ class WMainForm(xbmcgui.WindowXML):
                 if self.stopped:
                     break       
                 if not self.IsCanceled():
-                    xbmc.sleep(123)   
+                    xbmc.sleep(223)   
                     self.channel_number_str = str(self.selitem_id)
                     self.select_channel()  
                     self.channel_number_str = ''
@@ -530,9 +531,6 @@ class WMainForm(xbmcgui.WindowXML):
             else:
                 self.player.Stop()
             
-
-            
-        # xbmc.executebuiltin('SendClick(12345,%s)' % self.seltab)
         elif controlID == WMainForm.BTN_FULLSCREEN:
             self.player.show()
 
@@ -545,8 +543,12 @@ class WMainForm(xbmcgui.WindowXML):
         defines.closeRequested.set()
         self.isCanceled = True
         if self.player.TSPlayer:
-            self.player.TSPlayer.closed = True
             self.player.Stop()
+        if self.select_timer:
+            self.select_timer.cancel()
+        if self.hide_window_timer:
+            self.hide_window_timer.cancel()
+
         xbmcgui.WindowXML.close(self)
 
     def showInfoWindow(self):
@@ -597,7 +599,7 @@ class WMainForm(xbmcgui.WindowXML):
             self.progress.setPercent(1)
             
     def onAction(self, action):                
-        log.d('Событие {0}'.format(action.getId()))        
+        # log.d('Событие {0}'.format(action.getId()))        
         if action.getButtonCode() == 61513:
             return
         if action in WMainForm.CANCEL_DIALOG:
@@ -644,6 +646,7 @@ class WMainForm(xbmcgui.WindowXML):
                 self.select_timer.cancel()
                 self.select_timer = None      
             self.select_timer = threading.Timer(1, lambda: setattr(self, 'channel_number_str', ''))
+            self.select_timer.daemon = False
             self.select_timer.start()
         else:
             super(WMainForm, self).onAction(action)
