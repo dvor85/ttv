@@ -46,6 +46,7 @@ class TSengine(xbmc.Player):
         self.trys = 0
         self.thr = None
         self.link = None
+        self.manual_stopped = True
        
         log.d(defines.ADDON.getSetting('ip_addr'))
         if defines.ADDON.getSetting('ip_addr'):
@@ -80,37 +81,23 @@ class TSengine(xbmc.Player):
         return xbmc.Player.getPlayingFile(self)
     
     def isPlaying(self):
-        return xbmc.Player.isPlaying(self) or self.playing
+        return self.playing or xbmc.Player.isPlaying(self) 
 
     def onPlayBackStopped(self):
         log.d('onPlayBackStopped')
-        self.parent.manual_stopped = False
-        self.onPlayBackEnded()
-        
-        xbmc.Player.onPlayBackStopped(self)
-        
-    def stop(self):
-        log.d('stop player method')
-        
-        self.playing = False
-        self.tsstop()
-        xbmc.Player.stop(self)
-        self.parent.manual_stopped = False
-        
-
-    def onPlayBackEnded(self):
-        log.d('onPlayBackEnded')
-        log.d('playing={0}'.format(self.playing))
         if not self.amalker and self.isPlaying():
-            log.d('STOP')
-            self.tsstop()
-            self.parent.player.close()
-            
+            self.stop()
+            self.parent.player.close()            
         elif self.amalker:
             self.parent.amalkerWnd.close()
         else:
-            log.d("STOP")
-            self.tsstop()
+            self.stop()              
+        xbmc.Player.onPlayBackStopped(self)
+
+    def onPlayBackEnded(self):
+        log.d('onPlayBackEnded')
+        self.manual_stopped = False
+        self.onPlayBackStopped()
         xbmc.Player.onPlayBackEnded(self)
 
     def onPlayBackStarted(self):    
@@ -125,10 +112,10 @@ class TSengine(xbmc.Player):
             log.d('SHOW ADS Window')
             self.parent.amalkerWnd.show()
             log.d('END SHOW ADS Window')
-        self.parent.manual_stopped = False
+        self.manual_stopped = True
         self.parent.hide_main_window(0)
         xbmc.Player.onPlayBackStarted(self)
-
+        
     def sockConnect(self):        
         self.sock.connect((self.server_ip, self.aceport))
         self.sock.setblocking(0)
@@ -282,7 +269,7 @@ class TSengine(xbmc.Player):
             self.last_error = str(io)
             if self.parent: 
                 self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
-            self.end()
+            #self.end()
             return
 
         log.d('End Init AceEngine')
@@ -292,9 +279,13 @@ class TSengine(xbmc.Player):
         
     def sendCommand(self, cmd):
         try:
+            if not (self.thr and self.thr.active): 
+                if cmd not in ("STOP", "SHUTDOWN"): 
+                    self.createThread()
+                else:
+                    return
+                
             log.d('Send command %s' % cmd)
-            if not (self.thr and self.thr.active) and cmd not in ("STOP", "SHUTDOWN"): 
-                self.createThread()
             self.sock.send(cmd + '\r\n')
             self.trys = 0
         except Exception, e:
@@ -309,7 +300,7 @@ class TSengine(xbmc.Player):
             except Exception, e:
                 log.e('ERROR Send command: %s' % e)
                 self.end()
-                self.parent.close()                 
+                #self.parent.close()                 
                 raise   
             
     def isCancel(self):
@@ -329,10 +320,9 @@ class TSengine(xbmc.Player):
                     log.w('AceEngine is freeze')
                     if self.parent: 
                         self.parent.showStatus("Ошибка ожидания. Операция прервана")
-                    self.tsstop()
                     raise Exception('AceEngine is freeze')
         except:
-            self.tsstop()
+            self.stop()
     
     def createThread(self):
         self.thr = SockThread(self.sock)
@@ -351,7 +341,7 @@ class TSengine(xbmc.Player):
         comm = 'LOADASYNC ' + self.quid + ' ' + mode + ' ' + torrent + cmdparam
         if self.parent: 
             self.parent.showStatus("Загрузка торрента")
-        self.tsstop()
+        self.stop()
         
         self.sendCommand(comm)
         self.Wait(TSMessage.LOADRESP)
@@ -380,7 +370,7 @@ class TSengine(xbmc.Player):
             if self.parent: 
                 self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
             log.f('Incorrect msg from AceEngine %s' % msg.getType())
-            self.tsstop()
+            self.stop()
             return
 
         if self.parent: self.parent.hideStatus()
@@ -463,13 +453,13 @@ class TSengine(xbmc.Player):
                 self.last_error = e
                 if self.parent: 
                     self.parent.showStatus("Ошибка. Операция прервана")
-                self.tsstop()
+                self.stop()
         else:
             self.last_error = 'Incorrect msg from AceEngine %s' % msg.getType()
             log.e(self.last_error)
             if self.parent: 
                 self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
-            self.tsstop()
+            self.stop()
 
     def loop(self):
         while self.isPlaying() and not self.isCancel():
@@ -484,7 +474,8 @@ class TSengine(xbmc.Player):
 
             except Exception as e:
                 log.e('ERROR SLEEPING: {0}'.format(e))
-                self.parent.close()
+                self.end()
+                #self.parent.close()
                 raise
             
 
@@ -515,13 +506,13 @@ class TSengine(xbmc.Player):
                     self.last_error = e
                     if self.parent: 
                         self.parent.showStatus("Ошибка. Операция прервана")
-                    self.tsstop()
+                    self.stop()
             else:
                 self.last_error = 'Incorrect msg from AceEngine %s' % msg.getType()
                 if self.parent: 
                     self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
                 log.e(self.last_error)
-                self.tsstop()
+                self.stop()
 
     def end(self):
         self.playing = False
@@ -529,15 +520,14 @@ class TSengine(xbmc.Player):
         self.sendCommand('STOP')
         self.sendCommand('SHUTDOWN')
         self.last_error = None
-        log.d("Request to close connection")
         if self.thr:
-            self.thr.msg = TSMessage()
             self.thr.active = False
             self.thr = None
-        self.sock.close()
-        self.parent.close()
+        self.sock.close()  
+        xbmc.Player.stop(self)      
 
-    def tsstop(self):  
+    def stop(self):
+        log.d('stop player method')        
         self.playing = False
         self.link = None
         self.sendCommand('STOP')        
@@ -546,6 +536,7 @@ class TSengine(xbmc.Player):
             #self.thr.join()
             self.thr = None
         self.last_error = None
+        xbmc.Player.stop(self)
         
 class TSMessage:
     ERROR = 'ERROR'

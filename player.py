@@ -32,7 +32,7 @@ class MyPlayer(xbmcgui.WindowXML):
     DLG_SWITCH_ID = 299
 
     def __init__(self, *args, **kwargs):
-        
+        log.d('__init__')
         self.TSPlayer = None
         self.parent = None
         self.li = None
@@ -52,9 +52,9 @@ class MyPlayer(xbmcgui.WindowXML):
         self.swinfo = None
         self.control_window = None
         
-        
 
     def onInit(self):
+        log.d('onInit')
         if not self.li:
             return        
         cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
@@ -117,9 +117,9 @@ class MyPlayer(xbmcgui.WindowXML):
                     bt = float(self.curepg[0]['btime'])
                     et = float(self.curepg[0]['etime'])
                     sbt = time.localtime(bt)
-                    set = time.localtime(et)
+                    sett = time.localtime(et)
                     progress.setPercent((ctime - bt) * 100 / (et - bt))
-                    controlEpg.setLabel('%.2d:%.2d - %.2d:%.2d %s' % (sbt.tm_hour, sbt.tm_min, set.tm_hour, set.tm_min, self.curepg[0]['name']))
+                    controlEpg.setLabel('%.2d:%.2d - %.2d:%.2d %s' % (sbt.tm_hour, sbt.tm_min, sett.tm_hour, sett.tm_min, self.curepg[0]['name']))
                     self.setNextEpg()
                     return
                 
@@ -141,24 +141,19 @@ class MyPlayer(xbmcgui.WindowXML):
             controlEpg1 = self.getControl(112)  
                
             sbt = time.localtime(self.curepg[self.nextepg_id]['btime'])
-            set = time.localtime(self.curepg[self.nextepg_id]['etime'])
-            nextepg = nextepg + '%.2d:%.2d - %.2d:%.2d %s\n' % (sbt.tm_hour, sbt.tm_min, set.tm_hour, set.tm_min, self.curepg[self.nextepg_id]['name'])
+            sett = time.localtime(self.curepg[self.nextepg_id]['etime'])
+            nextepg = nextepg + '%.2d:%.2d - %.2d:%.2d %s\n' % (sbt.tm_hour, sbt.tm_min, sett.tm_hour, sett.tm_min, self.curepg[self.nextepg_id]['name'])
                 
         controlEpg1.setLabel(nextepg)         
                
 
     def Stop(self):
-        log.d('CLOSE STOP')
-#         if self.TSPlayer:
-#             self.TSPlayer.stop()
-        
-        xbmc.executebuiltin('PlayerControl(Stop)')
-        #self.close()
-        self.parent.manual_stopped = False
+        log.d('AutoStop')
+        #xbmc.executebuiltin('PlayerControl(Stop)')
         if self.TSPlayer:
-            self.TSPlayer.tsstop()
-        
-        
+            self.TSPlayer.manual_stopped = False
+            self.TSPlayer.stop()
+            
         
 
     def Start(self, li):
@@ -206,13 +201,6 @@ class MyPlayer(xbmcgui.WindowXML):
         self.TSPlayer.play_url_ind(0, li.getLabel(), li.getProperty('icon'), li.getProperty('icon'), torrent=url, mode=mode)
         log.d('End playing')
         
-    def hide(self):
-        pass
-        # xbmc.executebuiltin('Action(ParentDir)')
-        # if self.TSPlayer.playing:
-        #    xbmc.executebuiltin('Action(ParentDir)')
-        #    print 'Главное меню'
-
     def EndTS(self):
         if self.TSPlayer:
             self.TSPlayer.end()
@@ -224,18 +212,28 @@ class MyPlayer(xbmcgui.WindowXML):
             log.d("Закрыть TS")
             subprocess.Popen('taskkill /F /IM {0} /T'.format(os.path.basename(self.TSPlayer.ace_engine)))
             self.TSPlayer = None
-            
-    def run_selected_channel(self):
-        self.channel_number = defines.tryStringToInt(self.channel_number_str)        
-        log.d('CHANNEL NUMBER IS: %i' % self.channel_number)              
-        if 0 < self.channel_number < self.parent.list.size() and self.parent.selitem_id != self.channel_number:            
-            self.parent.selitem_id = self.channel_number
-            self.Stop()           
-        else:       
-            self.swinfo.setVisible(False)     
-        self.channel_number = self.parent.selitem_id  
-        self.chinfo.setLabel(self.parent.list.getListItem(self.parent.selitem_id).getLabel()) 
-        self.channel_number_str = ''
+    
+                
+    def run_selected_channel(self, timeout=5):        
+        def run():
+            self.channel_number = defines.tryStringToInt(self.channel_number_str)        
+            log.d('CHANNEL NUMBER IS: %i' % self.channel_number)              
+            if 0 < self.channel_number < self.parent.list.size() and self.parent.selitem_id != self.channel_number:            
+                self.parent.selitem_id = self.channel_number
+                self.Stop()           
+            else:       
+                self.swinfo.setVisible(False)     
+            self.channel_number = self.parent.selitem_id  
+            self.chinfo.setLabel(self.parent.list.getListItem(self.parent.selitem_id).getLabel()) 
+            self.channel_number_str = ''
+        
+        if self.select_timer: 
+            self.select_timer.cancel() 
+            self.select_timer = None
+        self.select_timer = threading.Timer(timeout, run)
+        self.select_timer.daemon = False
+        self.select_timer.start()    
+        
     
     def inc_channel_number(self):
         self.channel_number += 1
@@ -249,7 +247,6 @@ class MyPlayer(xbmcgui.WindowXML):
             
     def onAction(self, action):
         #log.d('Action {0} | ButtonCode {1}'.format(action.getId(), action.getButtonCode()))
-            
         if action in CANCEL_DIALOG:
             log.d('Closes player %s %s' % (action.getId(), action.getButtonCode()))
             self.close()
@@ -268,11 +265,9 @@ class MyPlayer(xbmcgui.WindowXML):
             li = self.parent.list.getListItem(self.channel_number)                            
             self.chinfo.setLabel(li.getLabel())
             defines.MyThread(self.UpdateEpg, li).start()
-            if self.select_timer: 
-                self.select_timer.cancel() 
-                self.select_timer = None
-            self.select_timer = threading.Timer(5, self.run_selected_channel)
-            self.select_timer.start()
+            
+            self.run_selected_channel()
+            
         elif action.getId() in MyPlayer.DIGIT_BUTTONS:
             ############# IF PRESSED DIGIT KEYS - SWITCH CHANNEL #######################
             digit_pressed = action.getId() - 58 
@@ -288,11 +283,8 @@ class MyPlayer(xbmcgui.WindowXML):
                 self.chinfo.setLabel(li.getLabel())
                 self.swinfo.setVisible(True)
                 defines.MyThread(self.UpdateEpg, li).start()
-                if self.select_timer: 
-                    self.select_timer.cancel() 
-                    self.select_timer = None
-                self.select_timer = threading.Timer(5, self.run_selected_channel)
-                self.select_timer.start()   
+                
+                self.run_selected_channel() 
         elif action.getId() == 0 and action.getButtonCode() == 61530:
             xbmc.executebuiltin('Action(FullScreen)')
             xbmc.sleep(4000)
@@ -316,14 +308,4 @@ class MyPlayer(xbmcgui.WindowXML):
         if controlID == self.CONTROL_BUTTON_INFOWIN:
             self.parent.showInfoWindow()
             
-    def close(self):
-        log.d('player close')
-        if self.select_timer:
-            self.select_timer.cancel()
-        if self.hide_control_timer:
-            self.hide_control_timer.cancel()
-        if self.hide_swinfo_timer:
-            self.hide_swinfo_timer.cancel()
-            
-        xbmcgui.WindowXML.close(self)
         

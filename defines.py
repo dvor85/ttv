@@ -41,13 +41,16 @@ class Logger():
         self.log(msg, level)
         
     def log(self, msg, level):
-        if isinstance(msg, unicode):
-            msg = msg.encode('utf-8')
-        m = "[{id}::{tag}] {msg}".format(**{'id':ADDON_ID, 'tag':self.tag, 'msg': msg})
-        xbmc.log(m, level)
-        if DEBUG:
-            m = '{0} {1}'.format(time.strftime('%X'), m)
-            print m        
+        try:
+            if isinstance(msg, unicode):
+                msg = msg.encode('utf-8', 'ignore')
+            m = "[{id}::{tag}] {msg}".format(**{'id':ADDON_ID, 'tag':self.tag, 'msg': msg})
+            xbmc.log(m, level)
+            if DEBUG:
+                m = '{0} {1}'.format(time.strftime('%X'), m)
+                print m  
+        except Exception as e:
+            xbmc.log('ERROR LOG OUT: {0}'.format(e), xbmc.LOGERROR)      
        
         
     def f(self, msg):

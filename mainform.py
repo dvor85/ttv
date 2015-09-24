@@ -78,9 +78,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.hide_window_timer = None
         self.play_thr = None
         self.is_fav_sync = False
-        self.manual_stopped = True
     
-        
     def onInit(self):
         data = defines.GET('http://api.torrent-tv.ru/v3/version.php?application=xbmc&version=%s' % defines.TTV_VERSION)
         try:
@@ -416,7 +414,7 @@ class WMainForm(xbmcgui.WindowXML):
             
                 self.player.Start(buf)
                 
-                if self.manual_stopped:
+                if self.player.TSPlayer.manual_stopped:
                     break       
                 if not self.IsCanceled():
                     xbmc.sleep(223)   
@@ -539,18 +537,6 @@ class WMainForm(xbmcgui.WindowXML):
             self.showInfoWindow()
             return
     
-    def close(self):
-        defines.closeRequested.set()
-        self.isCanceled = True
-        if self.player.TSPlayer:
-            self.player.Stop()
-        if self.select_timer:
-            self.select_timer.cancel()
-        if self.hide_window_timer:
-            self.hide_window_timer.cancel()
-
-        xbmcgui.WindowXML.close(self)
-
     def showInfoWindow(self):
         self.infoform = InfoForm("inform.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
         self.infoform.parent = self
@@ -568,9 +554,9 @@ class WMainForm(xbmcgui.WindowXML):
             bt = float(float(curepg[0]['btime']))
             et = float(float(curepg[0]['etime']))
             sbt = time.localtime(bt)
-            set = time.localtime(et)
+            sett = time.localtime(et)
             self.progress.setPercent((ctime - bt) * 100 / (et - bt))
-            controlEpg.setLabel('%.2d:%.2d - %.2d:%.2d %s' % (sbt.tm_hour, sbt.tm_min, set.tm_hour, set.tm_min, curepg[0]['name']))
+            controlEpg.setLabel('%.2d:%.2d - %.2d:%.2d %s' % (sbt.tm_hour, sbt.tm_min, sett.tm_hour, sett.tm_min, curepg[0]['name']))
             nextepg = ''
             for i in range(1, 99):
                 ce = None
@@ -583,8 +569,8 @@ class WMainForm(xbmcgui.WindowXML):
                 if i >= len(curepg):
                     break
                 sbt = time.localtime(float(curepg[i]['btime']))
-                set = time.localtime(float(curepg[i]['etime']))
-                nextepg = '%.2d:%.2d - %.2d:%.2d %s' % (sbt.tm_hour, sbt.tm_min, set.tm_hour, set.tm_min, curepg[i]['name'])
+                sett = time.localtime(float(curepg[i]['etime']))
+                nextepg = '%.2d:%.2d - %.2d:%.2d %s' % (sbt.tm_hour, sbt.tm_min, sett.tm_hour, sett.tm_min, curepg[i]['name'])
                 ce.setLabel(nextepg)
             # controlEpg1.setLabel(nextepg)
 
@@ -599,59 +585,61 @@ class WMainForm(xbmcgui.WindowXML):
             self.progress.setPercent(1)
             
     def onAction(self, action):                
-        # log.d('Событие {0}'.format(action.getId()))        
-        if action.getButtonCode() == 61513:
-            return
+        # log.d('Событие {0}'.format(action.getId()))  
         if action in WMainForm.CANCEL_DIALOG:
-            log.d('CLOSE FORM')
-            self.close()
-        elif action.getId() in WMainForm.ARROW_ACTIONS:
-            log.d("ARROW_ACTION %s" % self.seltab)
-            self.onFocus(self.getFocusId())
-        elif action.getId() in WMainForm.CONTEXT_MENU_IDS and self.getFocusId() == WMainForm.CONTROL_LIST:
-            if action.getId() == 101:
+            log.d('ACTION CLOSE FORM')
+            self.close() 
+            
+        if not self.IsCanceled():      
+            if action.getButtonCode() == 61513:
                 return
-            mnu = MenuForm("menu.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
-            mnu.li = self.getFocus().getSelectedItem()
-            mnu.parent = self
+            elif action.getId() in WMainForm.ARROW_ACTIONS:
+                log.d("ARROW_ACTION %s" % self.seltab)
+                self.onFocus(self.getFocusId())
+            elif action.getId() in WMainForm.CONTEXT_MENU_IDS and self.getFocusId() == WMainForm.CONTROL_LIST:
+                if action.getId() == 101:
+                    return
+                mnu = MenuForm("menu.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
+                mnu.li = self.getFocus().getSelectedItem()
+                mnu.parent = self
+                
+                log.d('Выполнить команду')
+                mnu.doModal()
+                log.d('Комманда выполнена')
+                res = mnu.GetResult()
+                log.d('Результат команды %s' % res)
+                if res.startswith('OK'):
+                    self.updateList()
+                elif res == WMainForm.API_ERROR_INCORRECT:
+                    self.showStatus('Пользователь не опознан по сессии')
+                elif res == WMainForm.API_ERROR_NOCONNECT:
+                    self.showStatus('Ошибка соединения с БД')
+                elif res == WMainForm.API_ERROR_ALREADY:
+                    self.showStatus('Канал уже был добавлен в избранное ранее')
+                elif res == WMainForm.API_ERROR_NOPARAM:
+                    self.showStatus('Ошибка входных параметров')
+                elif res == WMainForm.API_ERROR_NOFAVOURITE:
+                    self.showStatus('Канал не найден в избранном')
+                
+            elif action.getId() == WMainForm.ACTION_MOUSE:
+                if (self.getFocusId() == WMainForm.CONTROL_LIST):
+                    self.onFocus(WMainForm.CONTROL_LIST)
+            elif action.getId() in WMainForm.DIGIT_BUTTONS:
+                ############# IN PRESSING DIGIT KEYS ############
+                self.channel_number_str += str(action.getId() - 58)                     
+                self.select_channel()
+                self.setFocus(self.list)   
+                self.list.selectItem(self.selitem_id)
+                if self.select_timer:
+                    self.select_timer.cancel()
+                    self.select_timer = None      
+                self.select_timer = threading.Timer(1, lambda: setattr(self, 'channel_number_str', ''))
+                self.select_timer.daemon = False
+                self.select_timer.start()
+            else:
+                super(WMainForm, self).onAction(action)
             
-            log.d('Выполнить команду')
-            mnu.doModal()
-            log.d('Комманда выполнена')
-            res = mnu.GetResult()
-            log.d('Результат команды %s' % res)
-            if res.startswith('OK'):
-                self.updateList()
-            elif res == WMainForm.API_ERROR_INCORRECT:
-                self.showStatus('Пользователь не опознан по сессии')
-            elif res == WMainForm.API_ERROR_NOCONNECT:
-                self.showStatus('Ошибка соединения с БД')
-            elif res == WMainForm.API_ERROR_ALREADY:
-                self.showStatus('Канал уже был добавлен в избранное ранее')
-            elif res == WMainForm.API_ERROR_NOPARAM:
-                self.showStatus('Ошибка входных параметров')
-            elif res == WMainForm.API_ERROR_NOFAVOURITE:
-                self.showStatus('Канал не найден в избранном')
-            
-        elif action.getId() == WMainForm.ACTION_MOUSE:
-            if (self.getFocusId() == WMainForm.CONTROL_LIST):
-                self.onFocus(WMainForm.CONTROL_LIST)
-        elif action.getId() in WMainForm.DIGIT_BUTTONS:
-            ############# IN PRESSING DIGIT KEYS ############
-            self.channel_number_str += str(action.getId() - 58)                     
-            self.select_channel()
-            self.setFocus(self.list)   
-            self.list.selectItem(self.selitem_id)
-            if self.select_timer:
-                self.select_timer.cancel()
-                self.select_timer = None      
-            self.select_timer = threading.Timer(1, lambda: setattr(self, 'channel_number_str', ''))
-            self.select_timer.daemon = False
-            self.select_timer.start()
-        else:
-            super(WMainForm, self).onAction(action)
-            
-        self.hide_main_window()
+            self.hide_main_window()
 
     def updateList(self):
         self.showStatus("Получение списка каналов")
@@ -789,3 +777,22 @@ class WMainForm(xbmcgui.WindowXML):
 
     def IsCanceled(self):
         return self.isCanceled or xbmc.abortRequested or defines.closeRequested.isSet()
+    
+    def close(self):
+        
+        defines.closeRequested.set()
+        self.isCanceled = True
+        if self.player.TSPlayer:
+            #self.player.TSPlayer.stop()
+            self.player.TSPlayer.end()
+        #if self.player:
+        #    self.player.close()
+        
+        if self.select_timer:
+            self.select_timer.cancel()
+        if self.hide_window_timer:
+            self.hide_window_timer.cancel()
+        xbmcgui.WindowXML.close(self)
+        
+
+        
