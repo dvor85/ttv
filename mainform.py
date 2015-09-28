@@ -238,7 +238,7 @@ class WMainForm(xbmcgui.WindowXML):
                     if ch["access_user"] == 0:
                         chname = "[COLOR FF646464]%s[/COLOR]" % chname
                     li.setLabel(chname) 
-                    li.setProperty('commands', "%s,%s,%s" % (MenuForm.CMD_DEL_FAVOURITE, MenuForm.CMD_UP_FAVOURITE, MenuForm.CMD_DOWN_FAVOURITE))
+                    li.setProperty('commands', "%s,%s" % (MenuForm.CMD_MOVE_FAVOURITE, MenuForm.CMD_DEL_FAVOURITE))
                     self.category[WMainForm.CHN_TYPE_FAVOURITE]["channels"].append(li)
                 
                     
@@ -783,9 +783,9 @@ class WMainForm(xbmcgui.WindowXML):
         defines.closeRequested.set()
         self.isCanceled = True
         if self.player.TSPlayer:
-            #self.player.TSPlayer.stop()
+            # self.player.TSPlayer.stop()
             self.player.TSPlayer.end()
-        #if self.player:
+        # if self.player:
         #    self.player.close()
         
         if self.select_timer:

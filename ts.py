@@ -42,6 +42,7 @@ class TSengine(xbmc.Player):
         self.stream = False
         self.playing = False
         self.ace_engine = ''
+        self.aceport = 0
         self.port_file = ''
         self.trys = 0
         self.thr = None
@@ -58,10 +59,19 @@ class TSengine(xbmc.Player):
             self.webport = defines.ADDON.getSetting('webport')
         else:
             self.webport = '6878'
-        if defines.ADDON.getSetting('port'):
-            self.aceport = int(defines.ADDON.getSetting('port'))
-        else:
-            self.aceport = 62062
+        
+        if sys.platform.startswith('win'):            
+            self.ace_engine = self.getAceEngine_exe()
+            log.d("AceEngine path: {0}".format(self.ace_engine.encode('utf-8')))     
+            self.port_file = os.path.join(os.path.dirname(self.ace_engine), 'acestream.port')
+            log.d('AceEngine port file: {0}'.format(self.port_file))
+            self.aceport = self.getWinPort()
+                
+        if self.aceport == 0:
+            if defines.ADDON.getSetting('port'):
+                self.aceport = int(defines.ADDON.getSetting('port'))
+            else:
+                self.aceport = 62062
 
         if not defines.ADDON.getSetting('age'):
             defines.ADDON.setSetting('age', '1')
@@ -120,50 +130,47 @@ class TSengine(xbmc.Player):
         self.sock.connect((self.server_ip, self.aceport))
         self.sock.setblocking(0)
         self.sock.settimeout(10)
+        
+    def getAceEngine_exe(self):
+        log.d('Считываем путь к ace_engine.exe')      
+        import _winreg              
+        t = None
+        try:
+            t = _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, 'Software\\ACEStream')
+            return _winreg.QueryValueEx(t , 'EnginePath')[0]           
+            
+        except Exception, e:
+            log.e('getAceEngine_exe error: %s' % e)
+            return ''
+        finally:
+            if t:    
+                _winreg.CloseKey(t)
+    
+    def getWinPort(self):
+        log.d('Считываем порт')
+        for i in range(15):
+            if os.path.exists(self.port_file):                    
+                with open(self.port_file, 'r') as gf:
+                    return defines.tryStringToInt(gf.read())
+            else:
+                if self.parent: 
+                    self.parent.showStatus("Запуск AceEngine ({0})".format(i))                                
+                xbmc.sleep(995)
+
+        return 0
                 
     def startEngine(self):
-        def getAceEngine_exe():
-            log.d('Считываем путь к ace_engine.exe')      
-            import _winreg              
-            t = None
-            try:
-                t = _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, 'Software\\ACEStream')
-                return _winreg.QueryValueEx(t , 'EnginePath')[0]           
-                
-            except Exception, e:
-                log.e('Error Opening acestream.port %s' % e)
-                return ''
-            finally:
-                if t:    
-                    _winreg.CloseKey(t)
-        
-        def getWinPort():
-            log.d('Считываем порт')
-            for i in range(15):
-                if os.path.exists(self.port_file):                    
-                    with open(self.port_file, 'r') as gf:
-                        return int(gf.read())
-                else:
-                    if self.parent: 
-                        self.parent.showStatus("Запуск AceEngine ({0})".format(i))                                
-                    xbmc.sleep(995)
-    
-            return 0
-    
         import subprocess
         acestream_params = ["--live-cache-type", "memory"]
 
         if sys.platform.startswith('win') and self.server_ip == '127.0.0.1':
             try:                
                 log.d('try to start AceEngine for windows') 
-                self.ace_engine = getAceEngine_exe()
-                log.d("AceEngine path: {0}".format(self.ace_engine.encode('utf-8')))     
-                self.port_file = os.path.join(os.path.dirname(self.ace_engine), 'acestream.port')
                 
                 if self.port_file != '' and os.path.exists(self.port_file):
+                    log.d('Remove {0}'.format(self.port_file))
                     os.remove(self.port_file)
                 
-                log.d('Пытаюсь открыть %s' % self.port_file.encode('utf-8'))
                 if not os.path.exists(self.port_file):
                     if self.parent: 
                         self.parent.showStatus("Запуск AceEngine")
@@ -171,7 +178,7 @@ class TSengine(xbmc.Player):
                     p = subprocess.Popen([self.ace_engine] + acestream_params)
                     log.d('pid = {0}'.format(p.pid))
                     
-                    self.aceport = getWinPort()
+                    self.aceport = self.getWinPort()
                     if self.aceport > 0:
                         defines.ADDON.setSetting('port', str(self.aceport))
                     else:

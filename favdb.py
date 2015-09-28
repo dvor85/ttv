@@ -32,27 +32,15 @@ class FDB():
                 del(self.channels[k])
                 return self.save()
     
-    def upTo(self, li, to_id):
-        chid = int(li.getProperty('id'))
-        log.d(u'upTo channel with id={0}'.format(chid))
+    def moveTo(self, li, to_id):
+        to_id -= 1
+        chid = int(li.getProperty('id'))        
         if not self.channels:
             self.get()
-        if self.channels:
+        if self.channels and to_id < len(self.channels):
             k = self.find(chid)
-            if k > 0:
-                return self.swapTo(k, k - 1)
-            
-    def downTo(self, li, to_id):
-        chid = int(li.getProperty('id'))
-        log.d(u'downTo channel with id={0}'.format(chid))
-        if not self.channels:
-            self.get()
-        if self.channels:
-            k = self.find(chid)
-            if k < len(self.channels) - 1:
-                return self.swapTo(k + 1, k)
-    
-
+            log.d(u'moveTo channel from {0} to {1}'.format(k, to_id))
+            return self.swapTo(k, to_id)
     
     def find(self, chid):
         log.d(u'find channel by id={0}'.format(chid))
@@ -133,10 +121,6 @@ class LocalFDB(FDB):
 
             
 class RemoteFDB(FDB):
-    CMD_ADD_FAVOURITE = 'favourite_add.php'
-    CMD_DEL_FAVOURITE = 'favourite_delete.php'
-    CMD_UP_FAVOURITE = 'favourite_up.php'
-    CMD_DOWN_FAVOURITE = 'favourite_down.php'
     
     def __init__(self, session):
         FDB.__init__(self)
@@ -170,19 +154,19 @@ class RemoteFDB(FDB):
         return True
 
         
-    def exec_cmd(self, li, cmd):
-        log.d('exec_cmd')
-        channel_id = li.getProperty('id')
-        data = defines.GET('http://api.torrent-tv.ru/v3/%s?session=%s&channel_id=%s&typeresult=json' % (cmd, self.session, channel_id), cookie=self.session)
-        try:
-            jdata = json.loads(data)
-        except Exception as e:
-            msg = u'exec_cmd error: {0}'.format(e)
-            log.e(msg)
-            return msg
-        if jdata['success'] == 0:
-            return jdata['error'].encode('utf-8')
-        return True
+#     def __exec_cmd(self, li, cmd):
+#         log.d('exec_cmd')
+#         channel_id = li.getProperty('id')
+#         data = defines.GET('http://api.torrent-tv.ru/v3/%s?session=%s&channel_id=%s&typeresult=json' % (cmd, self.session, channel_id), cookie=self.session)
+#         try:
+#             jdata = json.loads(data)
+#         except Exception as e:
+#             msg = u'exec_cmd error: {0}'.format(e)
+#             log.e(msg)
+#             return msg
+#         if jdata['success'] == 0:
+#             return jdata['error'].encode('utf-8')
+#         return True
         
     def get(self):        
         data = defines.GET('http://api.torrent-tv.ru/v3/translation_list.php?session=%s&type=%s&typeresult=json' % (self.session, 'favourite'), cookie=self.session)
@@ -214,7 +198,7 @@ class RemoteFDB(FDB):
                     'remember' : 1,
                     'enter' : 'enter'
                 }
-                req = urllib2.Request('http://torrent-tv.ru/auth.php', data = urllib.urlencode(authdata))
+                req = urllib2.Request('http://torrent-tv.ru/auth.php', data=urllib.urlencode(authdata))
                 req.add_header('User-Agent', useragent)
                 resp = urllib2.urlopen(req)
                 self.__set_cookie(resp.headers['Set-Cookie'].split(";")[0])
