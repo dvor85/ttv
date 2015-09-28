@@ -130,14 +130,16 @@ def showMessage(message='', heading='Torrent-TV.RU', times=6789):
         except Exception, e:            
             log.w(u'showMessage: exec failed [{0}]'.format(e))
 
-def GET(target, post=None, cookie=None):
+def GET(target, post=None, cookie=None, useragent='XBMC (script.torrent-tv.ru)'):
     log.d(u'try to get: {0} with cookie={1}'.format(target, cookie))
     t = 0
     while not xbmc.abortRequested and not closeRequested.isSet():
         t += 1
         try:
             req = urllib2.Request(url=target, data=post)
-            req.add_header('User-Agent', 'XBMC (script.torrent-tv.ru)')
+            if post is not None:
+                req.add_header("Content-type", "application/x-www-form-urlencoded")
+            req.add_header('User-Agent', useragent)
             if cookie:
                 req.add_header('Cookie', 'PHPSESSID=%s' % cookie)
             resp = urllib2.urlopen(req, timeout=6)

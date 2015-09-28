@@ -71,9 +71,9 @@ class MenuForm(xbmcgui.WindowXMLDialog):
         elif cmd == MenuForm.CMD_DEL_FAVOURITE:
             return fdb.delete(self.li)
         elif cmd == MenuForm.CMD_UP_FAVOURITE:
-            return fdb.up(self.li)
+            return fdb.upTo(self.li, None)
         elif cmd == MenuForm.CMD_DOWN_FAVOURITE:
-            return fdb.down(self.li)
+            return fdb.downTo(self.li, None)
                     
 
     def GetResult(self):
