@@ -126,7 +126,7 @@ class RemoteFDB(FDB):
         FDB.__init__(self)
         log.d('init RemoteFDB')
         self.session = session
-        self.cookie = defines.ADDON.getSetting('cookie')
+        self.cookie = []#defines.ADDON.getSetting('cookie')
         
     def add(self, li):
         chid = int(li.getProperty('id'))
@@ -182,50 +182,52 @@ class RemoteFDB(FDB):
             log.e('get error: {0}'.format(e))
             return
         
-    def __set_cookie(self, cookie):
-        self.cookie = cookie
-        defines.ADDON.setSetting('cookie', self.cookie)
-        
-        
     def __post_to_site(self, target, jdata):
         try:
             import urllib, urllib2
-            useragent = 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.99 Safari/537.36'
-            if not self.cookie:
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.99 Safari/537.36',
+                       'Content-type': 'application/x-www-form-urlencoded',
+                       'Accept-Encoding': 'gzip, deflate',
+            }
+            
+            if len(self.cookie) == 0:
+                req = urllib2.Request('http://torrent-tv.ru/banhammer/pid', headers=headers)
+                resp = urllib2.urlopen(req)
+                self.cookie.append('BHC={0}; /auth.php;'.format(resp.headers['X-BH-Token'].split(";")[0]))
+                
                 authdata = {
                     'email' : defines.ADDON.getSetting('login'),
                     'password' : defines.ADDON.getSetting('password'),
                     'remember' : 1,
                     'enter' : 'enter'
                 }
-                req = urllib2.Request('http://torrent-tv.ru/auth.php', data=urllib.urlencode(authdata))
-                req.add_header('User-Agent', useragent)
+                req = urllib2.Request('http://torrent-tv.ru/auth.php', data=urllib.urlencode(authdata), headers=headers)
+                for cookie in self.cookie:
+                    req.add_header('Cookie', cookie)
                 resp = urllib2.urlopen(req)
-                self.__set_cookie(resp.headers['Set-Cookie'].split(";")[0])
-                
-            req = urllib2.Request(target, data='ch={0}'.format(urllib2.quote(jdata)))
-            req.add_header('User-Agent', useragent)
-            req.add_header('Cookie', self.cookie)
+                self.cookie.append(resp.headers['Set-Cookie'].split(";")[0])
+            
+            headers.pop('Accept-Encoding')
+            req = urllib2.Request(target, data='ch={0}'.format(urllib2.quote(jdata)), headers=headers)
+            for cookie in self.cookie:
+                req.add_header('Cookie', cookie)
             resp = urllib2.urlopen(req)
             return resp.read()
         except Exception as e:
-            self.__set_cookie('')
+            self.cookie = []
             log.e('ERROR: {0} on post query to {1}'.format(e, target))
             
     
     def save(self):
         if self.channels:
             jdata = json.dumps(self.channels)
-            for i in range(2):
-                log.d('try save {0}'.format(i))                
-                data = self.__post_to_site('http://torrent-tv.ru/store_sorted.php', jdata)
-                try:
-                    jdata = json.loads(data)
-                    if int(jdata['success']) == 1:
-                        return True
-                    
-                except Exception as e:
-                    log.e('save error: {0}'.format(e))
-                    self.__set_cookie('')
+            data = self.__post_to_site('http://torrent-tv.ru/store_sorted.php', jdata)
+            try:
+                jdata = json.loads(data)
+                if int(jdata['success']) == 1:
+                    return True
+                
+            except Exception as e:
+                log.e('save error: {0}'.format(e))
  
         
