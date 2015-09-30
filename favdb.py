@@ -4,6 +4,7 @@
 import os
 import defines
 import json
+import xbmc
 
 log = defines.Logger('FDB')
 
@@ -193,7 +194,7 @@ class RemoteFDB(FDB):
             if len(self.cookie) == 0:
                 req = urllib2.Request('http://torrent-tv.ru/banhammer/pid', headers=headers)
                 resp = urllib2.urlopen(req)
-                self.cookie.append('BHC={0}; /auth.php;'.format(resp.headers['X-BH-Token'].split(";")[0]))
+                self.cookie.append('BHC={0}; path=/;'.format(resp.headers['X-BH-Token']))
                 
                 authdata = {
                     'email' : defines.ADDON.getSetting('login'),
@@ -205,7 +206,11 @@ class RemoteFDB(FDB):
                 for cookie in self.cookie:
                     req.add_header('Cookie', cookie)
                 resp = urllib2.urlopen(req)
-                self.cookie.append(resp.headers['Set-Cookie'].split(";")[0])
+                for h in resp.headers.headers:
+                    keyval = h.split(':')
+                    if 'Set-Cookie' in keyval[0]:
+                        self.cookie.append(keyval[1].strip())
+                #self.cookie.append(resp.headers['Set-Cookie'].split(";")[0])
             
             headers.pop('Accept-Encoding')
             req = urllib2.Request(target, data='ch={0}'.format(urllib2.quote(jdata)), headers=headers)
@@ -221,13 +226,16 @@ class RemoteFDB(FDB):
     def save(self):
         if self.channels:
             jdata = json.dumps(self.channels)
-            data = self.__post_to_site('http://torrent-tv.ru/store_sorted.php', jdata)
-            try:
-                jdata = json.loads(data)
-                if int(jdata['success']) == 1:
-                    return True
-                
-            except Exception as e:
-                log.e('save error: {0}'.format(e))
+            for i in range(2):
+                log.d('try to save: {0}'.format(i))
+                data = self.__post_to_site('http://torrent-tv.ru/store_sorted.php', jdata)
+                try:
+                    jdata = json.loads(data)
+                    if int(jdata['success']) == 1:
+                        return True
+                    
+                except Exception as e:
+                    log.e('save error: {0}'.format(e))
+                    xbmc.sleep(900)
  
         

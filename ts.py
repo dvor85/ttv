@@ -91,7 +91,7 @@ class TSengine(xbmc.Player):
         return xbmc.Player.getPlayingFile(self)
     
     def isPlaying(self):
-        return self.playing or xbmc.Player.isPlaying(self) 
+        return self.playing and xbmc.Player.isPlaying(self) 
 
     def onPlayBackStopped(self):
         log.d('onPlayBackStopped')
@@ -154,8 +154,11 @@ class TSengine(xbmc.Player):
                     return defines.tryStringToInt(gf.read())
             else:
                 if self.parent: 
-                    self.parent.showStatus("Запуск AceEngine ({0})".format(i))                                
-                xbmc.sleep(995)
+                    self.parent.showStatus("Запуск AceEngine ({0})".format(i))
+                if not self.isCancel():                                
+                    xbmc.sleep(995)
+                else:
+                    break
 
         return 0
                 
@@ -235,8 +238,10 @@ class TSengine(xbmc.Player):
                         break
                     except Exception, e:
                         log.e("Подключение не удалось {0}".format(e))
-                        xbmc.sleep(995)
-                        continue
+                        if not self.isCancel():                                
+                            xbmc.sleep(995)
+                        else:
+                            break
                 else:
                     msg = 'Ошибка подключения к AceEngine: {0}'.format(e)
                     log.f(msg)
@@ -474,10 +479,12 @@ class TSengine(xbmc.Player):
                 self.parent.amalkerWnd.close()
                 break
             try:
-                if xbmc.abortRequested:
+                if not self.isCancel():
+                    xbmc.sleep(250)
+                else:
                     log.d("XBMC Shutdown")
                     break
-                xbmc.sleep(250)
+                
 
             except Exception as e:
                 log.e('ERROR SLEEPING: {0}'.format(e))

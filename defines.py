@@ -44,7 +44,7 @@ class Logger():
         try:
             if isinstance(msg, unicode):
                 msg = msg.encode('utf-8', 'ignore')
-            m = "[{id}::{tag}] {msg}".format(**{'id':ADDON_ID, 'tag':self.tag, 'msg': msg})
+            m = "[{id}::{tag}] {msg}".format(**{'id':ADDON_ID, 'tag':self.tag, 'msg': msg}).replace(ADDON.getSetting('password'), '********')
             xbmc.log(m, level)
             if DEBUG:
                 m = '{0} {1}'.format(time.strftime('%X'), m)
