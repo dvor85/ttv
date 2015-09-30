@@ -128,10 +128,10 @@ def showMessage(message='', heading='Torrent-TV.RU', times=6789):
         try: 
             xbmc.executebuiltin('XBMC.Notification("%s", "%s", %s, %s)' % (heading, message, times, ADDON_ICON))
         except Exception, e:            
-            log.w(u'showMessage: exec failed [{0}]'.format(e))
+            log.w('showMessage: exec failed [{0}]'.format(e))
 
 def GET(target, post=None, cookie=None, useragent='XBMC (script.torrent-tv.ru)'):
-    log.d(u'try to get: {0} with cookie={1}'.format(target, cookie))
+    log.d('try to get: {0}'.format(target))
     t = 0
     while not xbmc.abortRequested and not closeRequested.isSet():
         t += 1
@@ -151,7 +151,7 @@ def GET(target, post=None, cookie=None, useragent='XBMC (script.torrent-tv.ru)')
             
         except Exception, e:
             if t % 10 == 0:
-                log.e(u'GET EXCEPT [{0}]'.format(e))
+                log.e('GET EXCEPT [{0}]'.format(e))
                 xbmc.sleep(3000)       
 
 def checkPort(params):

@@ -238,7 +238,7 @@ class WMainForm(xbmcgui.WindowXML):
                     if ch["access_user"] == 0:
                         chname = "[COLOR FF646464]%s[/COLOR]" % chname
                     li.setLabel(chname) 
-                    li.setProperty('commands', "%s,%s" % (MenuForm.CMD_MOVE_FAVOURITE, MenuForm.CMD_DEL_FAVOURITE))
+                    li.setProperty('commands', "%s,%s,%s,%s" % (MenuForm.CMD_MOVE_FAVOURITE, MenuForm.CMD_DEL_FAVOURITE, MenuForm.CMD_DOWN_FAVOURITE, MenuForm.CMD_UP_FAVOURITE))
                     self.category[WMainForm.CHN_TYPE_FAVOURITE]["channels"].append(li)
                 
                     
@@ -427,7 +427,8 @@ class WMainForm(xbmcgui.WindowXML):
                 log.e(e)
                 xbmc.sleep(1000)
             
-        self.play_thr = None  
+        self.play_thr = None
+        self.player.close()  
           
         if xbmc.getCondVisibility("Window.IsVisible(home)"):
             log.d("Close from HOME Window")
