@@ -538,7 +538,8 @@ class TSengine(xbmc.Player):
             self.thr.active = False
             self.thr = None
         self.sock.close()  
-        xbmc.Player.stop(self)      
+        xbmc.Player.stop(self)    
+        
 
     def stop(self):
         log.d('stop player method')        
@@ -547,7 +548,7 @@ class TSengine(xbmc.Player):
         self.sendCommand('STOP')        
         if self.thr:
             self.thr.active = False
-            #self.thr.join()
+            self.thr.join()
             self.thr = None
         self.last_error = None
         xbmc.Player.stop(self)
