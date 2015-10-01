@@ -414,8 +414,8 @@ class WMainForm(xbmcgui.WindowXML):
             
                 self.player.Start(buf)
                 
-                if self.player.TSPlayer.manual_stopped:
-                    break       
+#                 if self.player.TSPlayer.manual_stopped:
+#                     break       
                 if not self.IsCanceled():
                     xbmc.sleep(223)   
                     self.channel_number_str = str(self.selitem_id)
