@@ -111,6 +111,7 @@ class MyThread(threading.Thread):
         self.params = params
         self.isCanceled = False
         self.daemon = False
+        self.name = func.__name__
 
     def run(self):
         self.func(self.params)

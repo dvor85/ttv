@@ -351,7 +351,7 @@ class WMainForm(xbmcgui.WindowXML):
             log.d('isPlaying={0}'.format(isPlaying()))
             if isPlaying():
                 log.d('hide main window')
-                self.player.show()
+                self.player.Show()
         
         if self.hide_window_timer:
             self.hide_window_timer.cancel()
@@ -414,8 +414,8 @@ class WMainForm(xbmcgui.WindowXML):
             
                 self.player.Start(buf)
                 
-#                 if self.player.TSPlayer.manual_stopped:
-#                     break       
+                if self.player.TSPlayer.manual_stopped:
+                    break       
                 if not self.IsCanceled():
                     xbmc.sleep(223)   
                     self.channel_number_str = str(self.selitem_id)
@@ -524,14 +524,15 @@ class WMainForm(xbmcgui.WindowXML):
                     self.fillRecords(self.archive[0], datefrm.date)
                     return
             
-            if not self.play_thr:
-                self.play_thr = defines.MyThread(self.LoopPlay, None)
-                self.play_thr.start()
-            else:
-                self.player.Stop()
+#             if not self.play_thr:
+#                 self.play_thr = defines.MyThread(self.LoopPlay, None)
+#                 self.play_thr.start()
+#             else:
+#                 self.player.Stop()
+            self.LoopPlay()
             
         elif controlID == WMainForm.BTN_FULLSCREEN:
-            self.player.show()
+            self.player.Show()
 
 
         elif controlID == WMainForm.BTN_INFO:

@@ -44,7 +44,7 @@ class MyPlayer(xbmcgui.WindowXML):
         self.select_timer = None
         self.hide_control_timer = None
         self.hide_swinfo_timer = None
-        self.update_epg_lock = threading.RLock()
+        self.update_epg_lock = threading.Event()
         
         self.channel_number = 0
         self.channel_number_str = ''
@@ -97,8 +97,11 @@ class MyPlayer(xbmcgui.WindowXML):
         self.hide_control_timer.start()
         
         
-    def UpdateEpg(self, li):        
-        with self.update_epg_lock:
+    def UpdateEpg(self, li):  
+        if self.update_epg_lock.is_set():
+            return      
+        self.update_epg_lock.set()
+        try:
             log.d('UpdateEPG')
             if not li:
                 return
@@ -126,6 +129,8 @@ class MyPlayer(xbmcgui.WindowXML):
             controlEpg.setLabel('Нет программы')
             controlEpg1.setLabel('')
             progress.setPercent(1)
+        finally:
+            self.update_epg_lock.clear()
         
             
     def setNextEpg(self):
@@ -153,6 +158,16 @@ class MyPlayer(xbmcgui.WindowXML):
         if self.TSPlayer:
             self.TSPlayer.manual_stopped = False
             self.TSPlayer.stop()
+            
+            
+    def Show(self):
+        if self.TSPlayer:
+            if not self.TSPlayer.amalker:
+                self.show()
+            else:
+                log.d('SHOW ADS Window')
+                self.parent.amalkerWnd.show()
+                log.d('END SHOW ADS Window')
             
         
 
@@ -184,7 +199,6 @@ class MyPlayer(xbmcgui.WindowXML):
             self.parent.showStatus(msg)
             raise
         
-        log.d(jdata)
         if not jdata["success"] or jdata["success"] == 0 or not jdata["source"]:
             msg = "Канал временно не доступен"
             self.parent.showStatus(msg)            

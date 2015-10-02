@@ -45,7 +45,7 @@ class TSengine(xbmc.Player):
         self.aceport = 0
         self.port_file = ''
         self.trys = 0
-        self.thr = None
+        self.sock_thr = None
         self.link = None
         self.manual_stopped = True
        
@@ -118,12 +118,6 @@ class TSengine(xbmc.Player):
         except Exception as e:
             log.e('onPlayBackStarted: {0}'.format(e))
         
-        if not self.amalker:
-            self.parent.player.show()
-        elif self.amalker:
-            log.d('SHOW ADS Window')
-            self.parent.amalkerWnd.show()
-            log.d('END SHOW ADS Window')
         self.manual_stopped = True
         self.parent.hide_main_window(0)
         #xbmc.Player.onPlayBackStarted(self)
@@ -264,15 +258,15 @@ class TSengine(xbmc.Player):
         try:
             self.sendCommand('HELLOBG version=4')
             self.Wait(TSMessage.HELLOTS)
-            msg = self.thr.getTSMessage()
+            msg = self.sock_thr.getTSMessage()
             if msg.getType() == TSMessage.HELLOTS and not msg.getParams().has_key('key'):
                 raise IOError('Incorrect msg from AceEngine')
             
-            self.thr.msg = TSMessage()
+            self.sock_thr.msg = TSMessage()
             log.d('Send READY')
             self.sendCommand('READY key=' + self.get_key(msg.getParams()['key']))
             self.Wait(TSMessage.AUTH)
-            msg = self.thr.getTSMessage()
+            msg = self.sock_thr.getTSMessage()
             if msg.getType() == TSMessage.AUTH:
                 if msg.getParams() == '0':
                     raise IOError('Пользователь не зарегистрирован')
@@ -293,7 +287,7 @@ class TSengine(xbmc.Player):
         
     def sendCommand(self, cmd):
         try:
-            if not (self.thr and self.thr.active): 
+            if not (self.sock_thr and self.sock_thr.is_active()): 
                 if cmd not in ("STOP", "SHUTDOWN"): 
                     self.createThread()
                 else:
@@ -325,7 +319,7 @@ class TSengine(xbmc.Player):
         log.d('wait message: {0}'.format(msg))
         a = 0
         try:
-            while self.thr.getTSMessage().getType() != msg and not self.thr.error and not self.isCancel():
+            while self.sock_thr.getTSMessage().getType() != msg and not self.sock_thr.error and not self.isCancel():
                 xbmc.sleep(DEFAULT_TIMEOUT)
                 if not self.stream: 
                     xbmc.sleep(DEFAULT_TIMEOUT)
@@ -339,10 +333,10 @@ class TSengine(xbmc.Player):
             self.stop()
     
     def createThread(self):
-        self.thr = SockThread(self.sock)
-        self.thr.state_method = self.showState
-        self.thr.owner = self
-        self.thr.start()
+        self.sock_thr = SockThread(self.sock)
+        self.sock_thr.state_method = self.showState
+        self.sock_thr.owner = self
+        self.sock_thr.start()
         
     def load_torrent(self, torrent, mode):
         log.d("Load Torrent: {0}, mode: {1}".format(torrent, mode))
@@ -359,7 +353,7 @@ class TSengine(xbmc.Player):
         
         self.sendCommand(comm)
         self.Wait(TSMessage.LOADRESP)
-        msg = self.thr.getTSMessage()
+        msg = self.sock_thr.getTSMessage()
         log.d('load_torrent - %s' % msg.getType())
         if msg.getType() == TSMessage.LOADRESP:
             try:
@@ -432,7 +426,7 @@ class TSengine(xbmc.Player):
         if self.parent: 
             self.parent.showStatus("Запуск торрента")
         self.Wait(TSMessage.START)
-        msg = self.thr.getTSMessage()
+        msg = self.sock_thr.getTSMessage()
         if msg.getType() == TSMessage.START:
             try:
                 _params = msg.getParams()
@@ -448,7 +442,7 @@ class TSengine(xbmc.Player):
                 self.icon = icon
                 #self.playing = True
                 
-                self.thr.msg = TSMessage()
+                self.sock_thr.msg = TSMessage()
                 if self.amalker:
                     self.parent.showStatus('Рекламный ролик')
                 #    self.parent.player.doModal()
@@ -460,7 +454,8 @@ class TSengine(xbmc.Player):
                 lit = xbmcgui.ListItem(title, iconImage=icon, thumbnailImage=thumb)
                 self.play(self.link, lit, windowed=True)
                 #self.playing = True
-                self.onPlayBackStarted()
+                #self.onPlayBackStarted()
+                self.parent.player.Show()
                 self.loop()
             except Exception, e:
                 log.e(e)
@@ -497,7 +492,7 @@ class TSengine(xbmc.Player):
         if self.amalker:
             self.sendCommand('PLAYBACK ' + self.play_url + ' 100')
             self.Wait(TSMessage.START)
-            msg = self.thr.getTSMessage()
+            msg = self.sock_thr.getTSMessage()
             if msg.getType() == TSMessage.START:
                 try:
                     _params = msg.getParams()
@@ -534,9 +529,9 @@ class TSengine(xbmc.Player):
         self.sendCommand('STOP')
         self.sendCommand('SHUTDOWN')
         self.last_error = None
-        if self.thr:
-            self.thr.active = False
-            self.thr = None
+        if self.sock_thr:
+            self.sock_thr.end()
+            self.sock_thr = None
         self.sock.close()  
         xbmc.Player.stop(self)    
         
@@ -546,10 +541,10 @@ class TSengine(xbmc.Player):
         #self.playing = False
         self.link = None
         self.sendCommand('STOP')        
-        if self.thr:
-            self.thr.active = False
-            self.thr.join()
-            self.thr = None
+        if self.sock_thr:
+            self.sock_thr.end()
+            #self.sock_thr.join()
+            self.sock_thr = None
         self.last_error = None
         xbmc.Player.stop(self)
         
@@ -584,13 +579,14 @@ class SockThread(threading.Thread):
     def __init__(self, _sock):
         log.d('Init SockThread')
         threading.Thread.__init__(self)
+        self.name = 'SockThread'
         self.daemon = False
         self.sock = _sock
         self.buffer = 65020
         self.isRecv = False
         self.lastRecv = ''
         self.lstCmd = ''
-        self.active = True
+        self.finished = threading.Event()
         self.error = None
         self.msg = TSMessage()
         self.state_method = None
@@ -599,7 +595,7 @@ class SockThread(threading.Thread):
 
     def run(self):
         def isCancel():
-            return not self.active or self.error or self.owner.isCancel()
+            return not self.is_active() or self.error or self.owner.isCancel()
         
         log.d('Start SockThread')
         while not isCancel():
@@ -615,7 +611,7 @@ class SockThread(threading.Thread):
                     self.lastRecv = ''
             except Exception, e:
                 self.isRecv = True
-                self.active = False
+                self.end()
                 self.error = e
                 log.e('RECV THREADING %s' % e)
                 _msg = TSMessage()
@@ -719,6 +715,9 @@ class SockThread(threading.Thread):
     def getTSMessage(self):
         res = copy.deepcopy(self.msg)
         return res
+    
+    def is_active(self):
+        return not self.finished.is_set()
 
     def end(self):
-        self.active = False
+        self.finished.set()
