@@ -33,7 +33,7 @@ class TSengine(xbmc.Player):
     MODE_NONE = None
     
     def __init__(self, parent=None, ipaddr='127.0.0.1', *args):
-        log.d("Init TSEngine")
+        log("Init TSEngine")
         self.last_error = None
         self.quid = 0
         self.torrent = ''
@@ -96,7 +96,7 @@ class TSengine(xbmc.Player):
     #    return self.playing or xbmc.Player.isPlaying(self) 
 
     def onPlayBackStopped(self):
-        log.d('onPlayBackStopped')
+        log('onPlayBackStopped')
         if not self.amalker and self.isPlaying():
             self.stop()
             self.parent.player.close()            
@@ -107,19 +107,19 @@ class TSengine(xbmc.Player):
         #xbmc.Player.onPlayBackStopped(self)
 
     def onPlayBackEnded(self):
-        log.d('onPlayBackEnded')
+        log('onPlayBackEnded')
         self.manual_stopped = False
         self.onPlayBackStopped()
         #xbmc.Player.onPlayBackEnded(self)
 
     def onPlayBackStarted(self):    
         try:
-            log.d('onPlayBackStarted: {0} {1} {2}'.format(xbmcgui.getCurrentWindowId(), self.amalker, self.getPlayingFile()))
+            log('onPlayBackStarted: {0} {1} {2}'.format(xbmcgui.getCurrentWindowId(), self.amalker, self.getPlayingFile()))
         except Exception as e:
             log.e('onPlayBackStarted: {0}'.format(e))
         
         self.manual_stopped = True
-        self.parent.hide_main_window(0)
+        self.parent.hide_main_window()
         #xbmc.Player.onPlayBackStarted(self)
         
     def sockConnect(self):        
@@ -164,7 +164,7 @@ class TSengine(xbmc.Player):
 
         if sys.platform.startswith('win') and self.server_ip == '127.0.0.1':
             try:                
-                log.d('try to start AceEngine for windows') 
+                log('try to start AceEngine for windows') 
                 
                 if self.port_file != '' and os.path.exists(self.port_file):
                     log.d('Remove {0}'.format(self.port_file))
@@ -188,7 +188,7 @@ class TSengine(xbmc.Player):
                 log.f('start AceEngine: %s' % e)
                 return
         else:  
-            log.d('try to start AceEngine for linux')  
+            log('try to start AceEngine for linux')  
             acestream_params += ["--client-console"]            
             try:
                 if self.parent: 
@@ -197,7 +197,7 @@ class TSengine(xbmc.Player):
                     p = subprocess.Popen(["acestreamengine"] + acestream_params)
                     log.d('pid = {0}'.format(p.pid))
                 except:
-                    log.d('try to start AceEngine for Android')
+                    log('try to start AceEngine for Android')
                     xbmc.executebuiltin('XBMC.StartAndroidActivity("org.acestream.engine")')
                     xbmc.sleep(100) 
                     xbmc.executebuiltin('XBMC.StartAndroidActivity("org.xbmc.kodi")')               
@@ -308,7 +308,6 @@ class TSengine(xbmc.Player):
             except Exception, e:
                 log.e('ERROR Send command: %s' % e)
                 self.end()
-                #self.parent.close()                 
                 raise   
             
     def isCancel(self):
@@ -339,7 +338,7 @@ class TSengine(xbmc.Player):
         self.sock_thr.start()
         
     def load_torrent(self, torrent, mode):
-        log.d("Load Torrent: {0}, mode: {1}".format(torrent, mode))
+        log("Load Torrent: {0}, mode: {1}".format(torrent, mode))
         cmdparam = ''
         self.mode = mode
         if mode != TSengine.MODE_PID:
@@ -458,7 +457,7 @@ class TSengine(xbmc.Player):
                 self.parent.player.Show()
                 self.loop()
             except Exception, e:
-                log.e(e)
+                log.e('play_url_ind error: {0}'.format(e))
                 self.last_error = e
                 if self.parent: 
                     self.parent.showStatus("Ошибка. Операция прервана")
@@ -533,17 +532,17 @@ class TSengine(xbmc.Player):
             self.sock_thr.end()
             self.sock_thr = None
         self.sock.close()  
-        xbmc.Player.stop(self)    
+        xbmc.Player.stop(self) 
         
 
     def stop(self):
-        log.d('stop player method')        
+        log('stop player method')        
         #self.playing = False
         self.link = None
         self.sendCommand('STOP')        
         if self.sock_thr:
             self.sock_thr.end()
-            #self.sock_thr.join()
+            self.sock_thr.join()
             self.sock_thr = None
         self.last_error = None
         xbmc.Player.stop(self)
@@ -586,7 +585,7 @@ class SockThread(threading.Thread):
         self.isRecv = False
         self.lastRecv = ''
         self.lstCmd = ''
-        self.finished = threading.Event()
+        self.active = False
         self.error = None
         self.msg = TSMessage()
         self.state_method = None
@@ -594,6 +593,7 @@ class SockThread(threading.Thread):
         
 
     def run(self):
+        self.active = True
         def isCancel():
             return not self.is_active() or self.error or self.owner.isCancel()
         
@@ -621,7 +621,7 @@ class SockThread(threading.Thread):
                 # self.owner.end()
                 # self.owner.connectToTS()
                 # self.owner.parent.close()
-        log.d('Close from thread')
+        log.d('Exit from sock thread')
         self.error = None
 
     def _constructMsg(self, strmsg):
@@ -717,7 +717,7 @@ class SockThread(threading.Thread):
         return res
     
     def is_active(self):
-        return not self.finished.is_set()
+        return self.active
 
     def end(self):
-        self.finished.set()
+        self.active = False

@@ -42,7 +42,7 @@ class InfoForm(xbmcgui.WindowXMLDialog):
         
         self.portLabel.setLabel("%s (Проверяется)" % self.outport, "Проверка")
 
-        thraddr = defines.MyThread(self.getAddr, None)
+        thraddr = defines.MyThread(self.getAddr)
         thraddr.start()
         
         thrport = defines.MyThread(self.checkPort, self.outport)
@@ -52,7 +52,7 @@ class InfoForm(xbmcgui.WindowXMLDialog):
         if self.ASLabel:
             self.ASLabel.setLabel(text)
 
-    def getAddr(self, params):
+    def getAddr(self, *args):
         data = defines.GET("http://2ip.ru/")
         beautifulSoup = BeautifulSoup(data)
         addr = beautifulSoup.find('big', attrs={'id': 'd_clip_button'})
@@ -62,12 +62,13 @@ class InfoForm(xbmcgui.WindowXMLDialog):
         log("InfoForm адрес получен")
         
 
-    def checkPort(self, params):
-        if not defines.checkPort(params):
-            self.printCheckPort(params, False)
+    def checkPort(self, *args):
+        port = args[0]
+        if not defines.checkPort(port):
+            self.printCheckPort(port, False)
             return False
         else:
-            self.printCheckPort(params, True)
+            self.printCheckPort(port, True)
             return True
 
     def printCheckPort(self, params, res=False):

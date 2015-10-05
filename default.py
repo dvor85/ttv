@@ -30,8 +30,9 @@ if defines.DEBUG:
         traceback.print_tb(tb)
         del tb
     
-def checkPort(params):
-    if not defines.checkPort(params):
+def checkPort(*args):
+    param = args[0]
+    if not defines.checkPort(param):
         mess = "Порт %s закрыт. Для стабильной работы сервиса и трансляций, настоятельно рекомендуется его открыть." % defines.ADDON.getSetting('outport')
         defines.showMessage(mess)
         defines.log(mess)
