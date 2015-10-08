@@ -195,7 +195,7 @@ class MyPlayer(xbmcgui.WindowXML):
         try:
             jdata = json.loads(data)
         except Exception as e:
-            log.e(e)
+            log.e('Start error: {0}'.format(e))
             msg = "Ошибка Torrent-TV.RU"
             self.parent.showStatus(msg)
             raise

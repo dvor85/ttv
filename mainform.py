@@ -433,7 +433,7 @@ class WMainForm(xbmcgui.WindowXML):
                 
                      
             except Exception as e:
-                log.e(e)
+                log.e('LoopPlay error: {0}'.format(e))
                 xbmc.sleep(1000)
             
         self.play_thr = None

@@ -369,7 +369,7 @@ class TSengine(xbmc.Player):
                     self.files[f[1]] = urllib.unquote_plus(urllib.quote(f[0]))
                 log.d('End Compile file list')
             except Exception, e:
-                log.e(e)
+                log.e('load_torrent error: {0}'.format(e))
                 self.last_error = e
                 self.end()
         else:
@@ -511,7 +511,7 @@ class TSengine(xbmc.Player):
                     self.play(self.play_url, lit, windowed=True)
                     self.loop()
                 except Exception, e:
-                    log.e(e)
+                    log.e('play_url_ind loop error: {0}'.format(e))
                     self.last_error = e
                     if self.parent: 
                         self.parent.showStatus("Ошибка. Операция прервана")
