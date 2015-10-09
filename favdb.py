@@ -163,6 +163,7 @@ class RemoteFDB(FDB):
                 for i, ch in enumerate(channels):
                     chdata = {'id': ch['id'], 'pos': i}
                     self.channels.append(chdata)
+                return self.channels 
         except Exception as e:
             log.e('get error: {0}'.format(e))
             return

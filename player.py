@@ -160,6 +160,7 @@ class MyPlayer(xbmcgui.WindowXML):
         if self.TSPlayer:
             self.TSPlayer.manual_stopped = False
             self.TSPlayer.stop()
+        
             
             
     def Show(self):

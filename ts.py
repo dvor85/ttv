@@ -65,7 +65,8 @@ class TSengine(xbmc.Player):
             log.d("AceEngine path: {0}".format(self.ace_engine.encode('utf-8')))     
             self.port_file = os.path.join(os.path.dirname(self.ace_engine), 'acestream.port')
             log.d('AceEngine port file: {0}'.format(self.port_file))
-            self.aceport = self.getWinPort()
+            if os.path.exists(self.port_file):
+                self.aceport = self.getWinPort()
                 
         if self.aceport == 0:
             if defines.ADDON.getSetting('port'):
@@ -97,13 +98,11 @@ class TSengine(xbmc.Player):
 
     def onPlayBackStopped(self):
         log('onPlayBackStopped')
-        if not self.amalker and self.isPlaying():
-            self.stop()
-            self.parent.player.close()            
-        elif self.amalker:
+        if self.amalker:
             self.parent.amalkerWnd.close()
         else:
-            self.stop()              
+            self.stop()  
+            self.parent.player.close()            
         #xbmc.Player.onPlayBackStopped(self)
 
     def onPlayBackEnded(self):
@@ -173,7 +172,7 @@ class TSengine(xbmc.Player):
                 if not os.path.exists(self.port_file):
                     if self.parent: 
                         self.parent.showStatus("Запуск AceEngine")
-        
+                        
                     p = subprocess.Popen([self.ace_engine] + acestream_params)
                     log.d('pid = {0}'.format(p.pid))
                     
