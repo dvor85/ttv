@@ -156,7 +156,7 @@ class MyPlayer(xbmcgui.WindowXML):
 
     def Stop(self):
         log('AutoStop')
-        #xbmc.executebuiltin('PlayerControl(Stop)')
+        # xbmc.executebuiltin('PlayerControl(Stop)')
         if self.TSPlayer:
             self.TSPlayer.manual_stopped = False
             self.TSPlayer.stop()
@@ -263,7 +263,7 @@ class MyPlayer(xbmcgui.WindowXML):
             self.channel_number = self.parent.list.size() - 1
             
     def onAction(self, action):
-        #log.d('Action {0} | ButtonCode {1}'.format(action.getId(), action.getButtonCode()))
+        # log.d('Action {0} | ButtonCode {1}'.format(action.getId(), action.getButtonCode()))
         if action in CANCEL_DIALOG or action.getId() == MyPlayer.ACTION_RBC:
             log.d('Close player %s %s' % (action.getId(), action.getButtonCode()))
             self.close()

@@ -126,17 +126,19 @@ def isCancel():
     return xbmc.abortRequested or closeRequested.isSet()       
             
 
-def GET(target, post=None, cookie=None, useragent='XBMC (script.torrent-tv.ru)'):
+def GET(target, post=None, cookie=None, trys=-1):
     log.d('try to get: {0}'.format(target))
     t = 0
     req = urllib2.Request(url=target, data=post)
-    req.add_header('User-Agent', useragent)
+    req.add_header('User-Agent', 'XBMC (script.torrent-tv.ru)')
     if post:
         req.add_header("Content-type", "application/x-www-form-urlencoded")
     if cookie:
         req.add_header('Cookie', 'PHPSESSID=%s' % cookie)
     while not isCancel():
         t += 1
+        if trys > 0 and t >= trys:
+            raise Exception('time out')
         try:
             resp = urllib2.urlopen(req, timeout=6)
             try:
@@ -149,7 +151,8 @@ def GET(target, post=None, cookie=None, useragent='XBMC (script.torrent-tv.ru)')
             if t % 10 == 0:
                 log.e('GET EXCEPT [{0}]'.format(e))
                 if not isCancel():
-                    xbmc.sleep(3000)       
+                    xbmc.sleep(3000)  
+
 
 def checkPort(*args):
         port = args[0]
