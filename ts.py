@@ -44,7 +44,6 @@ class TSengine(xbmc.Player):
         self.ace_engine = ''
         self.aceport = 0
         self.port_file = ''
-        self.trys = 0
         self.sock_thr = None
         self.link = None
         self.manual_stopped = True
@@ -78,13 +77,9 @@ class TSengine(xbmc.Player):
             defines.ADDON.setSetting('age', '1')
         if not defines.ADDON.getSetting('gender'):
             defines.ADDON.setSetting('gender', '1')
-        # try:
         log.d('Connect to AceEngine')
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.connectToTS()
-        # except Exception, e:
-        #    log.f('ERROR Connect to AceEngine: %s' % e)
-            # raise
         
 #     def getPlayingFile(self):
 #         #log.d('getPlayingFile')
@@ -93,9 +88,9 @@ class TSengine(xbmc.Player):
 #                 return self.link
 #         return xbmc.Player.getPlayingFile(self)
     
-    # def isPlaying(self):
-        # log.d('isPlaying')
-    #    return self.playing or xbmc.Player.isPlaying(self) 
+#     def isPlaying(self):
+#         log.d('isPlaying')
+#         return self.playing or xbmc.Player.isPlaying(self) 
 
     def onPlayBackStopped(self):
         log('onPlayBackStopped')
@@ -104,13 +99,15 @@ class TSengine(xbmc.Player):
         else:
             self.stop()  
             self.parent.player.close()            
-        # xbmc.Player.onPlayBackStopped(self)
+#         xbmc.Player.onPlayBackStopped(self)
+
 
     def onPlayBackEnded(self):
         log('onPlayBackEnded')
         self.manual_stopped = False
         self.onPlayBackStopped()
-        # xbmc.Player.onPlayBackEnded(self)
+#         xbmc.Player.onPlayBackEnded(self)
+
 
     def onPlayBackStarted(self):    
         try:
@@ -120,7 +117,8 @@ class TSengine(xbmc.Player):
         
         self.manual_stopped = True
         self.parent.hide_main_window()
-        # xbmc.Player.onPlayBackStarted(self)
+#         xbmc.Player.onPlayBackStarted(self)
+
         
     def sockConnect(self):  
         self.sock.connect((self.server_ip, self.aceport))
@@ -131,8 +129,7 @@ class TSengine(xbmc.Player):
     def checkConnect(self):
         for i in range(15):
             try:
-                if self.parent: 
-                    self.parent.showStatus("Подключение к AceEngine ({0})".format(i))
+                self.parent.showStatus("Подключение к AceEngine ({0})".format(i))
                 self.sockConnect()                            
                 return True
             except Exception, e:
@@ -158,6 +155,7 @@ class TSengine(xbmc.Player):
             if t:    
                 _winreg.CloseKey(t)
     
+
     def getWinPort(self):
         log.d('Считываем порт')
         for i in range(15):
@@ -165,8 +163,7 @@ class TSengine(xbmc.Player):
                 with open(self.port_file, 'r') as gf:
                     return defines.tryStringToInt(gf.read())
             else:
-                if self.parent: 
-                    self.parent.showStatus("Запуск AceEngine ({0})".format(i))
+                self.parent.showStatus("Запуск AceEngine ({0})".format(i))
                 if not self.isCancel():                                
                     xbmc.sleep(995)
                 else:
@@ -174,6 +171,7 @@ class TSengine(xbmc.Player):
 
         return 0
                 
+    
     def startEngine(self):
         import subprocess
         acestream_params = ["--live-cache-type", "memory"]
@@ -187,8 +185,7 @@ class TSengine(xbmc.Player):
                     os.remove(self.port_file)
                 
                 if not os.path.exists(self.port_file):
-                    if self.parent: 
-                        self.parent.showStatus("Запуск AceEngine")
+                    self.parent.showStatus("Запуск AceEngine")
                         
                     p = subprocess.Popen([self.ace_engine] + acestream_params)
                     log.d('pid = {0}'.format(p.pid))
@@ -199,28 +196,26 @@ class TSengine(xbmc.Player):
                     else:
                         return
                         
-                                            
-            except Exception, e:
-                log.f('start AceEngine: %s' % e)
+            except Exception as e:
+                log.e('Cannot start AceEngine {0}'.format(e))
                 return
         else:  
             log('try to start AceEngine for linux')  
             acestream_params += ["--client-console"]            
             try:
-                if self.parent: 
-                    self.parent.showStatus("Запуск acestreamengine")
+                self.parent.showStatus("Запуск acestreamengine")
                 try:                    
                     p = subprocess.Popen(["acestreamengine"] + acestream_params)
                     log.d('pid = {0}'.format(p.pid))
                 except:
                     log('try to start AceEngine for Android')
                     xbmc.executebuiltin('XBMC.StartAndroidActivity("org.acestream.engine")')
-                    xbmc.sleep(100) 
                     xbmc.executebuiltin('XBMC.StartAndroidActivity("org.xbmc.kodi")')               
             except Exception as e:
-                log.f('Cannot start AceEngine')
+                log.e('Cannot start AceEngine {0}'.format(e))
                 return
         return True
+    
     
     def get_key(self, key):
         try:
@@ -233,7 +228,6 @@ class TSengine(xbmc.Player):
             key = sha1.hexdigest()
             pk = pkey.split('-')[0]
             return "%s-%s" % (pk, key)
-        
     
     
     def connectToTS(self):
@@ -243,19 +237,17 @@ class TSengine(xbmc.Player):
                 log.d("Попытка подлючения ({0})".format(t))
                 self.sockConnect()
                 break
-            except Exception, e:
+            except Exception as e:
                 if self.startEngine():
                     if not self.checkConnect():
                         msg = 'Ошибка подключения к AceEngine: {0}'.format(e)
                         log.f(msg)
-                        if self.parent: 
-                            self.parent.showStatus('Ошибка подключения к AceEngine!')  
+                        self.parent.showStatus('Ошибка подключения к AceEngine!')  
                     else:
                         break                      
                 else:
                     msg = "Не удалось запустить AceEngine!"
-                    if self.parent: 
-                        self.parent.showStatus(msg)
+                    self.parent.showStatus(msg)
                     
                 if not self.isCancel():                                
                     xbmc.sleep(995)
@@ -263,10 +255,8 @@ class TSengine(xbmc.Player):
                     raise Exception('Cancel')
         else:
             msg = 'Ошибка подключения к AceEngine'
-            if self.parent: 
-                self.parent.showStatus(msg)
+            self.parent.showStatus(msg)
             raise Exception(msg)
-            
                 
         log.d('Все ок')
         # Общаемся
@@ -290,18 +280,13 @@ class TSengine(xbmc.Player):
             
         except IOError as io:
             self.last_error = str(io)
-            if self.parent: 
-                self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
-            # self.end()
+            self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
             return
         except Exception as e:
             log.e('connectToTS error: {0}'.format(e))
-            # self.parent.close()
-            # raise
 
         log.d('End Init AceEngine')
-        if self.parent: 
-            self.parent.hideStatus()
+        self.parent.hideStatus()
         
         
     def sendCommand(self, cmd):
@@ -317,7 +302,7 @@ class TSengine(xbmc.Player):
 #                 raise Exception('Test Exception')
                 self.sock.send(cmd + '\r\n')
                 return True        
-            except Exception, e:
+            except Exception as e:
                 log.e('ERROR: "{0}" while Send command: "{1}"'.format(e, cmd))
                 
         if self.sock_thr and self.sock_thr.is_active():
@@ -339,18 +324,19 @@ class TSengine(xbmc.Player):
                 a += 1
                 if a >= 249:
                     log.w('AceEngine is freeze')
-                    if self.parent: 
-                        self.parent.showStatus("Ошибка ожидания. Операция прервана")
+                    self.parent.showStatus("Ошибка ожидания. Операция прервана")
                     raise Exception('AceEngine is freeze')
         except:
             self.stop()
     
+
     def createThread(self):
         self.sock_thr = SockThread(self.sock)
         self.sock_thr.state_method = self.showState
         self.sock_thr.owner = self
         self.sock_thr.start()
         
+    
     def load_torrent(self, torrent, mode):
         log("Load Torrent: {0}, mode: {1}".format(torrent, mode))
         cmdparam = ''
@@ -360,8 +346,7 @@ class TSengine(xbmc.Player):
         self.quid = str(random.randint(0, 0x7fffffff))
         self.torrent = torrent
         comm = 'LOADASYNC ' + self.quid + ' ' + mode + ' ' + torrent + cmdparam
-        if self.parent: 
-            self.parent.showStatus("Загрузка торрента")
+        self.parent.showStatus("Загрузка торрента")
         self.stop()
         
         if self.sendCommand(comm):
@@ -388,15 +373,14 @@ class TSengine(xbmc.Player):
                     self.end()
             else:
                 self.last_error = 'Incorrect msg from AceEngine'
-                if self.parent: 
-                    self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
+                self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
                 log.f('Incorrect msg from AceEngine %s' % msg.getType())
                 self.stop()
                 return
     
-            if self.parent: 
-                self.parent.hideStatus()
+            self.parent.hideStatus()
 
+    
     def showState(self, state):
         if state.getType() == TSMessage.STATUS and self.parent:
             _params = state.getParams()
@@ -420,6 +404,7 @@ class TSengine(xbmc.Player):
         elif state.getType() == TSMessage.ERROR:
             self.parent.showStatus(state.getParams())
             
+    
     def play_url_ind(self, index=0, title='', icon=None, thumb=None, torrent=None, mode=None):
         if self.last_error:
             return
@@ -437,16 +422,14 @@ class TSengine(xbmc.Player):
         self.stop()
         xbmc.sleep(4)
         if self.sendCommand(comm):
-            if self.parent: 
-                self.parent.showStatus("Запуск торрента")
+            self.parent.showStatus("Запуск торрента")
             self.Wait(TSMessage.START)
             msg = self.sock_thr.getTSMessage()
             if msg.getType() == TSMessage.START:
                 try:
                     _params = msg.getParams()
                     if not _params.has_key('url'):
-                        if self.parent: 
-                            self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
+                        self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
                         raise Exception('Incorrect msg from AceEngine %s' % msg.getType())
     
                     self.amalker = _params.has_key('ad') and not _params.has_key('interruptable')
@@ -474,15 +457,14 @@ class TSengine(xbmc.Player):
                 except Exception, e:
                     log.e('play_url_ind error: {0}'.format(e))
                     self.last_error = e
-                    if self.parent: 
-                        self.parent.showStatus("Ошибка. Операция прервана")
+                    self.parent.showStatus("Ошибка. Операция прервана")
             else:
                 self.last_error = 'Incorrect msg from AceEngine %s' % msg.getType()
                 log.e(self.last_error)
-                if self.parent: 
-                    self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
+                self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
             self.stop()
 
+    
     def loop(self):
         while self.isPlaying() and not self.isCancel():
             if self.isPlaying() and self.amalker and (self.getTotalTime() - self.getTime()) < 0.5:
@@ -495,13 +477,10 @@ class TSengine(xbmc.Player):
                     log.d("XBMC Shutdown")
                     break
                 
-
             except Exception as e:
                 log.e('ERROR SLEEPING: {0}'.format(e))
                 self.end()
-                # self.parent.close()
                 raise
-            
 
         if self.amalker and self.sendCommand('PLAYBACK ' + self.play_url + ' 100'):
             self.Wait(TSMessage.START)
@@ -527,14 +506,13 @@ class TSengine(xbmc.Player):
                 except Exception, e:
                     log.e('play_url_ind loop error: {0}'.format(e))
                     self.last_error = e
-                    if self.parent: 
-                        self.parent.showStatus("Ошибка. Операция прервана")
+                    self.parent.showStatus("Ошибка. Операция прервана")
             else:
                 self.last_error = 'Incorrect msg from AceEngine %s' % msg.getType()
-                if self.parent: 
-                    self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
+                self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
                 log.e(self.last_error)
         self.stop()
+
 
     def end(self):
         # self.playing = False
@@ -561,6 +539,7 @@ class TSengine(xbmc.Player):
         self.last_error = None
         xbmc.Player.stop(self)
         
+        
 class TSMessage:
     ERROR = 'ERROR'
     HELLOTS = 'HELLOTS'
@@ -573,6 +552,7 @@ class TSMessage:
     PAUSE = 'PAUSE'
     RESUME = 'RESUME'
     NONE = ''
+    
     def __init__(self):
         self.type = TSMessage.NONE
         self.params = {}
@@ -586,7 +566,6 @@ class TSMessage:
     def setType(self, value):
         self.type = value
     
-
 
 class SockThread(threading.Thread):
     def __init__(self, _sock):
@@ -632,11 +611,9 @@ class SockThread(threading.Thread):
                 _msg.type = TSMessage.ERROR
                 _msg.params = 'Ошибка соединения с AceEngine'
                 self.state_method(_msg)
-                # self.owner.end()
-                # self.owner.connectToTS()
-                # self.owner.parent.close()
         log.d('Exit from sock thread')
         self.error = None
+
 
     def _constructMsg(self, strmsg):
         posparam = strmsg.find(' ')
@@ -730,8 +707,10 @@ class SockThread(threading.Thread):
         res = copy.deepcopy(self.msg)
         return res
     
+    
     def is_active(self):
         return self.active
+
 
     def end(self):
         self.active = False

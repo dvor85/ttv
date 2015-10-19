@@ -75,6 +75,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.channel_number_str = ''
         self.select_timer = None
         self.hide_window_timer = None
+        
     
     def onInit(self):
         data = defines.GET('http://api.torrent-tv.ru/v3/version.php?application=xbmc&version=%s' % defines.TTV_VERSION)
@@ -146,6 +147,7 @@ class WMainForm(xbmcgui.WindowXML):
                 img = self.getControl(1111)
                 img.setImage(selItem.getProperty('icon'))
         
+        
     def load_selitem_info(self):        
         self.cur_category = defines.ADDON.getSetting('cur_category')
         self.selitem_id = defines.ADDON.getSetting('cur_channel')
@@ -157,11 +159,13 @@ class WMainForm(xbmcgui.WindowXML):
         else:
             self.selitem_id = defines.tryStringToInt(self.selitem_id)          
 
+
     def initLists(self):
         self.category = {}
         self.category[WMainForm.CHN_TYPE_MODERATION] = { "name" : WMainForm.CHN_TYPE_MODERATION, "channels": []}
         self.category[WMainForm.CHN_TYPE_FAVOURITE] = { "name" : WMainForm.CHN_TYPE_FAVOURITE, "channels": []}
         self.translation = []
+        
         
     def getChannels(self, *args):
         param = args[0]
@@ -269,6 +273,7 @@ class WMainForm(xbmcgui.WindowXML):
             li.setProperty("type", "archive")
             self.archive.append(li)
 
+
     def getEpg(self, *args):
         log.d('getEpg')
         param = args[0]
@@ -292,6 +297,7 @@ class WMainForm(xbmcgui.WindowXML):
                 self.showSimpleEpg(param)
            
         self.hideStatus()
+
 
     def showScreen(self, *args):
         log.d('showScreen')
@@ -317,7 +323,6 @@ class WMainForm(xbmcgui.WindowXML):
             log.d('showScreen: %s' % jdata['screens'][0]['filename'])
             img.setImage(jdata['screens'][0]['filename'])
 
-            
     
     def checkButton(self, controlId):
         control = self.getControl(controlId)
@@ -332,6 +337,7 @@ class WMainForm(xbmcgui.WindowXML):
             if self.init:
                 self.init = False             
                 self.emulate_startChannel()
+               
                 
     def select_channel(self, sch='', timeout=0): 
         if sch != '':
@@ -349,6 +355,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.select_timer.name = 'select_channel'
         self.select_timer.daemon = False
         self.select_timer.start()
+        
         
     def hide_main_window(self, timeout=0):
         log.d('hide main window in {0} sec'.format(timeout))
@@ -377,22 +384,25 @@ class WMainForm(xbmcgui.WindowXML):
         xbmc.sleep(1000)
         self.onClick(WMainForm.CONTROL_LIST)
 
+
     def onClickChannels(self):
         log.d('onClickChannels')
         self.fillChannels()
         if self.seltab != WMainForm.BTN_CHANNELS_ID:
             self.checkButton(WMainForm.BTN_CHANNELS_ID)
             
+            
     def onClickTranslations(self):
         self.fillTranslation()
         if self.seltab != WMainForm.BTN_TRANSLATIONS_ID:
             self.checkButton(WMainForm.BTN_TRANSLATIONS_ID)
 
+
     def onClickArchive(self):
-        self.fillArchive()
-        
+        self.fillArchive()        
         if self.seltab != WMainForm.BTN_ARCHIVE_ID:
             self.checkButton(WMainForm.BTN_ARCHIVE_ID)
+            
             
     def LoopPlay(self, *args):  
         while not self.IsCanceled():
@@ -429,14 +439,11 @@ class WMainForm(xbmcgui.WindowXML):
                 if not self.IsCanceled():
                     xbmc.sleep(223)   
                     self.select_channel(str(self.selitem_id))  
-                    
-                
                      
             except Exception as e:
                 log.e('LoopPlay error: {0}'.format(e))
                 xbmc.sleep(1000)
             
-        self.play_thr = None
         self.player.close()  
           
         if xbmc.getCondVisibility("Window.IsVisible(home)"):
@@ -462,10 +469,6 @@ class WMainForm(xbmcgui.WindowXML):
             if jrpc["result"]["currentwindow"]["id"] == 10025:
                 log.d("Is video plugins window")
                 self.close()
-                    
-   
-            
-        
              
             
     def onClick(self, controlID):
@@ -537,7 +540,6 @@ class WMainForm(xbmcgui.WindowXML):
             
         elif controlID == WMainForm.BTN_FULLSCREEN:
             self.player.Show()
-
 
         elif controlID == WMainForm.BTN_INFO:
             self.showInfoWindow()
@@ -616,6 +618,7 @@ class WMainForm(xbmcgui.WindowXML):
                     break
             self.progress.setPercent(1)
             
+            
     def onAction(self, action):                
         # log.d('Событие {0}'.format(action.getId()))  
         if action in WMainForm.CANCEL_DIALOG:
@@ -644,6 +647,7 @@ class WMainForm(xbmcgui.WindowXML):
                 super(WMainForm, self).onAction(action)
             
             self.hide_main_window(timeout=10)
+
 
     def updateList(self):
         self.showStatus("Получение списка каналов")
@@ -675,7 +679,6 @@ class WMainForm(xbmcgui.WindowXML):
         self.hideStatus()
         log.d(self.selitem_id)
         
-        
 
     def showStatus(self, text):
         log.d("showStatus: %s" % text)
@@ -686,13 +689,16 @@ class WMainForm(xbmcgui.WindowXML):
         except Exception as ex:
             log.w("showStatus error: {0}". format(ex))
 
+
     def showInfoStatus(self, text):
         if self.infoform: 
             self.infoform.printASStatus(text)
 
+
     def hideStatus(self):
         if self.img_progress: self.img_progress.setVisible(False)
         if self.txt_progress: self.txt_progress.setLabel("")
+
 
     def fillChannels(self):
         self.showStatus("Заполнение списка")
@@ -711,6 +717,7 @@ class WMainForm(xbmcgui.WindowXML):
                 self.list.addItem(ch)
             self.hideStatus()
             
+            
     def fillTranslation(self):
         if not self.list:
             self.showStatus("Список не инициализирован")
@@ -722,6 +729,7 @@ class WMainForm(xbmcgui.WindowXML):
             self.list.addItem(ch)
         self.hideStatus()
 
+
     def fillArchive(self):
         if not self.list:
             self.showStatus("Список не инициализирован")
@@ -731,6 +739,7 @@ class WMainForm(xbmcgui.WindowXML):
         for ch in self.archive:
             self.list.addItem(ch)
         log.d("fillArchive")
+
 
     def fillCategory(self):
         if not self.list:
@@ -743,6 +752,7 @@ class WMainForm(xbmcgui.WindowXML):
             li.setProperty('type', 'category')
             li.setProperty('id', '%s' % gr)
             self.list.addItem(li)
+
 
     def fillRecords(self, li, date=time.localtime()):
         self.showStatus("Загрузка архива")
@@ -779,8 +789,10 @@ class WMainForm(xbmcgui.WindowXML):
 
         self.hideStatus()
 
+
     def IsCanceled(self):
         return defines.isCancel()
+    
     
     def close(self):
         defines.closeRequested.set()

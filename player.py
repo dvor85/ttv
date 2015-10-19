@@ -78,11 +78,13 @@ class MyPlayer(xbmcgui.WindowXML):
         self.control_window.setVisible(True)
         self.hide_control_window(timeout=5)
         
+        
     def init_channel_number(self):
         if self.channel_number != 0:
             self.parent.selitem_id = self.channel_number
         else:
             self.channel_number = self.parent.selitem_id
+
 
     def hide_control_window(self, timeout=0):
         def hide():
@@ -162,7 +164,6 @@ class MyPlayer(xbmcgui.WindowXML):
             self.TSPlayer.stop()
         
             
-            
     def Show(self):
         if self.TSPlayer:
             if not self.TSPlayer.amalker:
@@ -172,7 +173,6 @@ class MyPlayer(xbmcgui.WindowXML):
                 self.parent.amalkerWnd.show()
                 log.d('END SHOW ADS Window')
             
-        
 
     def Start(self, li):
         log("Start play")       
@@ -216,18 +216,6 @@ class MyPlayer(xbmcgui.WindowXML):
             self.TSPlayer = tsengine(parent=self.parent)
         self.TSPlayer.play_url_ind(0, li.getLabel(), li.getProperty('icon'), li.getProperty('icon'), torrent=url, mode=mode)
         log.d('End playing')
-        
-    def EndTS(self):
-        if self.TSPlayer:
-            self.TSPlayer.end()
-        import subprocess
-        import sys, os
-        
-
-        if sys.platform.startswith('win'):
-            log.d("Закрыть TS")
-            subprocess.Popen('taskkill /F /IM {0} /T'.format(os.path.basename(self.TSPlayer.ace_engine)))
-            self.TSPlayer = None
     
                 
     def run_selected_channel(self, timeout=0):        
@@ -257,10 +245,12 @@ class MyPlayer(xbmcgui.WindowXML):
         if self.channel_number >= self.parent.list.size():
             self.channel_number = 1
     
+    
     def dec_channel_number(self):
         self.channel_number -= 1
         if self.channel_number <= 0:
             self.channel_number = self.parent.list.size() - 1
+            
             
     def onAction(self, action):
         # log.d('Action {0} | ButtonCode {1}'.format(action.getId(), action.getButtonCode()))
@@ -321,5 +311,15 @@ class MyPlayer(xbmcgui.WindowXML):
             self.close()
         if controlID == self.CONTROL_BUTTON_INFOWIN:
             self.parent.showInfoWindow()
+            
+    
+    def close(self):
+        if self.hide_control_timer:
+            self.hide_control_timer.cancel()
+        if self.hide_swinfo_timer:
+            self.hide_swinfo_timer.cancel()
+        if self.select_timer:
+            self.select_timer.cancel()
+        xbmcgui.WindowXML.close(self)
             
         

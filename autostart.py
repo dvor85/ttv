@@ -24,12 +24,6 @@ elif xset.attrib['values'] != "st.anger":
     xset.attrib['values'] = "st.anger"
     dom.write(defines.ADDON_PATH + '/resources/settings.xml', 'utf-8')
     
-#### COMPATIBILITY. Must be deleted next release ###    
-if defines.ADDON.getSetting('startlast') == 'true':
-    defines.ADDON.setSetting('startlast', 'false')
-    defines.ADDON.setSetting('autostart', 'true')
-    defines.AutostartViaAutoexec(False)
-#################################################    
 if defines.AUTOSTART:
     import xbmc    
     xbmc.executebuiltin('RunAddon({0})'.format(defines.ADDON_ID))         

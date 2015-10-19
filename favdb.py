@@ -286,7 +286,7 @@ class RemoteFDB(FDB):
                 except Exception as e:
                     log.e('save error: {0}'.format(e))
                     self.cookie = []
-                    if not defines.closeRequested.isSet() and not xbmc.abortRequested:
+                    if not defines.isCancel():
                         xbmc.sleep(900)
                     else:
                         break
