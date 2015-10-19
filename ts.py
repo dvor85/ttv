@@ -80,6 +80,7 @@ class TSengine(xbmc.Player):
             defines.ADDON.setSetting('gender', '1')
         # try:
         log.d('Connect to AceEngine')
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.connectToTS()
         # except Exception, e:
         #    log.f('ERROR Connect to AceEngine: %s' % e)
@@ -121,10 +122,26 @@ class TSengine(xbmc.Player):
         self.parent.hide_main_window()
         # xbmc.Player.onPlayBackStarted(self)
         
-    def sockConnect(self):        
+    def sockConnect(self):  
         self.sock.connect((self.server_ip, self.aceport))
         self.sock.setblocking(0)
         self.sock.settimeout(10)
+        
+    
+    def checkConnect(self):
+        for i in range(15):
+            try:
+                if self.parent: 
+                    self.parent.showStatus("Подключение к AceEngine ({0})".format(i))
+                self.sockConnect()                            
+                return True
+            except Exception, e:
+                log.e("Подключение не удалось {0}".format(e))
+                if not self.isCancel():                                
+                    xbmc.sleep(995)
+                else:
+                    return
+    
         
     def getAceEngine_exe(self):
         log.d('Считываем путь к ace_engine.exe')      
@@ -217,43 +234,40 @@ class TSengine(xbmc.Player):
             pk = pkey.split('-')[0]
             return "%s-%s" % (pk, key)
         
-            
-        
+    
+    
     def connectToTS(self):
-        try:
-            log.d('Подключение к AceEngine %s %s ' % (self.server_ip, self.aceport))
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.sockConnect()
-        except Exception, e:
-            if self.startEngine():
-                for i in range(15):
-                    try:
-                        log.d("Попытка подлючения")
+        log.d('Подключение к AceEngine %s %s ' % (self.server_ip, self.aceport))        
+        for t in range(3):
+            try:
+                log.d("Попытка подлючения ({0})".format(t))
+                self.sockConnect()
+                break
+            except Exception, e:
+                if self.startEngine():
+                    if not self.checkConnect():
+                        msg = 'Ошибка подключения к AceEngine: {0}'.format(e)
+                        log.f(msg)
                         if self.parent: 
-                            self.parent.showStatus("Подключение к AceEngine ({0})".format(i))
-                        self.sockConnect()                            
-                        break
-                    except Exception, e:
-                        log.e("Подключение не удалось {0}".format(e))
-                        if not self.isCancel():                                
-                            xbmc.sleep(995)
-                        else:
-                            break
+                            self.parent.showStatus('Ошибка подключения к AceEngine!')  
+                    else:
+                        break                      
                 else:
-                    msg = 'Ошибка подключения к AceEngine: {0}'.format(e)
-                    log.f(msg)
-                    self.parent.showStatus('Ошибка подключения к AceEngine!')
-                    raise Exception(msg)  
-            else:
-                msg = "Не удалось запустить AceEngine!"
+                    msg = "Не удалось запустить AceEngine!"
+                    if self.parent: 
+                        self.parent.showStatus(msg)
+                    
+                if not self.isCancel():                                
+                    xbmc.sleep(995)
+                else:
+                    raise Exception('Cancel')
+        else:
+            msg = 'Ошибка подключения к AceEngine'
+            if self.parent: 
                 self.parent.showStatus(msg)
-                raise Exception(msg)
+            raise Exception(msg)
             
                 
-            
-        if self.parent: 
-            self.parent.hideStatus()
-
         log.d('Все ок')
         # Общаемся
         try:
