@@ -1,4 +1,4 @@
-﻿  # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 # Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 import xbmcaddon
@@ -7,6 +7,7 @@ import sys
 import urllib2
 import threading
 import os
+import time
 from BeautifulSoup import BeautifulSoup
 
 ADDON = xbmcaddon.Addon()
@@ -33,14 +34,26 @@ closeRequested = threading.Event()
 
 class Logger():
     
-    def __init__(self, tag):
+    def __init__(self, tag, minlevel=xbmc.LOGDEBUG):
         self.tag = tag
+        self.minlevel = minlevel
         
     def __call__(self, msg, level=xbmc.LOGNOTICE):
         self.log(msg, level)
         
     def log(self, msg, level):
-        xbmc.log("[{id}::{tag}] {msg}".format(**{'id':ADDON_ID, 'tag':self.tag, 'msg': msg}), level)
+        if level >= self.minlevel:
+            try:
+                if isinstance(msg, unicode):
+                    msg = msg.encode('utf-8', 'ignore')
+                m = "[{id}::{tag}] {msg}".format(**{'id':ADDON_ID, 'tag':self.tag, 'msg': msg}).replace(ADDON.getSetting('password'), '********')
+                xbmc.log(m, level)
+                if DEBUG:
+                    m = '{0} {1}'.format(time.strftime('%X'), m)
+                    print m  
+            except Exception as e:
+                xbmc.log('ERROR LOG OUT: {0}'.format(e), xbmc.LOGERROR)      
+       
         
     def f(self, msg):
         self.log(msg, xbmc.LOGFATAL)
@@ -92,25 +105,14 @@ def AutostartViaAutoexec(state):
         del tb
         
         
-
 class MyThread(threading.Thread):
-    def __init__(self, func, params, back=True):
-        threading.Thread.__init__(self)
-        self.func = func
-        self.params = params
-        self.isCanceled = False
+    def __init__(self, func, *args, **kwargs):
+        threading.Thread.__init__(self, target=func, name=func.__name__, args=args)        
         self.daemon = False
-
-    def run(self):
-        self.func(self.params)
-        
-    def stop(self):
-        self.isCanceled = True        
-        
 
 
 def showMessage(message='', heading='Torrent-TV.RU', times=6789):
-    log('showMessage: %s' % message)
+    log.d('showMessage: %s' % message)
     try: 
         xbmc.executebuiltin('XBMC.Notification("%s", "%s", %s, %s)' % (heading.encode('utf-8'), message.encode('utf-8'), times, ADDON_ICON))
     except Exception, e:
@@ -118,17 +120,26 @@ def showMessage(message='', heading='Torrent-TV.RU', times=6789):
             xbmc.executebuiltin('XBMC.Notification("%s", "%s", %s, %s)' % (heading, message, times, ADDON_ICON))
         except Exception, e:            
             log.w('showMessage: exec failed [{0}]'.format(e))
+       
+       
+def isCancel():
+    return xbmc.abortRequested or closeRequested.isSet()       
+            
 
-def GET(target, post=None, cookie=None):
-    log.d('try to get: {0} with cookie={1}'.format(target, cookie))
+def GET(target, post=None, cookie=None, trys=-1):
+    log.d('try to get: {0}'.format(target))
     t = 0
-    while not xbmc.abortRequested and not closeRequested.isSet():
+    req = urllib2.Request(url=target, data=post)
+    req.add_header('User-Agent', 'XBMC (script.torrent-tv.ru)')
+    if post:
+        req.add_header("Content-type", "application/x-www-form-urlencoded")
+    if cookie:
+        req.add_header('Cookie', 'PHPSESSID=%s' % cookie)
+    while not isCancel():
         t += 1
+        if trys > 0 and t >= trys:
+            raise Exception('time out')
         try:
-            req = urllib2.Request(url=target, data=post)
-            req.add_header('User-Agent', 'XBMC (script.torrent-tv.ru)')
-            if cookie:
-                req.add_header('Cookie', 'PHPSESSID=%s' % cookie)
             resp = urllib2.urlopen(req, timeout=6)
             try:
                 http = resp.read()
@@ -139,18 +150,20 @@ def GET(target, post=None, cookie=None):
         except Exception, e:
             if t % 10 == 0:
                 log.e('GET EXCEPT [{0}]'.format(e))
-                xbmc.sleep(3000)       
+                if not isCancel():
+                    xbmc.sleep(3000)  
 
-def checkPort(params):
-        data = GET("http://2ip.ru/check-port/?port=%s" % params)
+
+def checkPort(*args):
+        port = args[0]
+        data = GET("http://2ip.ru/check-port/?port=%s" % port)
         beautifulSoup = BeautifulSoup(data)
-        port = beautifulSoup.find('div', attrs={'class': 'ip-entry'}).text
-        if port.encode('utf-8').find("закрыт") > -1:
+        bsdata = beautifulSoup.find('div', attrs={'class': 'ip-entry'}).text
+        if bsdata.encode('utf-8').find("закрыт") > -1:
             return False
         else:
             return True
         
-
 
 def tryStringToInt(str_val):
     try:

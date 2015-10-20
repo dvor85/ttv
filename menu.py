@@ -12,6 +12,7 @@ log = defines.Logger('MenuForm')
 class MenuForm(xbmcgui.WindowXMLDialog):
     CMD_ADD_FAVOURITE = 'favourite_add'
     CMD_DEL_FAVOURITE = 'favourite_delete'
+    CMD_MOVE_FAVOURITE = 'favourite_move'
     CMD_UP_FAVOURITE = 'favourite_up'
     CMD_DOWN_FAVOURITE = 'favourite_down'
     CONTROL_CMD_LIST = 301
@@ -36,10 +37,12 @@ class MenuForm(xbmcgui.WindowXMLDialog):
                     title = 'Добавить в избранное'
                 elif c == MenuForm.CMD_DEL_FAVOURITE:
                     title = 'Удалить из избранного'
+                elif c == MenuForm.CMD_MOVE_FAVOURITE:
+                    title = 'Переместить'
                 elif c == MenuForm.CMD_UP_FAVOURITE:
-                    title = 'Поднять вверх'
+                    title = 'Поднять'
                 elif c == MenuForm.CMD_DOWN_FAVOURITE:
-                    title = 'Опустить вниз'
+                    title = 'Опустить'
                 lst.addItem(xbmcgui.ListItem(title, c))
             lst.setHeight(len(cmds) * 38)
             lst.selectItem(0)
@@ -61,19 +64,25 @@ class MenuForm(xbmcgui.WindowXMLDialog):
             self.close()
 
     def exec_cmd(self, cmd):
-        if self.parent.user["vip"]:
-            fdb = favdb.RemoteFDB(self.parent.session)
-        else:
-            fdb = favdb.LocalFDB()
-            
-        if cmd == MenuForm.CMD_ADD_FAVOURITE:
-            return fdb.add(self.li)
-        elif cmd == MenuForm.CMD_DEL_FAVOURITE:
-            return fdb.delete(self.li)
-        elif cmd == MenuForm.CMD_UP_FAVOURITE:
-            return fdb.up(self.li)
-        elif cmd == MenuForm.CMD_DOWN_FAVOURITE:
-            return fdb.down(self.li)
+        try:
+            if self.parent.user["vip"]:
+                fdb = favdb.RemoteFDB(self.parent.session)
+            else:
+                fdb = favdb.LocalFDB()
+                
+            if cmd == MenuForm.CMD_ADD_FAVOURITE:
+                return fdb.add(self.li)
+            elif cmd == MenuForm.CMD_DEL_FAVOURITE:
+                return fdb.delete(self.li)
+            elif cmd == MenuForm.CMD_MOVE_FAVOURITE:
+                to_num = int(xbmcgui.Dialog().numeric(0, heading='Введите позицию'))
+                return fdb.moveTo(self.li, to_num)
+            elif cmd == MenuForm.CMD_DOWN_FAVOURITE:
+                return fdb.down(self.li)
+            elif cmd == MenuForm.CMD_UP_FAVOURITE:
+                return fdb.up(self.li)
+        except Exception as e:
+            log.e('Error: {0} in exec_cmd "{1}"'.format(e, cmd))
                     
 
     def GetResult(self):

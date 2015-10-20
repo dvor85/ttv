@@ -394,7 +394,7 @@
           <posx>1240</posx>
           <posy>540</posy>
           <width>320</width>
-          <height>autho</height>
+          <height>auto</height>
           <visible>true</visible>
           <align>right</align>
           <label>Текущий статус</label>
