@@ -279,6 +279,7 @@ class TSengine(xbmc.Player):
                         raise IOError('Incorrect msg from AceEngine')
             
         except IOError as io:
+            log.e('Error while auth: {0}'.format(io))
             self.last_error = str(io)
             self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
             return
@@ -599,7 +600,7 @@ class SockThread(threading.Thread):
                     cmds = self.lastRecv.split('\r\n')
                     for cmd in cmds:                        
                         if len(cmd.replace(' ', '')) > 0 and not isCancel():
-                            # log.d('RUN Получена комманда = ' + cmd)
+                            log.d('RUN Получена комманда = ' + cmd)
                             self._constructMsg(cmd)
                     self.lastRecv = ''
             except Exception, e:
