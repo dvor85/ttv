@@ -11,7 +11,7 @@ log = defines.Logger('FDB')
 class FDB():
     
     def __init__(self):
-        self.channels = None
+        self.channels = []
         
         
     def get(self):
@@ -105,10 +105,11 @@ class LocalFDB(FDB):
         if os.path.exists(self.DB):
             with open(self.DB, 'r') as fp:
                 try:
-                    self.channels = json.load(fp) 
-                    return self.channels
+                    self.channels = json.load(fp)                    
                 except Exception as e:
                     log.w('get error: {0}'.format(e))
+        return self.channels
+            
                     
                 
     def save(self, obj=None):
@@ -136,11 +137,10 @@ class LocalFDB(FDB):
                    'epg_id': int(li.getProperty('epg_cdn_id'))}
         if not self.channels:
             self.get()
-        if self.channels:
-            if self.find(chid) is None:
-                self.channels.append(channel)
-                self.save()
-            return True
+        if (self.channels and self.find(chid) is None) or not self.channels:
+            self.channels.append(channel)
+            return self.save()
+
     
 
             
@@ -163,10 +163,9 @@ class RemoteFDB(FDB):
                 for i, ch in enumerate(channels):
                     chdata = {'id': ch['id'], 'pos': i}
                     self.channels.append(chdata)
-                return self.channels 
         except Exception as e:
             log.e('get error: {0}'.format(e))
-            return
+        return self.channels
         
         
     def add(self, li):
@@ -174,15 +173,12 @@ class RemoteFDB(FDB):
         log.d('add channels {0}'.format(chid))
         if not self.channels:
             self.get()
-        if self.channels:
-            channel = {'id': chid,
-                       'pos': len(self.channels)}
-        
-            if self.find(chid) is None:
-                self.channels.append(channel)
-                self.save()
-            return True  
-        
+        channel = {'id': chid,
+                   'pos': len(self.channels)}   
+        if (self.channels and self.find(chid) is None) or not self.channels:
+            self.channels.append(channel)
+            return self.save()
+    
         
     def swap(self, i1, i2):
         log.d('swap channels with indexes={0},{1}'.format(i1, i2))
