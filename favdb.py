@@ -135,9 +135,7 @@ class LocalFDB(FDB):
                    'access_user': int(li.getProperty('access_user')),
                    'name': li.getProperty('name'),
                    'epg_id': int(li.getProperty('epg_cdn_id'))}
-        if not self.channels:
-            self.get()
-        if (self.channels and self.find(chid) is None) or not self.channels:
+        if self.find(chid) is None:
             self.channels.append(channel)
             return self.save()
 
@@ -171,11 +169,10 @@ class RemoteFDB(FDB):
     def add(self, li):
         chid = int(li.getProperty('id'))
         log.d('add channels {0}'.format(chid))
-        if not self.channels:
-            self.get()
-        channel = {'id': chid,
-                   'pos': len(self.channels)}   
-        if (self.channels and self.find(chid) is None) or not self.channels:
+          
+        if self.find(chid) is None:
+            channel = {'id': chid,
+                       'pos': len(self.channels)} 
             self.channels.append(channel)
             return self.save()
     
