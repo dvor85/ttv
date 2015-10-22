@@ -274,7 +274,8 @@ class TSengine(xbmc.Player):
                     msg = self.sock_thr.getTSMessage()
                     if msg.getType() == TSMessage.AUTH:
                         if msg.getParams() == '0':
-                            raise IOError('Пользователь не зарегистрирован')
+#                             raise IOError('Пользователь не зарегистрирован')
+                            log.w('Пользователь не зарегистрирован')
                     else:
                         raise IOError('Incorrect msg from AceEngine')
             
