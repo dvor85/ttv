@@ -137,8 +137,8 @@ def GET(target, post=None, cookie=None, trys=-1):
         req.add_header('Cookie', 'PHPSESSID=%s' % cookie)
     while not isCancel():
         t += 1
-        if trys > 0 and t >= trys:
-            raise Exception('time out')
+        if 0 < trys < t:
+            raise Exception('Attempts are over')
         try:
             resp = urllib2.urlopen(req, timeout=6)
             try:
@@ -155,14 +155,17 @@ def GET(target, post=None, cookie=None, trys=-1):
 
 
 def checkPort(*args):
+    try:
         port = args[0]
-        data = GET("http://2ip.ru/check-port/?port=%s" % port)
+        data = GET("http://2ip.ru/check-port/?port=%s" % port, trys=2)
         beautifulSoup = BeautifulSoup(data)
         bsdata = beautifulSoup.find('div', attrs={'class': 'ip-entry'}).text
         if bsdata.encode('utf-8').find("закрыт") > -1:
             return False
         else:
             return True
+    except Exception as e:
+        log.w('checkPort Error: {0}'.format(e))
         
 
 def tryStringToInt(str_val):

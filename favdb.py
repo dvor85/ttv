@@ -152,8 +152,8 @@ class RemoteFDB(FDB):
         
         
     def get(self):        
-        data = defines.GET('http://api.torrent-tv.ru/v3/translation_list.php?session=%s&type=%s&typeresult=json' % (self.session, 'favourite'), cookie=self.session)
         try:
+            data = defines.GET('http://api.torrent-tv.ru/v3/translation_list.php?session=%s&type=%s&typeresult=json' % (self.session, 'favourite'), cookie=self.session, trys=10)
             jdata = json.loads(data)
             if jdata['success'] != 0:
                 channels = jdata['channels']
@@ -191,9 +191,9 @@ class RemoteFDB(FDB):
         
     def __exec_cmd(self, li, cmd):
         log.d('exec_cmd')
-        channel_id = li.getProperty('id')
-        data = defines.GET('http://api.torrent-tv.ru/v3/%s.php?session=%s&channel_id=%s&typeresult=json' % (cmd, self.session, channel_id), cookie=self.session)
         try:
+            channel_id = li.getProperty('id')
+            data = defines.GET('http://api.torrent-tv.ru/v3/%s.php?session=%s&channel_id=%s&typeresult=json' % (cmd, self.session, channel_id), cookie=self.session, trys=10)
             jdata = json.loads(data)
             if jdata['success'] == 0:
                 return jdata['error']

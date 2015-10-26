@@ -39,7 +39,11 @@ class WMainForm(xbmcgui.WindowXML):
     IMG_SCREEN = 210
     CONTROL_LIST = 50
     PANEL_ADS = 105
+    
+    TXT_PROGRESS = 107
+    IMG_PROGRESS = 108
     PROGRESS_BAR = 110
+    
     BTN_INFO = 209
     LBL_FIRST_EPG = 300
     
@@ -78,13 +82,19 @@ class WMainForm(xbmcgui.WindowXML):
         
     
     def onInit(self):
+        self.img_progress = self.getControl(WMainForm.IMG_PROGRESS)
+        self.txt_progress = self.getControl(WMainForm.TXT_PROGRESS)
+        self.progress = self.getControl(WMainForm.PROGRESS_BAR)
         data = defines.GET('http://api.torrent-tv.ru/v3/version.php?application=xbmc&version=%s' % defines.TTV_VERSION)
         try:
             jdata = json.loads(data)
+            if jdata['success'] == 0:                
+                raise Exception(jdata['error'])    
         except Exception as e:
             log.e('onInit error: {0}'.format(e))
             msg = "Ошибка Torrent-TV.RU"
-            self.showStatus(msg)                
+            self.showStatus(msg) 
+            threading.Timer(5, self.close).start()              
             return
         if jdata['support'] == 0:
             from okdialog import OkDialog
@@ -92,9 +102,7 @@ class WMainForm(xbmcgui.WindowXML):
             dialog.setText("Текущая версия приложения (%s) не поддерживается. Последняя версия %s " % (defines.TTV_VERSION, jdata['last_version'].encode('utf-8')))
             dialog.doModal()
             self.close()
-        self.img_progress = self.getControl(108)
-        self.txt_progress = self.getControl(107)
-        self.progress = self.getControl(WMainForm.PROGRESS_BAR)
+        
         self.showStatus("Авторизация")
         guid = defines.ADDON.getSetting("uuid")
         if guid == '':
@@ -104,15 +112,15 @@ class WMainForm(xbmcgui.WindowXML):
         data = defines.GET('http://api.torrent-tv.ru/v3/auth.php?username=%s&password=%s&typeresult=json&application=xbmc&guid=%s' % (defines.ADDON.getSetting('login'), defines.ADDON.getSetting('password'), guid))
         try:
             jdata = json.loads(data)
+            if jdata['success'] == 0:                
+                raise Exception(jdata['error'])
         except Exception as e:
             log.e('onInit error: {0}'.format(e))
             msg = "Ошибка Torrent-TV.RU"
             self.showStatus(msg)
+            threading.Timer(5, self.close).start()              
             return
-        if jdata['success'] == 0:
-            self.showStatus(jdata['error'])
-            return
-
+        
         self.user = {"login" : defines.ADDON.getSetting('login'), "balance" : jdata["balance"], "vip":jdata["balance"] > 1}
         
         self.session = jdata['session']
@@ -169,18 +177,16 @@ class WMainForm(xbmcgui.WindowXML):
         
     def getChannels(self, *args):
         param = args[0]
-        log.d('getChannels {0}'.format(param))
-        data = defines.GET('http://api.torrent-tv.ru/v3/translation_list.php?session=%s&type=%s&typeresult=json' % (self.session, param), cookie=self.session)
+        log.d('getChannels {0}'.format(param))        
         try:
+            data = defines.GET('http://api.torrent-tv.ru/v3/translation_list.php?session=%s&type=%s&typeresult=json' % (self.session, param), cookie=self.session, trys=10)
             jdata = json.loads(data)
+            if jdata['success'] == 0:
+                raise Exception(jdata['error'])            
         except Exception as e:
             log.e('getChannels error: {0}'.format(e))
             msg = "Ошибка Torrent-TV.RU"
             self.showStatus(msg)
-            return
-        
-        if jdata['success'] == 0:
-            self.showStatus(jdata['error'])
             return
 
         for cat in jdata["categories"]:
@@ -245,9 +251,11 @@ class WMainForm(xbmcgui.WindowXML):
                     
     def getArcChannels(self, *args):
         log.d('getArcChannels')
-        data = defines.GET('http://api.torrent-tv.ru/v3/arc_list.php?session=%s&typeresult=json' % self.session, cookie=self.session)
         try:
+            data = defines.GET('http://api.torrent-tv.ru/v3/arc_list.php?session=%s&typeresult=json' % self.session, cookie=self.session, trys=10)
             jdata = json.loads(data)
+            if jdata['success'] == 0:
+                raise Exception(jdata['error'])
         except Exception as e:
             log.e('getArcChannels error: {0}'.format(e))
             msg = "Ошибка Torrent-TV.RU"
@@ -255,9 +263,7 @@ class WMainForm(xbmcgui.WindowXML):
             return
         
         self.archive = []
-        if jdata['success'] == 0:
-            self.showStatus(jdata['error'])
-            return
+        
         
         for ch in jdata['channels']:
             chname = "%i. %s" % ((len(self.archive) + 1), ch["name"])
@@ -276,9 +282,9 @@ class WMainForm(xbmcgui.WindowXML):
 
     def getEpg(self, *args):
         log.d('getEpg')
-        param = args[0]
-        data = defines.GET('http://api.torrent-tv.ru/v3/translation_epg.php?session=%s&epg_id=%s&typeresult=json' % (self.session, param), cookie=self.session)
+        param = args[0]        
         try:
+            data = defines.GET('http://api.torrent-tv.ru/v3/translation_epg.php?session=%s&epg_id=%s&typeresult=json' % (self.session, param), cookie=self.session, trys=10)
             jdata = json.loads(data)
         except Exception as e:
             log.e('getEpg error: {0}'.format(e))
@@ -304,9 +310,9 @@ class WMainForm(xbmcgui.WindowXML):
         cdn = args[0]
         if defines.tryStringToInt(cdn) < 1:
             return
-
-        data = defines.GET('http://api.torrent-tv.ru/v3/translation_screen.php?session=%s&channel_id=%s&typeresult=json&count=1' % (self.session, cdn), cookie=self.session)
+        
         try:
+            data = defines.GET('http://api.torrent-tv.ru/v3/translation_screen.php?session=%s&channel_id=%s&typeresult=json&count=1' % (self.session, cdn), cookie=self.session, trys=10)
             jdata = json.loads(data)
         except Exception as e:
             log.e('showScreen error: {0}'.format(e))
@@ -765,8 +771,9 @@ class WMainForm(xbmcgui.WindowXML):
         const_li.setProperty("epg_cdn_id", li.getProperty("epg_cdn_id"))
         const_li.setProperty("date", "%s-%s-%s" % (date.year, date.month, date.day))
         self.list.addItem(const_li)
-        data = defines.GET("http://api.torrent-tv.ru/v3/arc_records.php?session=%s&date=%d-%d-%s&epg_id=%s&typeresult=json" % (self.session, date.day, date.month, date.year, li.getProperty("epg_cdn_id")), cookie=self.session)
+        
         try:
+            data = defines.GET("http://api.torrent-tv.ru/v3/arc_records.php?session=%s&date=%d-%d-%s&epg_id=%s&typeresult=json" % (self.session, date.day, date.month, date.year, li.getProperty("epg_cdn_id")), cookie=self.session, trys=10)
             jdata = json.loads(data)
         except Exception as e:
             log.e('fillRecords error: {0}'.format(e))

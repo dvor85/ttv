@@ -207,7 +207,8 @@ class TSengine(xbmc.Player):
                 try:                    
                     p = subprocess.Popen(["acestreamengine"] + acestream_params)
                     log.d('pid = {0}'.format(p.pid))
-                except:
+                except  Exception as e:
+                    log.d('Error start acestreamengine for linux: {0}'.format(e))
                     log('try to start AceEngine for Android')
                     xbmc.executebuiltin('XBMC.StartAndroidActivity("org.acestream.engine")')
                     xbmc.executebuiltin('XBMC.StartAndroidActivity("org.xbmc.kodi")')               
@@ -300,7 +301,7 @@ class TSengine(xbmc.Player):
                     else:
                         return
                     
-                log.d('Send command "{0}" ({1})'.format(cmd, t))
+                log.d('>> "{0}"'.format(cmd))
 #                 raise Exception('Test Exception')
                 self.sock.send(cmd + '\r\n')
                 return True        
@@ -601,7 +602,7 @@ class SockThread(threading.Thread):
                     cmds = self.lastRecv.split('\r\n')
                     for cmd in cmds:                        
                         if len(cmd.replace(' ', '')) > 0 and not isCancel():
-                            log.d('RUN Получена комманда = ' + cmd)
+                            log.d('<< "{0}"'.format(cmd))
                             self._constructMsg(cmd)
                     self.lastRecv = ''
             except Exception, e:
@@ -662,14 +663,12 @@ class SockThread(threading.Thread):
                 self.state_method(self.status)
             else:
                 log.w('I DONT KNOW HOW IT PROCESS %s' % strmsg)
-            return
         elif _msg == TSMessage.STATE:
             if self.state_method: 
                 self.state = TSMessage()
                 self.state.setType(TSMessage.STATE)
                 self.state.setParams(strmsg[posparam + 1:])
                 self.state_method(self.state)
-            return
         elif _msg == TSMessage.EVENT:
             self.event = TSMessage()
             _strparams = strmsg[posparam + 1:]
@@ -693,16 +692,11 @@ class SockThread(threading.Thread):
                 _params['url'] = _strparams[0].split("=")[1].replace("%3A", ":")
             self.msg.setType(TSMessage.START)
             self.msg.setParams(_params)
-        elif _msg == TSMessage.PAUSE:
+        elif _msg in (TSMessage.PAUSE, TSMessage.RESUME):
             msg = TSMessage()
-            msg.setType(TSMessage.PAUSE)
-            log.d("GET PAUSE")
+            msg.setType(_msg)
             self.state_method(msg)
-        elif _msg == TSMessage.RESUME:
-            msg = TSMessage()
-            msg.setType(TSMessage.RESUME)
-            log.d("GET RESUME")
-            self.state_method(msg)
+
 
 
     def getTSMessage(self):
