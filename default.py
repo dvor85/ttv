@@ -34,7 +34,7 @@ def checkPort(*args):
     param = args[0]
     if not defines.checkPort(param):
         mess = "Порт %s закрыт. Для стабильной работы сервиса и трансляций, настоятельно рекомендуется его открыть." % defines.ADDON.getSetting('outport')
-        defines.showMessage(mess)
+        defines.showNotification(mess)
         defines.log(mess)
         
 def main():
@@ -53,7 +53,8 @@ def main():
     
     w = mainform.WMainForm("mainform.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
     w.doModal()
-    defines.showMessage('Close plugin')
+    defines.log('Close plugin')
+#     defines.showNotification('Close plugin')
     del w
 
 if __name__ == '__main__':

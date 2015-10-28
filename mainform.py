@@ -89,19 +89,18 @@ class WMainForm(xbmcgui.WindowXML):
         try:
             jdata = json.loads(data)
             if jdata['success'] == 0:                
-                raise Exception(jdata['error'])    
+                raise Exception(jdata['error'])
+#             raise Exception('Test')    
         except Exception as e:
             log.e('onInit error: {0}'.format(e))
-            msg = "Ошибка Torrent-TV.RU"
-            self.showStatus(msg) 
-            threading.Timer(5, self.close).start()              
+            msg = 'Ошибка Torrent-TV.RU'
+            defines.showNotification(msg, xbmcgui.NOTIFICATION_ERROR)
+            self.close()
             return
         if jdata['support'] == 0:
-            from okdialog import OkDialog
-            dialog = OkDialog("okdialog.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
-            dialog.setText("Текущая версия приложения (%s) не поддерживается. Последняя версия %s " % (defines.TTV_VERSION, jdata['last_version'].encode('utf-8')))
-            dialog.doModal()
+            self.showDialog("Текущая версия приложения (%s) не поддерживается. Последняя версия %s " % (defines.TTV_VERSION, jdata['last_version'].encode('utf-8')))
             self.close()
+            return
         
         self.showStatus("Авторизация")
         guid = defines.ADDON.getSetting("uuid")
@@ -116,9 +115,9 @@ class WMainForm(xbmcgui.WindowXML):
                 raise Exception(jdata['error'])
         except Exception as e:
             log.e('onInit error: {0}'.format(e))
-            msg = "Ошибка Torrent-TV.RU"
-            self.showStatus(msg)
-            threading.Timer(5, self.close).start()              
+            msg = 'Ошибка Torrent-TV.RU'
+            defines.showNotification(msg, xbmcgui.NOTIFICATION_ERROR)
+            self.close()             
             return
         
         self.user = {"login" : defines.ADDON.getSetting('login'), "balance" : jdata["balance"], "vip":jdata["balance"] > 1}
@@ -126,6 +125,13 @@ class WMainForm(xbmcgui.WindowXML):
         self.session = jdata['session']
         self.updateList()
         self.hide_main_window(timeout=10)
+        
+        
+    def showDialog(self, msg):
+        from okdialog import OkDialog
+        dialog = OkDialog("okdialog.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
+        dialog.setText(msg)
+        dialog.doModal()
             
 
     def onFocus(self, ControlID):
@@ -187,6 +193,7 @@ class WMainForm(xbmcgui.WindowXML):
             log.e('getChannels error: {0}'.format(e))
             msg = "Ошибка Torrent-TV.RU"
             self.showStatus(msg)
+            defines.showNotification(msg, xbmcgui.NOTIFICATION_ERROR)
             return
 
         for cat in jdata["categories"]:
@@ -260,6 +267,7 @@ class WMainForm(xbmcgui.WindowXML):
             log.e('getArcChannels error: {0}'.format(e))
             msg = "Ошибка Torrent-TV.RU"
             self.showStatus(msg)
+            defines.showNotification(msg, xbmcgui.NOTIFICATION_ERROR)
             return
         
         self.archive = []
@@ -418,11 +426,11 @@ class WMainForm(xbmcgui.WindowXML):
                 if selItem.getProperty("access_user") == 0:
                     access = selItem.getProperty("access_translation")
                     if access == "registred":
-                        defines.showMessage("Трансляция доступна для зарегестрированных пользователей")
+                        defines.showNotification("Трансляция доступна для зарегестрированных пользователей", xbmcgui.NOTIFICATION_ERROR)
                     elif access == "vip":
-                        defines.showMessage("Трансляция доступна для VIP пользователей")
+                        defines.showNotification("Трансляция доступна для VIP пользователей", xbmcgui.NOTIFICATION_ERROR)
                     else:
-                        defines.showMessage("На данный момент трансляция не доступна")
+                        defines.showNotification("На данный момент трансляция не доступна", xbmcgui.NOTIFICATION_ERROR)
                     break
                      
                 buf = xbmcgui.ListItem(selItem.getLabel())

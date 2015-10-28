@@ -3,6 +3,7 @@
 
 import xbmcaddon
 import xbmc
+import xbmcgui
 import sys
 import urllib2
 import threading
@@ -111,15 +112,13 @@ class MyThread(threading.Thread):
         self.daemon = False
 
 
-def showMessage(message='', heading='Torrent-TV.RU', times=6789):
-    log.d('showMessage: %s' % message)
-    try: 
-        xbmc.executebuiltin('XBMC.Notification("%s", "%s", %s, %s)' % (heading.encode('utf-8'), message.encode('utf-8'), times, ADDON_ICON))
-    except Exception, e:
-        try: 
-            xbmc.executebuiltin('XBMC.Notification("%s", "%s", %s, %s)' % (heading, message, times, ADDON_ICON))
-        except Exception, e:            
-            log.w('showMessage: exec failed [{0}]'.format(e))
+def showNotification(msg, icon=ADDON_ICON):
+    try:
+        if isinstance(msg, unicode):
+            msg = msg.encode('utf-8', 'ignore')
+        xbmcgui.Dialog().notification(ADDON.getAddonInfo('name'), msg, icon)
+    except Exception as e:
+        log.e('showNotification error: "{0}"'.format(e))
        
        
 def isCancel():
