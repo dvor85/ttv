@@ -9,6 +9,11 @@ import xbmc
 log = defines.Logger('FDB')
 
 class FDB():
+    API_ERROR_INCORRECT = 'incorrect'
+    API_ERROR_NOCONNECT = 'noconnect'
+    API_ERROR_ALREADY = 'already'
+    API_ERROR_NOPARAM = 'noparam'
+    API_ERROR_NOFAVOURITE = 'nofavourite' 
     
     def __init__(self):
         self.channels = []
@@ -36,6 +41,7 @@ class FDB():
             if self.channels:
                 del(self.channels[k])
                 return self.save()
+        return FDB.API_ERROR_NOFAVOURITE
             
     
     def moveTo(self, li, to_id):
@@ -47,6 +53,8 @@ class FDB():
             k = self.find(chid)
             log.d('moveTo channel from {0} to {1}'.format(k, to_id))
             return self.swapTo(k, to_id)
+        
+        return FDB.API_ERROR_NOPARAM
         
     
     def find(self, chid):
@@ -123,6 +131,7 @@ class LocalFDB(FDB):
                 return True
         except Exception as e:
             log.w('save error: {0}'.format(e))
+            return FDB.API_ERROR_NOCONNECT
             
     
     def add(self, li):
@@ -138,6 +147,8 @@ class LocalFDB(FDB):
         if self.find(chid) is None:
             self.channels.append(channel)
             return self.save()
+                
+        return FDB.API_ERROR_ALREADY
 
     
 
@@ -175,6 +186,8 @@ class RemoteFDB(FDB):
                        'pos': len(self.channels)} 
             self.channels.append(channel)
             return self.save()
+
+        return FDB.API_ERROR_ALREADY
     
         
     def swap(self, i1, i2):
@@ -200,7 +213,7 @@ class RemoteFDB(FDB):
         except Exception as e:
             msg = 'exec_cmd error: {0}'.format(e)
             log.e(msg)
-            return msg
+            return FDB.API_ERROR_NOCONNECT
         return True
     
 
@@ -285,5 +298,6 @@ class RemoteFDB(FDB):
                         break
             
             self.channels = None
+            return FDB.API_ERROR_NOCONNECT
  
         

@@ -193,7 +193,6 @@ class WMainForm(xbmcgui.WindowXML):
             log.e('getChannels error: {0}'.format(e))
             msg = "Ошибка Torrent-TV.RU"
             self.showStatus(msg)
-            defines.showNotification(msg, xbmcgui.NOTIFICATION_ERROR)
             return
 
         for cat in jdata["categories"]:
@@ -267,7 +266,6 @@ class WMainForm(xbmcgui.WindowXML):
             log.e('getArcChannels error: {0}'.format(e))
             msg = "Ошибка Torrent-TV.RU"
             self.showStatus(msg)
-            defines.showNotification(msg, xbmcgui.NOTIFICATION_ERROR)
             return
         
         self.archive = []
