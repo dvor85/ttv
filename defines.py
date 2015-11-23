@@ -3,6 +3,7 @@
 
 import xbmcaddon
 import xbmc
+import xbmcgui
 import sys
 import urllib2
 import threading
@@ -111,15 +112,13 @@ class MyThread(threading.Thread):
         self.daemon = False
 
 
-def showMessage(message='', heading='Torrent-TV.RU', times=6789):
-    log.d('showMessage: %s' % message)
-    try: 
-        xbmc.executebuiltin('XBMC.Notification("%s", "%s", %s, %s)' % (heading.encode('utf-8'), message.encode('utf-8'), times, ADDON_ICON))
-    except Exception, e:
-        try: 
-            xbmc.executebuiltin('XBMC.Notification("%s", "%s", %s, %s)' % (heading, message, times, ADDON_ICON))
-        except Exception, e:            
-            log.w('showMessage: exec failed [{0}]'.format(e))
+def showNotification(msg, icon=ADDON_ICON):
+    try:
+        if isinstance(msg, unicode):
+            msg = msg.encode('utf-8', 'ignore')
+        xbmcgui.Dialog().notification(ADDON.getAddonInfo('name'), msg, icon)
+    except Exception as e:
+        log.e('showNotification error: "{0}"'.format(e))
        
        
 def isCancel():
@@ -137,8 +136,8 @@ def GET(target, post=None, cookie=None, trys=-1):
         req.add_header('Cookie', 'PHPSESSID=%s' % cookie)
     while not isCancel():
         t += 1
-        if trys > 0 and t >= trys:
-            raise Exception('time out')
+        if 0 < trys < t:
+            raise Exception('Attempts are over')
         try:
             resp = urllib2.urlopen(req, timeout=6)
             try:
@@ -155,14 +154,17 @@ def GET(target, post=None, cookie=None, trys=-1):
 
 
 def checkPort(*args):
+    try:
         port = args[0]
-        data = GET("http://2ip.ru/check-port/?port=%s" % port)
+        data = GET("http://2ip.ru/check-port/?port=%s" % port, trys=2)
         beautifulSoup = BeautifulSoup(data)
         bsdata = beautifulSoup.find('div', attrs={'class': 'ip-entry'}).text
         if bsdata.encode('utf-8').find("закрыт") > -1:
             return False
         else:
             return True
+    except Exception as e:
+        log.w('checkPort Error: {0}'.format(e))
         
 
 def tryStringToInt(str_val):

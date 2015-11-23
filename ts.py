@@ -175,45 +175,46 @@ class TSengine(xbmc.Player):
     def startEngine(self):
         import subprocess
         acestream_params = ["--live-cache-type", "memory"]
-
-        if sys.platform.startswith('win') and self.server_ip == '127.0.0.1':
-            try:                
-                log('try to start AceEngine for windows') 
-                
-                if self.port_file != '' and os.path.exists(self.port_file):
-                    log.d('Remove {0}'.format(self.port_file))
-                    os.remove(self.port_file)
-                
-                if not os.path.exists(self.port_file):
-                    self.parent.showStatus("Запуск AceEngine")
-                        
-                    p = subprocess.Popen([self.ace_engine] + acestream_params)
-                    log.d('pid = {0}'.format(p.pid))
+        if self.server_ip == '127.0.0.1':
+            if sys.platform.startswith('win'):
+                try:                
+                    log('try to start AceEngine for windows') 
                     
-                    self.aceport = self.getWinPort()
-                    if self.aceport > 0:
-                        defines.ADDON.setSetting('port', str(self.aceport))
-                    else:
-                        return
+                    if self.port_file != '' and os.path.exists(self.port_file):
+                        log.d('Remove {0}'.format(self.port_file))
+                        os.remove(self.port_file)
+                    
+                    if not os.path.exists(self.port_file):
+                        self.parent.showStatus("Запуск AceEngine")
+                            
+                        p = subprocess.Popen([self.ace_engine] + acestream_params)
+                        log.d('pid = {0}'.format(p.pid))
                         
-            except Exception as e:
-                log.e('Cannot start AceEngine {0}'.format(e))
-                return
-        else:  
-            log('try to start AceEngine for linux')  
-            acestream_params += ["--client-console"]            
-            try:
-                self.parent.showStatus("Запуск acestreamengine")
-                try:                    
-                    p = subprocess.Popen(["acestreamengine"] + acestream_params)
-                    log.d('pid = {0}'.format(p.pid))
-                except:
-                    log('try to start AceEngine for Android')
-                    xbmc.executebuiltin('XBMC.StartAndroidActivity("org.acestream.engine")')
-                    xbmc.executebuiltin('XBMC.StartAndroidActivity("org.xbmc.kodi")')               
-            except Exception as e:
-                log.e('Cannot start AceEngine {0}'.format(e))
-                return
+                        self.aceport = self.getWinPort()
+                        if self.aceport > 0:
+                            defines.ADDON.setSetting('port', str(self.aceport))
+                        else:
+                            return
+                            
+                except Exception as e:
+                    log.e('Cannot start AceEngine {0}'.format(e))
+                    return
+            else:  
+                log('try to start AceEngine for linux')  
+                acestream_params += ["--client-console"]            
+                try:
+                    self.parent.showStatus("Запуск acestreamengine")
+                    try:                    
+                        p = subprocess.Popen(["acestreamengine"] + acestream_params)
+                        log.d('pid = {0}'.format(p.pid))
+                    except  Exception as e:
+                        log.d('Error start acestreamengine for linux: {0}'.format(e))
+                        log('try to start AceEngine for Android')
+                        xbmc.executebuiltin('XBMC.StartAndroidActivity("org.acestream.engine")')
+                        xbmc.executebuiltin('XBMC.StartAndroidActivity("org.xbmc.kodi")')               
+                except Exception as e:
+                    log.e('Cannot start AceEngine {0}'.format(e))
+                    return
         return True
     
     
@@ -264,11 +265,14 @@ class TSengine(xbmc.Player):
             if self.sendCommand('HELLOBG version=4'):
                 self.Wait(TSMessage.HELLOTS)
                 msg = self.sock_thr.getTSMessage()
-                if msg.getType() == TSMessage.HELLOTS and not msg.getParams().has_key('key'):
-                    raise IOError('Incorrect msg from AceEngine')
+                if msg.getType() == TSMessage.HELLOTS: 
+                    if not msg.getParams().has_key('key'):
+                        raise IOError('Incorrect msg from AceEngine')
+                    ace_version = msg.getParams()['version']
+                    if ace_version < '3':
+                        raise ValueError("It's necessary to update AceStream")
                 
                 self.sock_thr.msg = TSMessage()
-                log.d('Send READY')
                 if self.sendCommand('READY key=' + self.get_key(msg.getParams()['key'])):
                     self.Wait(TSMessage.AUTH)
                     msg = self.sock_thr.getTSMessage()
@@ -283,6 +287,11 @@ class TSengine(xbmc.Player):
             log.e('Error while auth: {0}'.format(io))
             self.last_error = str(io)
             self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
+            return
+        except ValueError as ve:
+            log.e('AceStream version error: {0}'.format(ve))
+            self.last_error = str(ve)
+            self.parent.showStatus("Необходимо обновить AceStream до версии 3")
             return
         except Exception as e:
             log.e('connectToTS error: {0}'.format(e))
@@ -300,7 +309,7 @@ class TSengine(xbmc.Player):
                     else:
                         return
                     
-                log.d('Send command "{0}" ({1})'.format(cmd, t))
+                log.d('>> "{0}"'.format(cmd))
 #                 raise Exception('Test Exception')
                 self.sock.send(cmd + '\r\n')
                 return True        
@@ -477,7 +486,7 @@ class TSengine(xbmc.Player):
                     xbmc.sleep(250)
                 else:
                     log.d("XBMC Shutdown")
-                    break
+                    return
                 
             except Exception as e:
                 log.e('ERROR SLEEPING: {0}'.format(e))
@@ -601,7 +610,7 @@ class SockThread(threading.Thread):
                     cmds = self.lastRecv.split('\r\n')
                     for cmd in cmds:                        
                         if len(cmd.replace(' ', '')) > 0 and not isCancel():
-                            log.d('RUN Получена комманда = ' + cmd)
+                            log.d('<< "{0}"'.format(cmd))
                             self._constructMsg(cmd)
                     self.lastRecv = ''
             except Exception, e:
@@ -662,14 +671,12 @@ class SockThread(threading.Thread):
                 self.state_method(self.status)
             else:
                 log.w('I DONT KNOW HOW IT PROCESS %s' % strmsg)
-            return
         elif _msg == TSMessage.STATE:
             if self.state_method: 
                 self.state = TSMessage()
                 self.state.setType(TSMessage.STATE)
                 self.state.setParams(strmsg[posparam + 1:])
                 self.state_method(self.state)
-            return
         elif _msg == TSMessage.EVENT:
             self.event = TSMessage()
             _strparams = strmsg[posparam + 1:]
@@ -693,16 +700,11 @@ class SockThread(threading.Thread):
                 _params['url'] = _strparams[0].split("=")[1].replace("%3A", ":")
             self.msg.setType(TSMessage.START)
             self.msg.setParams(_params)
-        elif _msg == TSMessage.PAUSE:
+        elif _msg in (TSMessage.PAUSE, TSMessage.RESUME):
             msg = TSMessage()
-            msg.setType(TSMessage.PAUSE)
-            log.d("GET PAUSE")
+            msg.setType(_msg)
             self.state_method(msg)
-        elif _msg == TSMessage.RESUME:
-            msg = TSMessage()
-            msg.setType(TSMessage.RESUME)
-            log.d("GET RESUME")
-            self.state_method(msg)
+
 
 
     def getTSMessage(self):
