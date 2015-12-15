@@ -470,9 +470,9 @@ class WMainForm(xbmcgui.WindowXML):
         elif xbmc.getCondVisibility("Window.IsVisible(addonbrowser)"):
             self.close()
             log.d("Is addonbrowser Window")
-        elif xbmc.getCondVisibility("Window.IsMedia"):
-            self.close()
-            log.d("Is media Window")
+#         elif xbmc.getCondVisibility("Window.IsMedia"):
+#             self.close()
+#             log.d("Is media Window")
         elif xbmc.getCondVisibility("Window.IsVisible(12346)"):
             self.close()
             log.d("Is plugin Window")
