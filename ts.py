@@ -220,7 +220,7 @@ class TSengine(xbmc.Player):
     
     def get_key(self, key):
         try:
-            return defines.GET("http://api.torrent-tv.ru/xbmc_get_key.php?key=" + key, trys=2)
+            return defines.GET("http://{0}/xbmc_get_key.php?key={1}".format(defines.API_MIRROR, key), trys=2)
         except:
             import hashlib
             pkey = 'n51LvQoTlJzNGaFxseRK-uvnvX-sD4Vm5Axwmc4UcoD-jruxmKsuJaH0eVgE'
