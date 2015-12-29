@@ -212,7 +212,7 @@ class WMainForm(xbmcgui.WindowXML):
                 if not ch['logo']:
                     ch['logo'] = ''
                 else:
-                    ch['logo'] = 'http://torrent-tv.ru/uploads/' + ch['logo']    
+                    ch['logo'] = 'http://{0}/uploads/{1}'.format(defines.SITE_MIRROR, ch['logo'])    
                             
                 li = xbmcgui.ListItem(ch["name"], '%s' % ch['id'], ch['logo'], ch['logo'])
                 li.setProperty('name', ch["name"])
@@ -278,7 +278,7 @@ class WMainForm(xbmcgui.WindowXML):
             if not ch["logo"]:
                 ch["logo"] = ""
             else:
-                ch["logo"] = "http://torrent-tv.ru/uploads/" + ch["logo"]
+                ch["logo"] = "http://{0}/uploads/{1}".format(defines.SITE_MIRROR, ch["logo"])
             li = xbmcgui.ListItem(chname, '%s' % ch["id"], ch["logo"], ch["logo"])
             li.setProperty("epg_cdn_id", '%s' % ch["epg_id"])
             li.setProperty("icon", ch["logo"])
@@ -292,21 +292,20 @@ class WMainForm(xbmcgui.WindowXML):
         try:
             data = defines.GET('http://{0}/v3/translation_epg.php?session={1}&epg_id={2}&typeresult=json'.format(defines.API_MIRROR, self.session, param), cookie=self.session, trys=10)
             jdata = json.loads(data)
+            if jdata['success'] == 0:
+                self.epg[param] = []
+                self.showSimpleEpg(param)
+            else:
+                self.epg[param] = jdata['data']
+                selitem = self.list.getSelectedItem()
+                
+                if selitem and selitem.getProperty('epg_cdn_id') == param:
+                    self.showSimpleEpg(param)
         except Exception as e:
             log.e('getEpg error: {0}'.format(e))
             msg = "Ошибка Torrent-TV.RU"
             self.showStatus(msg)
             return
-
-        if jdata['success'] == 0:
-            self.epg[param] = []
-            self.showSimpleEpg(param)
-        else:
-            self.epg[param] = jdata['data']
-            selitem = self.list.getSelectedItem()
-            
-            if selitem and selitem.getProperty('epg_cdn_id') == param:
-                self.showSimpleEpg(param)
            
         self.hideStatus()
 
@@ -320,6 +319,8 @@ class WMainForm(xbmcgui.WindowXML):
         try:
             data = defines.GET('http://{0}/v3/translation_screen.php?session={1}&channel_id={2}&typeresult=json&count=1'.format(defines.API_MIRROR, self.session, cdn), cookie=self.session, trys=10)
             jdata = json.loads(data)
+            if jdata['success'] == 0:
+                raise Exception(jdata['error'])
         except Exception as e:
             log.e('showScreen error: {0}'.format(e))
             msg = "Ошибка Torrent-TV.RU"
@@ -328,12 +329,8 @@ class WMainForm(xbmcgui.WindowXML):
         
         img = self.getControl(WMainForm.IMG_SCREEN)
         img.setImage("")
-        if jdata['success'] == 0:
-            log.w('showScreen: скрин не найден')
-            return
-        else:
-            log.d('showScreen: %s' % jdata['screens'][0]['filename'])
-            img.setImage(jdata['screens'][0]['filename'])
+        log.d('showScreen: %s' % jdata['screens'][0]['filename'])
+        img.setImage(jdata['screens'][0]['filename'])
 
     
     def checkButton(self, controlId):

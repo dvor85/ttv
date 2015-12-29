@@ -18,6 +18,7 @@ ADDON_PATH = ADDON.getAddonInfo('path')
 ADDON_ICON = ADDON.getAddonInfo('icon')
 PTR_FILE = ADDON.getSetting('port_path')
 API_MIRROR = ADDON.getSetting('api_mirror')
+SITE_MIRROR = '1ttv.org' if API_MIRROR == '1ttvxbmc.top' else 'torrent-tv.ru'
 DATA_PATH = xbmc.translatePath(os.path.join("special://profile/addon_data", ADDON_ID))
 TTV_VERSION = '1.5.3'
 AUTOSTART = ADDON.getSetting('autostart') == 'true'
