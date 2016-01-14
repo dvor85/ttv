@@ -164,7 +164,7 @@ class RemoteFDB(FDB):
         
     def get(self):        
         try:
-            data = defines.GET('http://api.torrent-tv.ru/v3/translation_list.php?session=%s&type=%s&typeresult=json' % (self.session, 'favourite'), cookie=self.session, trys=10)
+            data = defines.GET('http://{0}/v3/translation_list.php?session={1}&type={2}&typeresult=json'.format(defines.API_MIRROR, self.session, 'favourite'), cookie=self.session, trys=10)
             jdata = json.loads(data)
             if jdata['success'] != 0:
                 channels = jdata['channels']
@@ -206,7 +206,7 @@ class RemoteFDB(FDB):
         log.d('exec_cmd')
         try:
             channel_id = li.getProperty('id')
-            data = defines.GET('http://api.torrent-tv.ru/v3/%s.php?session=%s&channel_id=%s&typeresult=json' % (cmd, self.session, channel_id), cookie=self.session, trys=10)
+            data = defines.GET('http://{0}/v3/{1}.php?session={2}&channel_id={3}&typeresult=json'.format(defines.API_MIRROR, self.session, channel_id), cookie=self.session, trys=10)
             jdata = json.loads(data)
             if jdata['success'] == 0:
                 return jdata['error']
@@ -238,7 +238,7 @@ class RemoteFDB(FDB):
             }
             
             if len(self.cookie) == 0:
-                req = urllib2.Request('http://torrent-tv.ru/banhammer/pid', headers=headers)
+                req = urllib2.Request('http://{0}/banhammer/pid'.format(defines.SITE_MIRROR), headers=headers)
                 resp = urllib2.urlopen(req, timeout=6)
                 try:
                     self.cookie.append('BHC={0}; path=/;'.format(resp.headers['X-BH-Token']))
@@ -251,7 +251,7 @@ class RemoteFDB(FDB):
                     'remember' : 1,
                     'enter' : 'enter'
                 }
-                req = urllib2.Request('http://torrent-tv.ru/auth.php', data=urllib.urlencode(authdata), headers=headers)
+                req = urllib2.Request('http://{0}/auth.php'.format(defines.SITE_MIRROR), data=urllib.urlencode(authdata), headers=headers)
                 for cookie in self.cookie:
                     req.add_header('Cookie', cookie)
                 resp = urllib2.urlopen(req, timeout=6)
@@ -283,7 +283,7 @@ class RemoteFDB(FDB):
             jdata = json.dumps(self.channels)
             for i in range(10):
                 log.d('try to save: {0}'.format(i))
-                data = self.__post_to_site('http://torrent-tv.ru/store_sorted.php', jdata)
+                data = self.__post_to_site('http://{0}/store_sorted.php'.format(defines.SITE_MIRROR), jdata)
                 try:
                     jdata = json.loads(data)
                     if int(jdata['success']) == 1:

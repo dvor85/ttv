@@ -85,7 +85,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.img_progress = self.getControl(WMainForm.IMG_PROGRESS)
         self.txt_progress = self.getControl(WMainForm.TXT_PROGRESS)
         self.progress = self.getControl(WMainForm.PROGRESS_BAR)
-        data = defines.GET('http://api.torrent-tv.ru/v3/version.php?application=xbmc&version=%s' % defines.TTV_VERSION)
+        data = defines.GET('http://{0}/v3/version.php?application=xbmc&version={1}'.format(defines.API_MIRROR, defines.TTV_VERSION))
         try:
             jdata = json.loads(data)
             if jdata['success'] == 0:                
@@ -108,7 +108,7 @@ class WMainForm(xbmcgui.WindowXML):
             guid = str(uuid.uuid1())
             defines.ADDON.setSetting("uuid", guid)
         guid = guid.replace('-', '')
-        data = defines.GET('http://api.torrent-tv.ru/v3/auth.php?username=%s&password=%s&typeresult=json&application=xbmc&guid=%s' % (defines.ADDON.getSetting('login'), defines.ADDON.getSetting('password'), guid))
+        data = defines.GET('http://{0}/v3/auth.php?username={1}&password={2}&typeresult=json&application=xbmc&guid={3}'.format(defines.API_MIRROR, defines.ADDON.getSetting('login'), defines.ADDON.getSetting('password'), guid))
         try:
             jdata = json.loads(data)
             if jdata['success'] == 0:                
@@ -185,7 +185,7 @@ class WMainForm(xbmcgui.WindowXML):
         param = args[0]
         log.d('getChannels {0}'.format(param))        
         try:
-            data = defines.GET('http://api.torrent-tv.ru/v3/translation_list.php?session=%s&type=%s&typeresult=json' % (self.session, param), cookie=self.session, trys=10)
+            data = defines.GET('http://{0}/v3/translation_list.php?session={1}&type={2}&typeresult=json'.format(defines.API_MIRROR, self.session, param), cookie=self.session, trys=10)
             jdata = json.loads(data)
             if jdata['success'] == 0:
                 raise Exception(jdata['error'])            
@@ -212,7 +212,7 @@ class WMainForm(xbmcgui.WindowXML):
                 if not ch['logo']:
                     ch['logo'] = ''
                 else:
-                    ch['logo'] = 'http://torrent-tv.ru/uploads/' + ch['logo']    
+                    ch['logo'] = 'http://{0}/uploads/{1}'.format(defines.SITE_MIRROR, ch['logo'])    
                             
                 li = xbmcgui.ListItem(ch["name"], '%s' % ch['id'], ch['logo'], ch['logo'])
                 li.setProperty('name', ch["name"])
@@ -258,7 +258,7 @@ class WMainForm(xbmcgui.WindowXML):
     def getArcChannels(self, *args):
         log.d('getArcChannels')
         try:
-            data = defines.GET('http://api.torrent-tv.ru/v3/arc_list.php?session=%s&typeresult=json' % self.session, cookie=self.session, trys=10)
+            data = defines.GET('http://{0}/v3/arc_list.php?session={1}&typeresult=json'.format(defines.API_MIRROR, self.session), cookie=self.session, trys=10)
             jdata = json.loads(data)
             if jdata['success'] == 0:
                 raise Exception(jdata['error'])
@@ -278,7 +278,7 @@ class WMainForm(xbmcgui.WindowXML):
             if not ch["logo"]:
                 ch["logo"] = ""
             else:
-                ch["logo"] = "http://torrent-tv.ru/uploads/" + ch["logo"]
+                ch["logo"] = "http://{0}/uploads/{1}".format(defines.SITE_MIRROR, ch["logo"])
             li = xbmcgui.ListItem(chname, '%s' % ch["id"], ch["logo"], ch["logo"])
             li.setProperty("epg_cdn_id", '%s' % ch["epg_id"])
             li.setProperty("icon", ch["logo"])
@@ -290,23 +290,22 @@ class WMainForm(xbmcgui.WindowXML):
         log.d('getEpg')
         param = args[0]        
         try:
-            data = defines.GET('http://api.torrent-tv.ru/v3/translation_epg.php?session=%s&epg_id=%s&typeresult=json' % (self.session, param), cookie=self.session, trys=10)
+            data = defines.GET('http://{0}/v3/translation_epg.php?session={1}&epg_id={2}&typeresult=json'.format(defines.API_MIRROR, self.session, param), cookie=self.session, trys=10)
             jdata = json.loads(data)
+            if jdata['success'] == 0:
+                self.epg[param] = []
+                self.showSimpleEpg(param)
+            else:
+                self.epg[param] = jdata['data']
+                selitem = self.list.getSelectedItem()
+                
+                if selitem and selitem.getProperty('epg_cdn_id') == param:
+                    self.showSimpleEpg(param)
         except Exception as e:
             log.e('getEpg error: {0}'.format(e))
             msg = "Ошибка Torrent-TV.RU"
             self.showStatus(msg)
             return
-
-        if jdata['success'] == 0:
-            self.epg[param] = []
-            self.showSimpleEpg(param)
-        else:
-            self.epg[param] = jdata['data']
-            selitem = self.list.getSelectedItem()
-            
-            if selitem and selitem.getProperty('epg_cdn_id') == param:
-                self.showSimpleEpg(param)
            
         self.hideStatus()
 
@@ -318,8 +317,10 @@ class WMainForm(xbmcgui.WindowXML):
             return
         
         try:
-            data = defines.GET('http://api.torrent-tv.ru/v3/translation_screen.php?session=%s&channel_id=%s&typeresult=json&count=1' % (self.session, cdn), cookie=self.session, trys=10)
+            data = defines.GET('http://{0}/v3/translation_screen.php?session={1}&channel_id={2}&typeresult=json&count=1'.format(defines.API_MIRROR, self.session, cdn), cookie=self.session, trys=10)
             jdata = json.loads(data)
+            if jdata['success'] == 0:
+                raise Exception(jdata['error'])
         except Exception as e:
             log.e('showScreen error: {0}'.format(e))
             msg = "Ошибка Torrent-TV.RU"
@@ -328,12 +329,8 @@ class WMainForm(xbmcgui.WindowXML):
         
         img = self.getControl(WMainForm.IMG_SCREEN)
         img.setImage("")
-        if jdata['success'] == 0:
-            log.w('showScreen: скрин не найден')
-            return
-        else:
-            log.d('showScreen: %s' % jdata['screens'][0]['filename'])
-            img.setImage(jdata['screens'][0]['filename'])
+        log.d('showScreen: %s' % jdata['screens'][0]['filename'])
+        img.setImage(jdata['screens'][0]['filename'])
 
     
     def checkButton(self, controlId):
@@ -470,9 +467,9 @@ class WMainForm(xbmcgui.WindowXML):
         elif xbmc.getCondVisibility("Window.IsVisible(addonbrowser)"):
             self.close()
             log.d("Is addonbrowser Window")
-        elif xbmc.getCondVisibility("Window.IsMedia"):
-            self.close()
-            log.d("Is media Window")
+#         elif xbmc.getCondVisibility("Window.IsMedia"):
+#             self.close()
+#             log.d("Is media Window")
         elif xbmc.getCondVisibility("Window.IsVisible(12346)"):
             self.close()
             log.d("Is plugin Window")
@@ -779,7 +776,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.list.addItem(const_li)
         
         try:
-            data = defines.GET("http://api.torrent-tv.ru/v3/arc_records.php?session=%s&date=%d-%d-%s&epg_id=%s&typeresult=json" % (self.session, date.day, date.month, date.year, li.getProperty("epg_cdn_id")), cookie=self.session, trys=10)
+            data = defines.GET("http://{0}/v3/arc_records.php?session={1}&date={2}-{3}-{4}&epg_id={5}&typeresult=json".format(defines.API_MIRROR, self.session, date.day, date.month, date.year, li.getProperty("epg_cdn_id")), cookie=self.session, trys=10)
             jdata = json.loads(data)
         except Exception as e:
             log.e('fillRecords error: {0}'.format(e))

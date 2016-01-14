@@ -185,9 +185,9 @@ class MyPlayer(xbmcgui.WindowXML):
         log.d(li.getProperty("type"))
         log.d(li.getProperty("id"))
         if (li.getProperty("type") == "channel"):
-            data = defines.GET("http://api.torrent-tv.ru/v3/translation_stream.php?session=%s&channel_id=%s&typeresult=json" % (self.parent.session, li.getProperty("id")))
+            data = defines.GET("http://{0}/v3/translation_stream.php?session={1}&channel_id={2}&typeresult=json".format(defines.API_MIRROR, self.parent.session, li.getProperty("id")))
         elif (li.getProperty("type") == "record"):
-            data = defines.GET("http://api.torrent-tv.ru/v3/arc_stream.php?session=%s&record_id=%s&typeresult=json" % (self.parent.session, li.getProperty("id")))
+            data = defines.GET("http://{0}/v3/arc_stream.php?session={1}&record_id={2}&typeresult=json".format(defines.API_MIRROR, self.parent.session, li.getProperty("id")))
         else:
             msg = "Неизвестный тип контента"
             self.parent.showStatus(msg)
