@@ -1,4 +1,4 @@
-﻿  # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 # Copyright (c) 2013 Torrent-TV.RU
 # Writer (c) 2013, Welicobratov K.A., E-mail: 07pov23@gmail.com
 # Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
@@ -48,6 +48,7 @@ class WMainForm(xbmcgui.WindowXML):
     LBL_FIRST_EPG = 300
     
     CHN_TYPE_FAVOURITE = 'Избранное'
+    CHN_TYPE_ONETTVNET = '1ttv.net'
     CHN_TYPE_TRANSLATION = 'Трансляции'
     CHN_TYPE_MODERATION = 'На модерации'
     API_ERROR_INCORRECT = 'incorrect'
@@ -176,8 +177,9 @@ class WMainForm(xbmcgui.WindowXML):
 
     def initLists(self):
         self.category = {}
-        self.category[WMainForm.CHN_TYPE_MODERATION] = { "name" : WMainForm.CHN_TYPE_MODERATION, "channels": []}
-        self.category[WMainForm.CHN_TYPE_FAVOURITE] = { "name" : WMainForm.CHN_TYPE_FAVOURITE, "channels": []}
+        self.category[WMainForm.CHN_TYPE_MODERATION] = { "name" : '[COLOR FFFFFF00]' + WMainForm.CHN_TYPE_MODERATION + '[/COLOR]', "channels": []}
+        self.category[WMainForm.CHN_TYPE_FAVOURITE] = { "name" : '[COLOR FFFFFF00][B]' + WMainForm.CHN_TYPE_FAVOURITE + '[/B][/COLOR]', "channels": []}
+        self.category[WMainForm.CHN_TYPE_ONETTVNET] = { "name" : '[COLOR FFFF0000][B]' + WMainForm.CHN_TYPE_ONETTVNET + '[/B][/COLOR]', "channels": []}
         self.translation = []
         
         
@@ -185,8 +187,13 @@ class WMainForm(xbmcgui.WindowXML):
         param = args[0]
         log.d('getChannels {0}'.format(param))        
         try:
-            data = defines.GET('http://{0}/v3/translation_list.php?session={1}&type={2}&typeresult=json'.format(defines.API_MIRROR, self.session, param), cookie=self.session, trys=10)
-            jdata = json.loads(data)
+            if param == WMainForm.CHN_TYPE_ONETTVNET:    
+                from tchannels import TChannels
+                from ext.onettvnet import Channels 
+                jdata = {'channels': TChannels(Channels).get(), 'categories':[], 'success': 1} 
+            else:
+                data = defines.GET('http://{0}/v3/translation_list.php?session={1}&type={2}&typeresult=json'.format(defines.API_MIRROR, self.session, param), cookie=self.session, trys=10)
+                jdata = json.loads(data)
             if jdata['success'] == 0:
                 raise Exception(jdata['error'])            
         except Exception as e:
@@ -194,6 +201,8 @@ class WMainForm(xbmcgui.WindowXML):
             msg = "Ошибка Torrent-TV.RU"
             self.showStatus(msg)
             return
+            
+        
 
         for cat in jdata["categories"]:
             if not self.category.has_key('%s' % cat["id"]):
@@ -205,6 +214,10 @@ class WMainForm(xbmcgui.WindowXML):
                 fdb.save(jdata['channels'])
             elif not self.user["vip"]:
                 jdata['channels'] = fdb.get()
+                
+        
+           
+                
         if jdata['channels']:
             for ch in jdata['channels']:
                 if not ch["name"]:
@@ -230,6 +243,14 @@ class WMainForm(xbmcgui.WindowXML):
                     li.setLabel(chname)           
                     li.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
                     self.category['%s' % ch['group']]["channels"].append(li)
+                    
+                elif param == WMainForm.CHN_TYPE_ONETTVNET:
+                    chname = u"{0}. {1}".format((len(self.category[WMainForm.CHN_TYPE_ONETTVNET]["channels"]) + 1), ch["name"])
+                    if ch["access_user"] == 0:
+                        chname = "[COLOR FF646464]%s[/COLOR]" % chname
+                    li.setLabel(chname) 
+                    li.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
+                    self.category[WMainForm.CHN_TYPE_ONETTVNET]["channels"].append(li)
                     
                 elif param == 'moderation':
                     chname = u"{0}. {1}".format((len(self.category[WMainForm.CHN_TYPE_MODERATION]["channels"]) + 1), ch["name"])
@@ -303,8 +324,8 @@ class WMainForm(xbmcgui.WindowXML):
                     self.showSimpleEpg(param)
         except Exception as e:
             log.e('getEpg error: {0}'.format(e))
-            msg = "Ошибка Torrent-TV.RU"
-            self.showStatus(msg)
+#             msg = "Ошибка Torrent-TV.RU"
+#             self.showStatus(msg)
             return
            
         self.hideStatus()
@@ -323,8 +344,8 @@ class WMainForm(xbmcgui.WindowXML):
                 raise Exception(jdata['error'])
         except Exception as e:
             log.e('showScreen error: {0}'.format(e))
-            msg = "Ошибка Torrent-TV.RU"
-            self.showStatus(msg)
+#             msg = "Ошибка Torrent-TV.RU"
+#             self.showStatus(msg)
             return
         
         img = self.getControl(WMainForm.IMG_SCREEN)
@@ -667,6 +688,7 @@ class WMainForm(xbmcgui.WindowXML):
         thrs['translation'] = defines.MyThread(self.getChannels, 'translation', self.cur_category == WMainForm.CHN_TYPE_TRANSLATION)
         thrs['moderation'] = defines.MyThread(self.getChannels, 'moderation', self.cur_category == WMainForm.CHN_TYPE_MODERATION)
         thrs['favourite'] = defines.MyThread(self.getChannels, 'favourite', self.cur_category == WMainForm.CHN_TYPE_FAVOURITE)
+        thrs[WMainForm.CHN_TYPE_ONETTVNET] = defines.MyThread(self.getChannels, WMainForm.CHN_TYPE_ONETTVNET, self.cur_category == WMainForm.CHN_TYPE_ONETTVNET)
         thrs['archive'] = defines.MyThread(self.getArcChannels, "", False)
         for thr in thrs:
             thrs[thr].start()
@@ -676,6 +698,8 @@ class WMainForm(xbmcgui.WindowXML):
             thrs['favourite'].join(10)
         elif self.cur_category == WMainForm.CHN_TYPE_MODERATION:
             thrs['moderation'].join(10)
+        elif self.cur_category == WMainForm.CHN_TYPE_ONETTVNET:
+            thrs[WMainForm.CHN_TYPE_ONETTVNET].join(10)
         elif self.cur_category == WMainForm.CHN_TYPE_TRANSLATION:
             thrs['translation'].join(10)
         else:

@@ -9,7 +9,8 @@ import xbmc
 import time
 import defines
 import json
-
+from ext.onettvnet import Channels
+from tchannels import TChannels
 from ts import TSengine as tsengine
 # defines
 CANCEL_DIALOG = (9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448,)
@@ -52,6 +53,7 @@ class MyPlayer(xbmcgui.WindowXML):
         self.chinfo = None
         self.swinfo = None
         self.control_window = None
+        self.onettvnet = TChannels(Channels)
         
 
     def onInit(self):
@@ -75,6 +77,8 @@ class MyPlayer(xbmcgui.WindowXML):
         log.d("selitem_id = %i" % self.parent.selitem_id)    
         
         defines.MyThread(self.UpdateEpg, self.li).start()
+        
+        
         self.control_window.setVisible(True)
         self.hide_control_window(timeout=5)
         
@@ -172,7 +176,38 @@ class MyPlayer(xbmcgui.WindowXML):
                 log.d('SHOW ADS Window')
                 self.parent.amalkerWnd.show()
                 log.d('END SHOW ADS Window')
+                
+    
+
+    def get_cid(self, url):
+        def mfindal(http, ss, es):
+            L = []
+            while http.find(es) > 0:
+                s = http.find(ss)
+                e = http.find(es)
+                i = http[s:e]
+                L.append(i)
+                http = http[e + 2:]
+            return L
             
+        http = defines.GET(url, trys=2)
+        ss1 = 'this.loadPlayer("'
+        ss2 = 'this.loadTorrent("'
+        es = '",{autoplay: true})'
+        
+        try:
+            if ss1 in http:
+                CID = mfindal(http, ss1, es)[0][len(ss1):]
+                return CID
+            elif ss2 in http:
+                AL = mfindal(http, ss2, es)[0][len(ss2):]
+                return AL
+            else: return
+        except Exception as e:
+            log.e('get_cid error: {0}'.format(e))            
+            return
+                
+         
 
     def Start(self, li):
         log("Start play")       
@@ -200,11 +235,24 @@ class MyPlayer(xbmcgui.WindowXML):
             msg = "Ошибка Torrent-TV.RU"
             self.parent.showStatus(msg)
             raise
-        
+            
         if not jdata["success"] or jdata["success"] == 0 or not jdata["source"]:
-            msg = "Канал временно не доступен"
-            self.parent.showStatus(msg)            
-            raise Exception(msg)
+            msg = None
+            if li.getProperty("type") == "channel":                
+                cid = self.get_cid(self.onettvnet.find(li.getProperty("id")).get('url'))
+                if cid:
+                    jdata["source"] = cid 
+                    jdata["success"] = 1
+                    jdata["type"] = 'PID'
+                else:    
+                    msg = "Канал временно не доступен"
+            else:    
+                msg = "Канал временно не доступен"
+            
+            if msg:    
+                self.parent.showStatus(msg)            
+                raise Exception(msg)
+        
         
         url = jdata["source"]
         mode = jdata["type"].upper().replace("CONTENTID", "PID")

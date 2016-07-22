@@ -1,4 +1,5 @@
 eclipse.preferences.version=1
+encoding//ext/onettvnet.py=utf-8
 encoding/adswnd.py=utf-8
 encoding/autostart.py=utf-8
 encoding/default.py=utf-8
@@ -9,4 +10,5 @@ encoding/mainform.py=utf-8
 encoding/menu.py=utf-8
 encoding/okdialog.py=utf-8
 encoding/player.py=utf-8
+encoding/tchannels.py=utf-8
 encoding/ts.py=utf-8

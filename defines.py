@@ -129,6 +129,8 @@ def isCancel():
 
 def GET(target, post=None, cookie=None, trys=-1):
     log.d('try to get: {0}'.format(target))
+    if not target:
+        return
     t = 0
     req = urllib2.Request(url=target, data=post)
     req.add_header('User-Agent', 'XBMC (script.torrent-tv.ru)')
