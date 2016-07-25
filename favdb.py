@@ -143,7 +143,7 @@ class LocalFDB(FDB):
                    'access_translation': li.getProperty('access_translation'),
                    'access_user': int(li.getProperty('access_user')),
                    'name': li.getProperty('name'),
-                   'epg_id': int(li.getProperty('epg_cdn_id'))}
+                   'epg_id': li.getProperty('epg_cdn_id')}
         if self.find(chid) is None:
             self.channels.append(channel)
             return self.save()

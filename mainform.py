@@ -11,6 +11,7 @@ import xbmc
 import time
 import datetime
 import threading
+import BeautifulSoup
 
 from player import MyPlayer
 from adswnd import AdsForm
@@ -156,7 +157,7 @@ class WMainForm(xbmcgui.WindowXML):
                     self.showSimpleEpg(epg_id)
                 else:
                     self.showStatus('Загрузка программы')
-                    defines.MyThread(self.getEpg, epg_id).start()
+                    defines.MyThread(self.getEpg, epg_id).start()                    
                 
                 defines.MyThread(self.showScreen, selItem.getLabel2()).start()
                 img = self.getControl(1111)
@@ -309,28 +310,64 @@ class WMainForm(xbmcgui.WindowXML):
 
     def getEpg(self, *args):
         log.d('getEpg')
-        param = args[0]        
-        try:
-            data = defines.GET('http://{0}/v3/translation_epg.php?session={1}&epg_id={2}&typeresult=json'.format(defines.API_MIRROR, self.session, param), cookie=self.session, trys=10)
-            jdata = json.loads(data)
-            if jdata['success'] == 0:
-                self.epg[param] = []
-                self.showSimpleEpg(param)
-            else:
-                self.epg[param] = jdata['data']
-                selitem = self.list.getSelectedItem()
-                
-                if selitem and selitem.getProperty('epg_cdn_id') == param:
+        param = args[0]
+        if param[0] != '#':        
+            try:
+                data = defines.GET('http://{0}/v3/translation_epg.php?session={1}&epg_id={2}&typeresult=json'.format(defines.API_MIRROR, self.session, param), cookie=self.session, trys=10)
+                jdata = json.loads(data)
+                if jdata['success'] == 0:
+                    self.epg[param] = []
                     self.showSimpleEpg(param)
+                else:
+                    self.epg[param] = jdata['data']                    
+            except Exception as e:
+                log.e('getEpg error: {0}'.format(e))
+    #             msg = "Ошибка Torrent-TV.RU"
+    #             self.showStatus(msg)
+                return
+        else:
+            self.epg[param] = self.get_epg_for_chid(param)
+            
+        selitem = self.list.getSelectedItem()
+        if selitem and selitem.getProperty('epg_cdn_id') == param:
+            self.showSimpleEpg(param)
+           
+        self.hideStatus()
+        
+    def get_epg_for_chid(self, chepg):        
+        programs = []
+        try:
+            http = defines.GET('http://torrent-tv.ru/torrent-online.php?translation={}'.format(chepg[1:]), trys=1)
+            soup = BeautifulSoup.BeautifulSoup(http)
+            elems = soup.findAll('div', attrs={'class':"on-air"})
+            for i, elem in enumerate(elems): 
+                try:               
+                    e={}
+                    elist=elem.text.split('&ndash;') 
+                               
+                    e['name'] = elist[1].strip()
+                    t = time.strptime(elist[0].strip(), '%H:%M') 
+                    today = datetime.datetime.today()       
+                    e['btime'] = time.mktime(datetime.datetime(today.year, today.month, today.day, t.tm_hour, t.tm_min).timetuple())
+                    e['etime'] = 0
+                    if i>0:
+                        programs[i-1]['etime'] = e['btime']
+        
+                    programs.append(e)
+                except Exception as e:
+                    log.e('get_epg_for_chid error: {0}'.format(e))
+                    log.d('get_epg_for_chid error: {0}'.format(elist))
+        #             msg = "Ошибка Torrent-TV.RU"
+        #             self.showStatus(msg)
+                    pass
+            
+            return programs 
         except Exception as e:
-            log.e('getEpg error: {0}'.format(e))
+            log.e('get_epg_for_chid error: {0}'.format(e))
 #             msg = "Ошибка Torrent-TV.RU"
 #             self.showStatus(msg)
             return
-           
-        self.hideStatus()
-
-
+            
     def showScreen(self, *args):
         log.d('showScreen')
         cdn = args[0]
@@ -615,6 +652,7 @@ class WMainForm(xbmcgui.WindowXML):
                 curepg = filter(lambda x: (float(x['etime']) > ctime), self.epg[epg_id])
             except:
                 return
+#                 pass
             bt = float(float(curepg[0]['btime']))
             et = float(float(curepg[0]['etime']))
             sbt = time.localtime(bt)

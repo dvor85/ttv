@@ -16,8 +16,8 @@ class TChannels():
                            'logo': os.path.basename(ch['img']),
                            'access_translation': 1,
                            'access_user': 1,
-                           'name': ch["title"].decode('utf-8', 'ignore'),
-                           'epg_id': 0}
+                           'name': ch["title"].decode('utf-8', 'ignore')}
+                channel['epg_id'] = "#%s" % channel['id']
                 self.tChannels.append(channel)            
         return self.tChannels   
     

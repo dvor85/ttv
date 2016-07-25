@@ -123,6 +123,7 @@ class MyPlayer(xbmcgui.WindowXML):
                     self.parent.getEpg(epg_id)
                 if self.parent.epg.has_key(epg_id) and len(self.parent.epg[epg_id]) > 0:
                     ctime = time.time()
+                    self.curepg = []
                     self.curepg = filter(lambda x: (float(x['etime']) > ctime), self.parent.epg[epg_id])
                     if self.curepg:
                         bt = float(self.curepg[0]['btime'])
