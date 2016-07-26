@@ -18,10 +18,12 @@ from adswnd import AdsForm
 from menu import MenuForm
 from infoform import InfoForm
 from dateform import DateForm
+from tchannels import TChannels
 import uuid
 import os
 import favdb
 import json
+import re
 
 log = defines.Logger('MainForm')
 
@@ -81,6 +83,8 @@ class WMainForm(xbmcgui.WindowXML):
         self.channel_number_str = ''
         self.select_timer = None
         self.hide_window_timer = None
+        self.get_epg_timer = None
+        self.show_screen_timer = None
         
     
     def onInit(self):
@@ -156,10 +160,9 @@ class WMainForm(xbmcgui.WindowXML):
                 elif self.epg.has_key(epg_id):
                     self.showSimpleEpg(epg_id)
                 else:
-                    self.showStatus('Загрузка программы')
-                    defines.MyThread(self.getEpg, epg_id).start()                    
+                    self.getEpg(epg_id, timeout=1)
                 
-                defines.MyThread(self.showScreen, selItem.getLabel2()).start()
+                self.showScreen(selItem.getProperty('id'), timeout=1)
                 img = self.getControl(1111)
                 img.setImage(selItem.getProperty('icon'))
         
@@ -189,7 +192,7 @@ class WMainForm(xbmcgui.WindowXML):
         log.d('getChannels {0}'.format(param))        
         try:
             if param == WMainForm.CHN_TYPE_ONETTVNET:    
-                from tchannels import TChannels
+                
                 from ext.onettvnet import Channels 
                 jdata = {'channels': TChannels(Channels).get(), 'categories':[], 'success': 1} 
             else:
@@ -216,9 +219,6 @@ class WMainForm(xbmcgui.WindowXML):
             elif not self.user["vip"]:
                 jdata['channels'] = fdb.get()
                 
-        
-           
-                
         if jdata['channels']:
             for ch in jdata['channels']:
                 if not ch["name"]:
@@ -238,41 +238,22 @@ class WMainForm(xbmcgui.WindowXML):
                 li.setProperty("access_user", '%s' % ch["access_user"])
                 
                 if param == 'channel':
-                    chname = u"{0}. {1}".format((len(self.category['%s' % ch['group']]["channels"]) + 1), ch["name"])
-                    if ch["access_user"] == 0:
-                        chname = "[COLOR FF646464]%s[/COLOR]" % chname
-                    li.setLabel(chname)           
                     li.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
                     self.category['%s' % ch['group']]["channels"].append(li)
                     
                 elif param == WMainForm.CHN_TYPE_ONETTVNET:
-                    chname = u"{0}. {1}".format((len(self.category[WMainForm.CHN_TYPE_ONETTVNET]["channels"]) + 1), ch["name"])
-                    if ch["access_user"] == 0:
-                        chname = "[COLOR FF646464]%s[/COLOR]" % chname
-                    li.setLabel(chname) 
                     li.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
                     self.category[WMainForm.CHN_TYPE_ONETTVNET]["channels"].append(li)
                     
                 elif param == 'moderation':
-                    chname = u"{0}. {1}".format((len(self.category[WMainForm.CHN_TYPE_MODERATION]["channels"]) + 1), ch["name"])
-                    if ch["access_user"] == 0:
-                        chname = "[COLOR FF646464]%s[/COLOR]" % chname
-                    li.setLabel(chname) 
                     li.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
                     self.category[WMainForm.CHN_TYPE_MODERATION]["channels"].append(li)
                             
                 elif param == 'translation':
-                    chname = u"{0}. {1}".format((len(self.translation) + 1), ch["name"])
-                    if ch["access_user"] == 0:
-                        chname = "[COLOR FF646464]%s[/COLOR]" % chname
-                    li.setLabel(chname)   
                     li.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
                     self.translation.append(li)
+                    
                 elif param == 'favourite':
-                    chname = u"{0}. {1}".format((len(self.category[WMainForm.CHN_TYPE_FAVOURITE]["channels"]) + 1), ch["name"])
-                    if ch["access_user"] == 0:
-                        chname = "[COLOR FF646464]%s[/COLOR]" % chname
-                    li.setLabel(chname) 
                     li.setProperty('commands', "%s,%s,%s,%s" % (MenuForm.CMD_MOVE_FAVOURITE, MenuForm.CMD_DEL_FAVOURITE, MenuForm.CMD_DOWN_FAVOURITE, MenuForm.CMD_UP_FAVOURITE))
                     self.category[WMainForm.CHN_TYPE_FAVOURITE]["channels"].append(li)
                 
@@ -292,7 +273,6 @@ class WMainForm(xbmcgui.WindowXML):
         
         self.archive = []
         
-        
         for ch in jdata['channels']:
             chname = "%i. %s" % ((len(self.archive) + 1), ch["name"])
             if not ch["id"]:
@@ -308,58 +288,70 @@ class WMainForm(xbmcgui.WindowXML):
             self.archive.append(li)
 
 
-    def getEpg(self, *args):
-        log.d('getEpg')
-        param = args[0]
-        if param[0] != '#':        
+    def getEpg(self, epg_id, timeout=0):
+        def get(*args):
             try:
-                data = defines.GET('http://{0}/v3/translation_epg.php?session={1}&epg_id={2}&typeresult=json'.format(defines.API_MIRROR, self.session, param), cookie=self.session, trys=10)
-                jdata = json.loads(data)
-                if jdata['success'] == 0:
-                    self.epg[param] = []
-                    self.showSimpleEpg(param)
+                log.d('getEpg')
+                self.showStatus('Загрузка программы')
+                param = args[0]
+                if param[0] != '#':
+                    data = defines.GET('http://{0}/v3/translation_epg.php?session={1}&epg_id={2}&typeresult=json'.format(defines.API_MIRROR, self.session, param), cookie=self.session, trys=10)
+                    jdata = json.loads(data)
+                    if jdata['success'] == 0:
+                        self.epg[param] = []
+                        self.showSimpleEpg(param)
+                    else:
+                        self.epg[param] = jdata['data']                    
                 else:
-                    self.epg[param] = jdata['data']                    
+                    self.epg[param] = self.get_epg_for_chid(param)
+                    
+                selitem = self.list.getSelectedItem()
+                if selitem and selitem.getProperty('epg_cdn_id') == param:
+                    self.showSimpleEpg(param)
+                   
             except Exception as e:
                 log.e('getEpg error: {0}'.format(e))
     #             msg = "Ошибка Torrent-TV.RU"
     #             self.showStatus(msg)
                 return
-        else:
-            self.epg[param] = self.get_epg_for_chid(param)
             
-        selitem = self.list.getSelectedItem()
-        if selitem and selitem.getProperty('epg_cdn_id') == param:
-            self.showSimpleEpg(param)
-           
-        self.hideStatus()
+            self.hideStatus()
+            
+        if self.get_epg_timer:
+            self.get_epg_timer.cancel()
+            self.get_epg_timer = None
+         
+        self.get_epg_timer = threading.Timer(timeout, get, [epg_id])
+        self.get_epg_timer.name = 'getEpg'
+        self.get_epg_timer.daemon = False
+        self.get_epg_timer.start()
+        
         
     def get_epg_for_chid(self, chepg):        
         programs = []
         try:
-            http = defines.GET('http://torrent-tv.ru/torrent-online.php?translation={}'.format(chepg[1:]), trys=1)
+            http = defines.GET('http://{}/torrent-online.php?translation={}'.format(defines.SITE_MIRROR, chepg[1:]), trys=1)
             soup = BeautifulSoup.BeautifulSoup(http)
             elems = soup.findAll('div', attrs={'class':"on-air"})
             for i, elem in enumerate(elems): 
                 try:               
-                    e={}
-                    elist=elem.text.split('&ndash;') 
-                               
-                    e['name'] = elist[1].strip()
-                    t = time.strptime(elist[0].strip(), '%H:%M') 
-                    today = datetime.datetime.today()       
-                    e['btime'] = time.mktime(datetime.datetime(today.year, today.month, today.day, t.tm_hour, t.tm_min).timetuple())
-                    e['etime'] = 0
-                    if i>0:
-                        programs[i-1]['etime'] = e['btime']
-        
-                    programs.append(e)
+                    e = {}
+                    elist = elem.text.split('&ndash;', 2) 
+                    if len(elist) == 2:           
+                        e['name'] = elist[1].strip()
+                        t = time.strptime(elist[0].strip(), '%H:%M') 
+                        today = datetime.datetime.today()       
+                        e['btime'] = time.mktime(datetime.datetime(today.year, today.month, today.day, t.tm_hour, t.tm_min).timetuple())
+                        e['etime'] = time.mktime(datetime.datetime(today.year, today.month, today.day, t.tm_hour + 1, t.tm_min).timetuple())
+                        if i > 0:
+                            programs[i - 1]['etime'] = e['btime']
+            
+                        programs.append(e)
                 except Exception as e:
                     log.e('get_epg_for_chid error: {0}'.format(e))
                     log.d('get_epg_for_chid error: {0}'.format(elist))
         #             msg = "Ошибка Torrent-TV.RU"
         #             self.showStatus(msg)
-                    pass
             
             return programs 
         except Exception as e:
@@ -368,28 +360,37 @@ class WMainForm(xbmcgui.WindowXML):
 #             self.showStatus(msg)
             return
             
-    def showScreen(self, *args):
-        log.d('showScreen')
-        cdn = args[0]
-        if defines.tryStringToInt(cdn) < 1:
-            return
+    def showScreen(self, cdn, timeout=0):
+        def show(*args):
+            log.d('showScreen')
+            cdn = args[0]
+            if defines.tryStringToInt(cdn) < 1:
+                return
+            
+            try:
+                data = defines.GET('http://{0}/v3/translation_screen.php?session={1}&channel_id={2}&typeresult=json&count=1'.format(defines.API_MIRROR, self.session, cdn), cookie=self.session, trys=10)
+                jdata = json.loads(data)
+                if jdata['success'] == 0:
+                    raise Exception(jdata['error'])
+            except Exception as e:
+                log.e('showScreen error: {0}'.format(e))
+    #             msg = "Ошибка Torrent-TV.RU"
+    #             self.showStatus(msg)
+                return
+            
+            img = self.getControl(WMainForm.IMG_SCREEN)
+            img.setImage("")
+            log.d('showScreen: %s' % jdata['screens'][0]['filename'])
+            img.setImage(jdata['screens'][0]['filename'])
         
-        try:
-            data = defines.GET('http://{0}/v3/translation_screen.php?session={1}&channel_id={2}&typeresult=json&count=1'.format(defines.API_MIRROR, self.session, cdn), cookie=self.session, trys=10)
-            jdata = json.loads(data)
-            if jdata['success'] == 0:
-                raise Exception(jdata['error'])
-        except Exception as e:
-            log.e('showScreen error: {0}'.format(e))
-#             msg = "Ошибка Torrent-TV.RU"
-#             self.showStatus(msg)
-            return
-        
-        img = self.getControl(WMainForm.IMG_SCREEN)
-        img.setImage("")
-        log.d('showScreen: %s' % jdata['screens'][0]['filename'])
-        img.setImage(jdata['screens'][0]['filename'])
-
+        if self.show_screen_timer:
+            self.show_screen_timer.cancel()
+            self.show_screen_timer = None
+         
+        self.show_screen_timer = threading.Timer(timeout, show, [cdn])
+        self.show_screen_timer.name = 'show_screen'
+        self.show_screen_timer.daemon = False
+        self.show_screen_timer.start()
     
     def checkButton(self, controlId):
         control = self.getControl(controlId)
@@ -577,6 +578,7 @@ class WMainForm(xbmcgui.WindowXML):
 
             if selItem.getProperty('type') == 'category':
                 self.cur_category = selItem.getProperty("id")
+#                 self.updateList()
                 self.fillChannels()
                 return
 
@@ -723,25 +725,42 @@ class WMainForm(xbmcgui.WindowXML):
         self.initLists()
         thrs = {}
         thrs['channel'] = defines.MyThread(self.getChannels, 'channel', not (self.cur_category in (WMainForm.CHN_TYPE_TRANSLATION, WMainForm.CHN_TYPE_MODERATION, WMainForm.CHN_TYPE_FAVOURITE)))
-        thrs['translation'] = defines.MyThread(self.getChannels, 'translation', self.cur_category == WMainForm.CHN_TYPE_TRANSLATION)
+#         thrs['translation'] = defines.MyThread(self.getChannels, 'translation', self.cur_category == WMainForm.CHN_TYPE_TRANSLATION)
         thrs['moderation'] = defines.MyThread(self.getChannels, 'moderation', self.cur_category == WMainForm.CHN_TYPE_MODERATION)
         thrs['favourite'] = defines.MyThread(self.getChannels, 'favourite', self.cur_category == WMainForm.CHN_TYPE_FAVOURITE)
         thrs[WMainForm.CHN_TYPE_ONETTVNET] = defines.MyThread(self.getChannels, WMainForm.CHN_TYPE_ONETTVNET, self.cur_category == WMainForm.CHN_TYPE_ONETTVNET)
         thrs['archive'] = defines.MyThread(self.getArcChannels, "", False)
         for thr in thrs:
             thrs[thr].start()
+            thrs[thr].join(10)
             
         log.d('Ожидание результата')
-        if self.cur_category == WMainForm.CHN_TYPE_FAVOURITE:
-            thrs['favourite'].join(10)
-        elif self.cur_category == WMainForm.CHN_TYPE_MODERATION:
-            thrs['moderation'].join(10)
-        elif self.cur_category == WMainForm.CHN_TYPE_ONETTVNET:
-            thrs[WMainForm.CHN_TYPE_ONETTVNET].join(10)
-        elif self.cur_category == WMainForm.CHN_TYPE_TRANSLATION:
-            thrs['translation'].join(10)
-        else:
-            thrs['channel'].join(10)
+#         if self.cur_category == WMainForm.CHN_TYPE_FAVOURITE:
+#             thrs['favourite'].join(10)
+            
+#         elif self.cur_category == WMainForm.CHN_TYPE_MODERATION:
+#             thrs['moderation'].join(10)
+            
+#         elif self.cur_category == WMainForm.CHN_TYPE_ONETTVNET:            
+#             thrs[WMainForm.CHN_TYPE_ONETTVNET].join(10)
+#             thrs['favourite'].join(10)
+#             thrs['channel'].join(10)
+#             thrs['moderation'].join(10)
+#             thrs['translation'].join(10)
+        
+        for cat in self.category:                    
+            if cat not in [WMainForm.CHN_TYPE_ONETTVNET]:
+                for cli in self.category[cat]['channels']:
+                    for li in self.category[WMainForm.CHN_TYPE_ONETTVNET]["channels"]:
+                        if cli.getProperty('id') == li.getProperty('id'):
+                            self.category[WMainForm.CHN_TYPE_ONETTVNET]["channels"].remove(li)
+                            break
+                            
+#         elif self.cur_category == WMainForm.CHN_TYPE_TRANSLATION:
+#             thrs['translation'].join(10)
+            
+#         else:
+#             thrs['channel'].join(10)
                 
         log.d('updateList: Clear list')    
         self.list.reset()
@@ -778,13 +797,21 @@ class WMainForm(xbmcgui.WindowXML):
             return
         log.d('fillChannels: Clear list')
         self.list.reset()
+        chnum_pattern = re.compile('^[0-9]+\.')
+        
         if len(self.category[self.cur_category]["channels"]) == 0:            
             self.fillCategory()          
             self.hideStatus()
         else:
             li = xbmcgui.ListItem('..')
             self.list.addItem(li)
-            for ch in self.category[self.cur_category]["channels"]:
+            for i, ch in enumerate(self.category[self.cur_category]["channels"]):
+                chname = ch.getLabel()
+                if not chnum_pattern.match(chname):
+                    chname = "{0}. {1}".format(i + 1, ch.getLabel())
+                    if ch.getProperty("access_user") == 0:
+                        chname = "[COLOR FF646464]%s[/COLOR]" % chname
+                    ch.setLabel(chname)
                 self.list.addItem(ch)
             self.hideStatus()
             
@@ -875,6 +902,10 @@ class WMainForm(xbmcgui.WindowXML):
             self.select_timer.cancel()
         if self.hide_window_timer:
             self.hide_window_timer.cancel()
+        if self.get_epg_timer:
+            self.get_epg_timer.cancel()
+        if self.show_screen_timer:
+            self.show_screen_timer.cancel()
         xbmcgui.WindowXML.close(self)
         
 

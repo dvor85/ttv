@@ -132,8 +132,9 @@ def GET(target, post=None, cookie=None, trys=-1):
     if not target:
         return
     t = 0
-    req = urllib2.Request(url=target, data=post)
-    req.add_header('User-Agent', 'XBMC (script.torrent-tv.ru)')
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.99 Safari/537.36'}
+    req = urllib2.Request(url=target, data=post, headers=headers)
+    
     if post:
         req.add_header("Content-type", "application/x-www-form-urlencoded")
     if cookie:
