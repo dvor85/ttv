@@ -80,17 +80,17 @@ class WMainForm(xbmcgui.WindowXML):
         self.user = None
         self.infoform = None
         self.init = True
+        self.session = None
+        self.cookie = None
         self.channel_number_str = ''
         self.select_timer = None
         self.hide_window_timer = None
         self.get_epg_timer = None
         self.show_screen_timer = None
         
-    
-    def onInit(self):
-        self.img_progress = self.getControl(WMainForm.IMG_PROGRESS)
-        self.txt_progress = self.getControl(WMainForm.TXT_PROGRESS)
-        self.progress = self.getControl(WMainForm.PROGRESS_BAR)
+        self.initTTV()
+        
+    def initTTV(self):
         data = defines.GET('http://{0}/v3/version.php?application=xbmc&version={1}'.format(defines.API_MIRROR, defines.TTV_VERSION))
         try:
             jdata = json.loads(data)
@@ -129,7 +129,20 @@ class WMainForm(xbmcgui.WindowXML):
         self.user = {"login" : defines.ADDON.getSetting('login'), "balance" : jdata["balance"], "vip":jdata["balance"] > 1}
         
         self.session = jdata['session']
-        self.updateList()
+#         self.cookie = defines.AUTH()
+#         self.cookie = ["PHPSESSID=710f1ae31db941b19ff75ac3a9d44dd0"]
+        
+    
+    def onInit(self):
+        self.img_progress = self.getControl(WMainForm.IMG_PROGRESS)
+        self.txt_progress = self.getControl(WMainForm.TXT_PROGRESS)
+        self.progress = self.getControl(WMainForm.PROGRESS_BAR)
+        
+#         self.initTTV()
+        if not self.category:
+            self.updateList((WMainForm.CHN_TYPE_MODERATION, WMainForm.CHN_TYPE_FAVOURITE, WMainForm.CHN_TYPE_ONETTVNET, WMainForm.CHN_TYPE_TRANSLATION, "channel", 'archive'))
+        else:
+            self.loadList()    
         self.hide_main_window(timeout=10)
         
         
@@ -138,8 +151,8 @@ class WMainForm(xbmcgui.WindowXML):
         dialog = OkDialog("okdialog.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
         dialog.setText(msg)
         dialog.doModal()
-            
-
+        
+    
     def onFocus(self, ControlID):
         if ControlID == WMainForm.CONTROL_LIST:
             if not self.list:
@@ -179,14 +192,19 @@ class WMainForm(xbmcgui.WindowXML):
             self.selitem_id = defines.tryStringToInt(self.selitem_id)          
 
 
-    def initLists(self):
-        self.category = {}
-        self.category[WMainForm.CHN_TYPE_MODERATION] = { "name" : '[COLOR FFFFFF00]' + WMainForm.CHN_TYPE_MODERATION + '[/COLOR]', "channels": []}
-        self.category[WMainForm.CHN_TYPE_FAVOURITE] = { "name" : '[COLOR FFFFFF00][B]' + WMainForm.CHN_TYPE_FAVOURITE + '[/B][/COLOR]', "channels": []}
-        self.category[WMainForm.CHN_TYPE_ONETTVNET] = { "name" : '[COLOR FFFF0000][B]' + WMainForm.CHN_TYPE_ONETTVNET + '[/B][/COLOR]', "channels": []}
-        self.translation = []
+    def initLists(self, categ=None): 
+        if not categ:
+            return       
+        if WMainForm.CHN_TYPE_MODERATION in categ:
+            self.category[WMainForm.CHN_TYPE_MODERATION] = { "name" : '[COLOR FFFFFF00]' + WMainForm.CHN_TYPE_MODERATION + '[/COLOR]', "channels": []}
+        if WMainForm.CHN_TYPE_FAVOURITE in categ:
+            self.category[WMainForm.CHN_TYPE_FAVOURITE] = { "name" : '[COLOR FFFFFF00][B]' + WMainForm.CHN_TYPE_FAVOURITE + '[/B][/COLOR]', "channels": []}
+        if WMainForm.CHN_TYPE_ONETTVNET in categ:
+            self.category[WMainForm.CHN_TYPE_ONETTVNET] = { "name" : '[COLOR FFFF0000][B]' + WMainForm.CHN_TYPE_ONETTVNET + '[/B][/COLOR]', "channels": []}    
+        if WMainForm.CHN_TYPE_TRANSLATION in categ:
+            self.translation = []
         
-        
+                    
     def getChannels(self, *args):
         param = args[0]
         log.d('getChannels {0}'.format(param))        
@@ -196,7 +214,7 @@ class WMainForm(xbmcgui.WindowXML):
                 from ext.onettvnet import Channels 
                 jdata = {'channels': TChannels(Channels).get(), 'categories':[], 'success': 1} 
             else:
-                data = defines.GET('http://{0}/v3/translation_list.php?session={1}&type={2}&typeresult=json'.format(defines.API_MIRROR, self.session, param), cookie=self.session, trys=10)
+                data = defines.GET('http://{0}/v3/translation_list.php?session={1}&type={2}&typeresult=json'.format(defines.API_MIRROR, self.session, param), cookie=['PHPSESSID=%s' % self.session], trys=10)
                 jdata = json.loads(data)
             if jdata['success'] == 0:
                 raise Exception(jdata['error'])            
@@ -261,7 +279,7 @@ class WMainForm(xbmcgui.WindowXML):
     def getArcChannels(self, *args):
         log.d('getArcChannels')
         try:
-            data = defines.GET('http://{0}/v3/arc_list.php?session={1}&typeresult=json'.format(defines.API_MIRROR, self.session), cookie=self.session, trys=10)
+            data = defines.GET('http://{0}/v3/arc_list.php?session={1}&typeresult=json'.format(defines.API_MIRROR, self.session), cookie=['PHPSESSID=%s' % self.session], trys=10)
             jdata = json.loads(data)
             if jdata['success'] == 0:
                 raise Exception(jdata['error'])
@@ -288,14 +306,14 @@ class WMainForm(xbmcgui.WindowXML):
             self.archive.append(li)
 
 
-    def getEpg(self, epg_id, timeout=0):
+    def getEpg(self, epg_id, timeout=0, blocking=False):
         def get(*args):
             try:
                 log.d('getEpg')
                 self.showStatus('Загрузка программы')
                 param = args[0]
                 if param[0] != '#':
-                    data = defines.GET('http://{0}/v3/translation_epg.php?session={1}&epg_id={2}&typeresult=json'.format(defines.API_MIRROR, self.session, param), cookie=self.session, trys=10)
+                    data = defines.GET('http://{0}/v3/translation_epg.php?session={1}&epg_id={2}&typeresult=json'.format(defines.API_MIRROR, self.session, param), cookie=['PHPSESSID=%s' % self.session], trys=10)
                     jdata = json.loads(data)
                     if jdata['success'] == 0:
                         self.epg[param] = []
@@ -325,12 +343,16 @@ class WMainForm(xbmcgui.WindowXML):
         self.get_epg_timer.name = 'getEpg'
         self.get_epg_timer.daemon = False
         self.get_epg_timer.start()
+        if blocking:
+            self.get_epg_timer.join(10)
         
         
     def get_epg_for_chid(self, chepg):        
         programs = []
         try:
-            http = defines.GET('http://{}/torrent-online.php?translation={}'.format(defines.SITE_MIRROR, chepg[1:]), trys=1)
+#             if not self.cookie:
+#                 self.cookie = defines.AUTH()
+            http = defines.GET('http://{}/torrent-online.php?translation={}'.format(defines.SITE_MIRROR, chepg[1:]), trys=1, cookie=self.cookie)
             soup = BeautifulSoup.BeautifulSoup(http)
             elems = soup.findAll('div', attrs={'class':"on-air"})
             for i, elem in enumerate(elems): 
@@ -368,7 +390,7 @@ class WMainForm(xbmcgui.WindowXML):
                 return
             
             try:
-                data = defines.GET('http://{0}/v3/translation_screen.php?session={1}&channel_id={2}&typeresult=json&count=1'.format(defines.API_MIRROR, self.session, cdn), cookie=self.session, trys=10)
+                data = defines.GET('http://{0}/v3/translation_screen.php?session={1}&channel_id={2}&typeresult=json&count=1'.format(defines.API_MIRROR, self.session, cdn), cookie=['PHPSESSID=%s' % self.session], trys=10)
                 jdata = json.loads(data)
                 if jdata['success'] == 0:
                     raise Exception(jdata['error'])
@@ -633,7 +655,7 @@ class WMainForm(xbmcgui.WindowXML):
         res = mnu.GetResult()
         log.d('Результат команды %s' % res)
         if res.startswith('OK'):
-            self.updateList()
+            self.updateList((WMainForm.CHN_TYPE_FAVOURITE))
         elif res == WMainForm.API_ERROR_INCORRECT:
             self.showStatus('Пользователь не опознан по сессии')
         elif res == WMainForm.API_ERROR_NOCONNECT:
@@ -719,22 +741,30 @@ class WMainForm(xbmcgui.WindowXML):
             self.hide_main_window(timeout=10)
 
 
-    def updateList(self):
+    def updateList(self, categ):
         self.showStatus("Получение списка каналов")
         self.list = self.getControl(WMainForm.CONTROL_LIST)
-        self.initLists()
+        self.initLists(categ)
         thrs = {}
-        thrs['channel'] = defines.MyThread(self.getChannels, 'channel', not (self.cur_category in (WMainForm.CHN_TYPE_TRANSLATION, WMainForm.CHN_TYPE_MODERATION, WMainForm.CHN_TYPE_FAVOURITE)))
-#         thrs['translation'] = defines.MyThread(self.getChannels, 'translation', self.cur_category == WMainForm.CHN_TYPE_TRANSLATION)
-        thrs['moderation'] = defines.MyThread(self.getChannels, 'moderation', self.cur_category == WMainForm.CHN_TYPE_MODERATION)
-        thrs['favourite'] = defines.MyThread(self.getChannels, 'favourite', self.cur_category == WMainForm.CHN_TYPE_FAVOURITE)
-        thrs[WMainForm.CHN_TYPE_ONETTVNET] = defines.MyThread(self.getChannels, WMainForm.CHN_TYPE_ONETTVNET, self.cur_category == WMainForm.CHN_TYPE_ONETTVNET)
-        thrs['archive'] = defines.MyThread(self.getArcChannels, "", False)
-        for thr in thrs:
-            thrs[thr].start()
-            thrs[thr].join(10)
+        if 'channel' in categ:
+            thrs['channel'] = defines.MyThread(self.getChannels, 'channel', not (self.cur_category in (WMainForm.CHN_TYPE_TRANSLATION, WMainForm.CHN_TYPE_MODERATION, WMainForm.CHN_TYPE_FAVOURITE)))        
+        if WMainForm.CHN_TYPE_TRANSLATION in categ:    
+            thrs['translation'] = defines.MyThread(self.getChannels, 'translation', self.cur_category == WMainForm.CHN_TYPE_TRANSLATION)
+        if WMainForm.CHN_TYPE_MODERATION in categ:     
+            thrs['moderation'] = defines.MyThread(self.getChannels, 'moderation', self.cur_category == WMainForm.CHN_TYPE_MODERATION)
+        if WMainForm.CHN_TYPE_FAVOURITE in categ:
+            thrs['favourite'] = defines.MyThread(self.getChannels, 'favourite', self.cur_category == WMainForm.CHN_TYPE_FAVOURITE)
+        if WMainForm.CHN_TYPE_ONETTVNET in categ:
+            thrs[WMainForm.CHN_TYPE_ONETTVNET] = defines.MyThread(self.getChannels, WMainForm.CHN_TYPE_ONETTVNET, self.cur_category == WMainForm.CHN_TYPE_ONETTVNET)
+        if 'archive' in categ:    
+            thrs['archive'] = defines.MyThread(self.getArcChannels, "", False)
             
+        for thr in thrs:
+            thrs[thr].start()            
+
         log.d('Ожидание результата')
+        for thr in thrs:
+            thrs[thr].join(10)
 #         if self.cur_category == WMainForm.CHN_TYPE_FAVOURITE:
 #             thrs['favourite'].join(10)
             
@@ -747,20 +777,24 @@ class WMainForm(xbmcgui.WindowXML):
 #             thrs['channel'].join(10)
 #             thrs['moderation'].join(10)
 #             thrs['translation'].join(10)
-        
-        for cat in self.category:                    
-            if cat not in [WMainForm.CHN_TYPE_ONETTVNET]:
-                for cli in self.category[cat]['channels']:
-                    for li in self.category[WMainForm.CHN_TYPE_ONETTVNET]["channels"]:
-                        if cli.getProperty('id') == li.getProperty('id'):
-                            self.category[WMainForm.CHN_TYPE_ONETTVNET]["channels"].remove(li)
-                            break
+
+        if 'channel' in categ or WMainForm.CHN_TYPE_ONETTVNET in categ:        
+            for cat in self.category:                    
+                if cat not in [WMainForm.CHN_TYPE_ONETTVNET]:
+                    for cli in self.category[cat]['channels']:
+                        for li in self.category[WMainForm.CHN_TYPE_ONETTVNET]["channels"]:
+                            if cli.getProperty('id') == li.getProperty('id'):
+                                self.category[WMainForm.CHN_TYPE_ONETTVNET]["channels"].remove(li)
+                                break
                             
 #         elif self.cur_category == WMainForm.CHN_TYPE_TRANSLATION:
 #             thrs['translation'].join(10)
             
 #         else:
 #             thrs['channel'].join(10)
+        self.loadList()
+    
+    def loadList(self):
                 
         log.d('updateList: Clear list')    
         self.list.reset()
@@ -865,7 +899,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.list.addItem(const_li)
         
         try:
-            data = defines.GET("http://{0}/v3/arc_records.php?session={1}&date={2}-{3}-{4}&epg_id={5}&typeresult=json".format(defines.API_MIRROR, self.session, date.day, date.month, date.year, li.getProperty("epg_cdn_id")), cookie=self.session, trys=10)
+            data = defines.GET("http://{0}/v3/arc_records.php?session={1}&date={2}-{3}-{4}&epg_id={5}&typeresult=json".format(defines.API_MIRROR, self.session, date.day, date.month, date.year, li.getProperty("epg_cdn_id")), cookie=['PHPSESSID=%s' % self.session], trys=10)
             jdata = json.loads(data)
         except Exception as e:
             log.e('fillRecords error: {0}'.format(e))

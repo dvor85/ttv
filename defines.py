@@ -5,7 +5,7 @@ import xbmcaddon
 import xbmc
 import xbmcgui
 import sys
-import urllib2
+import urllib, urllib2
 import threading
 import os
 import time
@@ -124,21 +124,88 @@ def showNotification(msg, icon=ADDON_ICON):
        
        
 def isCancel():
-    return xbmc.abortRequested or closeRequested.isSet()       
+    return xbmc.abortRequested or closeRequested.isSet()      
+
+def AUTH():
+    try:        
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.99 Safari/537.36',
+                   'Content-type': 'application/x-www-form-urlencoded',
+                   'Accept-Encoding': 'gzip, deflate'
+                   
+        }
+        cookie = []
+#         try:
+#             req = urllib2.Request('http://{0}/banhammer/pid'.format(SITE_MIRROR), headers=headers)
+#             resp = urllib2.urlopen(req, timeout=6)
+#             try:
+#                 cookie.append('BHC={0}; path=/;'.format(resp.headers['X-BH-Token']))
+#             finally:
+#                 resp.close()
+#         except Exception as e:
+#             log.e('ERROR: open url: {0} {1} '.format(req.get_full_url(), e)) 
+            
+        
+        authdata = {
+            'email' : ADDON.getSetting('login'),
+            'password' : ADDON.getSetting('password'),
+            'remember' : 'on',
+            'enter' : 'enter'
+        }
+#         try:
+#             req = urllib2.Request('http://{0}/auth.php'.format(SITE_MIRROR), data=urllib.urlencode(authdata), headers=headers)
+#             for coo in cookie:
+#                 req.add_header('Cookie', coo)
+#             resp = urllib2.urlopen(req, timeout=6)
+#             try:
+#                 for h in resp.headers.headers:
+#                     keyval = h.split(':')
+#                     if 'Set-Cookie' in keyval[0]:
+#                         cookie.append(keyval[1].strip())
+#             finally:
+#                 resp.close()
+#             
+#         except Exception as e:
+#             log.e('ERROR: open url: {0} {1} '.format(req.get_full_url(), e))
+            
+        try:
+            req = urllib2.Request('http://{0}/auth.php'.format(SITE_MIRROR), data=urllib.urlencode(authdata), headers=headers)
+#             req.add_header('Referer', 'http://{0}/auth.php'.format(SITE_MIRROR))
+            for coo in cookie:
+                req.add_header('Cookie', coo)
+            resp = urllib2.urlopen(req, timeout=6)
+            try:
+                for h in resp.headers.headers:
+                    keyval = h.split(':')
+                    if 'Set-Cookie' in keyval[0]:
+                        cookie.append(keyval[1].split(';')[0].strip())
+            finally:
+                resp.close()
+            
+        except Exception as e:
+            log.e('ERROR: open url: {0} {1} '.format(req.get_full_url(), e))
+            raise 
+            
+        return cookie
+    except Exception as e:
+        log.e('ERROR: {0} on auth'.format(e)) 
+        return [] 
             
 
-def GET(target, post=None, cookie=None, trys=-1):
+def GET(target, post=None, cookie=None, headers=None, trys=-1):
     log.d('try to get: {0}'.format(target))
     if not target:
         return
     t = 0
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.99 Safari/537.36'}
+    if not headers:
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.99 Safari/537.36'}
     req = urllib2.Request(url=target, data=post, headers=headers)
     
     if post:
         req.add_header("Content-type", "application/x-www-form-urlencoded")
     if cookie:
-        req.add_header('Cookie', 'PHPSESSID=%s' % cookie)
+        for coo in cookie:
+            req.add_header('Cookie', coo)
+#         req.add_header('Cookie', 'PHPSESSID=%s' % cookie)
     while not isCancel():
         t += 1
         if 0 < trys < t:
@@ -156,8 +223,8 @@ def GET(target, post=None, cookie=None, trys=-1):
                 log.e('GET EXCEPT [{0}]'.format(e))
                 if not isCancel():
                     xbmc.sleep(3000)  
-
-
+                    
+                    
 def checkPort(*args):
     try:
         port = args[0]

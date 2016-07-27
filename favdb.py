@@ -164,7 +164,7 @@ class RemoteFDB(FDB):
         
     def get(self):        
         try:
-            data = defines.GET('http://{0}/v3/translation_list.php?session={1}&type={2}&typeresult=json'.format(defines.API_MIRROR, self.session, 'favourite'), cookie=self.session, trys=10)
+            data = defines.GET('http://{0}/v3/translation_list.php?session={1}&type={2}&typeresult=json'.format(defines.API_MIRROR, self.session, 'favourite'), cookie=['PHPSESSID=%s' % self.session], trys=10)
             jdata = json.loads(data)
             if jdata['success'] != 0:
                 channels = jdata['channels']
@@ -206,7 +206,7 @@ class RemoteFDB(FDB):
         log.d('exec_cmd')
         try:
             channel_id = li.getProperty('id')
-            data = defines.GET('http://{0}/v3/{1}.php?session={2}&channel_id={3}&typeresult=json'.format(defines.API_MIRROR, self.session, channel_id), cookie=self.session, trys=10)
+            data = defines.GET('http://{0}/v3/{1}.php?session={2}&channel_id={3}&typeresult=json'.format(defines.API_MIRROR, self.session, channel_id), cookie=['PHPSESSID=%s' % self.session], trys=10)
             jdata = json.loads(data)
             if jdata['success'] == 0:
                 return jdata['error']

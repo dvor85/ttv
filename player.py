@@ -120,7 +120,7 @@ class MyPlayer(xbmcgui.WindowXML):
                 epg_id = li.getProperty('epg_cdn_id')
                 
                 if not self.parent.epg.has_key(epg_id):
-                    self.parent.getEpg(epg_id)
+                    self.parent.getEpg(epg_id, blocking=True)
                 if self.parent.epg.has_key(epg_id) and len(self.parent.epg[epg_id]) > 0:
                     ctime = time.time()
                     self.curepg = []
@@ -207,7 +207,24 @@ class MyPlayer(xbmcgui.WindowXML):
         except Exception as e:
             log.e('get_cid error: {0}'.format(e))            
             return
-                
+        
+    def get_epg(self, url):
+        def mfindal(http, ss, es):
+            L = []
+            while http.find(es) > 0:
+                s = http.find(ss)
+                e = http.find(es)
+                i = http[s:e]
+                L.append(i)
+                http = http[e + 2:]
+            return L
+        
+        import re
+            
+        http = defines.GET(url, trys=2)
+        m = re.search("var +epg *= *[(?<=epg[^\]]+)", http)
+        
+               
          
 
     def Start(self, li):
