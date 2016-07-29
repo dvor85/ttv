@@ -24,8 +24,42 @@ import os
 import favdb
 import json
 import re
+from UserDict import UserDict
 
 log = defines.Logger('MainForm')
+
+
+class ChannelGroups(UserDict):
+    def __init__(self):
+        self.data = {}
+        
+    def setGroup(self, groupname, grouptitle):
+        self.data[groupname] = {"title": grouptitle, "channels": []}
+        
+    def delGroup(self, groupname):
+        del self.data[groupname]
+        
+    def getGroups(self):
+        return self.data.keys()
+        
+    def setChannels(self, groupname, channels):
+        self.data[groupname]["channels"] = channels
+        
+    def addChannel(self, groupname, channel):
+        self.data[groupname]["channels"].append(channel)
+        
+    def delChannel(self, groupname, chid):
+        for li in self.data[groupname]["channels"]:
+            if li.getProperty('id') == chid:
+                self.data[groupname]["channels"].remove(li)
+                
+    def getChannels(self, groupname):
+        return self.data[groupname]["channels"]
+        
+    def getChannel(self, groupname, chid):
+        for li in self.data[groupname]["channels"]:
+            if li.getProperty('id') == chid:
+                return li  
 
 class WMainForm(xbmcgui.WindowXML):
     CANCEL_DIALOG = (9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448,)
@@ -64,7 +98,7 @@ class WMainForm(xbmcgui.WindowXML):
     def __init__(self, *args, **kwargs):
         log.d('__init__')
         self.translation = []
-        self.category = {}
+        self.channel_groups = ChannelGroups()
         self.seltab = 0
         self.epg = {}
         self.archive = []
@@ -82,6 +116,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.init = True
         self.session = None
         self.cookie = None
+        self.onettvnet = None
         self.channel_number_str = ''
         self.select_timer = None
         self.hide_window_timer = None
@@ -139,7 +174,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.progress = self.getControl(WMainForm.PROGRESS_BAR)
         
 #         self.initTTV()
-        if not self.category:
+        if not self.channel_groups:            
             self.updateList((WMainForm.CHN_TYPE_MODERATION, WMainForm.CHN_TYPE_FAVOURITE, WMainForm.CHN_TYPE_ONETTVNET, WMainForm.CHN_TYPE_TRANSLATION, "channel", 'archive'))
         else:
             self.loadList()    
@@ -196,11 +231,13 @@ class WMainForm(xbmcgui.WindowXML):
         if not categ:
             return       
         if WMainForm.CHN_TYPE_MODERATION in categ:
-            self.category[WMainForm.CHN_TYPE_MODERATION] = { "name" : '[COLOR FFFFFF00]' + WMainForm.CHN_TYPE_MODERATION + '[/COLOR]', "channels": []}
+            self.channel_groups.setGroup(WMainForm.CHN_TYPE_MODERATION, '[COLOR FFFFFF00]' + WMainForm.CHN_TYPE_MODERATION + '[/COLOR]')
+            
         if WMainForm.CHN_TYPE_FAVOURITE in categ:
-            self.category[WMainForm.CHN_TYPE_FAVOURITE] = { "name" : '[COLOR FFFFFF00][B]' + WMainForm.CHN_TYPE_FAVOURITE + '[/B][/COLOR]', "channels": []}
+            self.channel_groups.setGroup(WMainForm.CHN_TYPE_FAVOURITE, '[COLOR FFFFFF00][B]' + WMainForm.CHN_TYPE_FAVOURITE + '[/B][/COLOR]')
+            
         if WMainForm.CHN_TYPE_ONETTVNET in categ:
-            self.category[WMainForm.CHN_TYPE_ONETTVNET] = { "name" : '[COLOR FFFF0000][B]' + WMainForm.CHN_TYPE_ONETTVNET + '[/B][/COLOR]', "channels": []}    
+            self.channel_groups.setGroup(WMainForm.CHN_TYPE_ONETTVNET, '[COLOR FFFFFF00][B]' + WMainForm.CHN_TYPE_ONETTVNET + '[/B][/COLOR]')
         if WMainForm.CHN_TYPE_TRANSLATION in categ:
             self.translation = []
         
@@ -227,8 +264,8 @@ class WMainForm(xbmcgui.WindowXML):
         
 
         for cat in jdata["categories"]:
-            if not self.category.has_key('%s' % cat["id"]):
-                self.category['%s' % cat["id"]] = { "name": cat["name"], "channels": [] }
+            if not self.channel_groups.has_key('%s' % cat["id"]):
+                self.channel_groups.setGroup('%s' % cat["id"], cat["name"])
         
         if param == 'favourite':  
             fdb = favdb.LocalFDB()          
@@ -257,15 +294,16 @@ class WMainForm(xbmcgui.WindowXML):
                 
                 if param == 'channel':
                     li.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
-                    self.category['%s' % ch['group']]["channels"].append(li)
+                    self.channel_groups.addChannel('%s' % ch['group'], li)
                     
                 elif param == WMainForm.CHN_TYPE_ONETTVNET:
                     li.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
-                    self.category[WMainForm.CHN_TYPE_ONETTVNET]["channels"].append(li)
+                    li.setProperty("url", ch['url'])
+                    self.channel_groups.addChannel(WMainForm.CHN_TYPE_ONETTVNET, li)
                     
                 elif param == 'moderation':
                     li.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
-                    self.category[WMainForm.CHN_TYPE_MODERATION]["channels"].append(li)
+                    self.channel_groups.addChannel(WMainForm.CHN_TYPE_MODERATION, li)
                             
                 elif param == 'translation':
                     li.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
@@ -273,7 +311,7 @@ class WMainForm(xbmcgui.WindowXML):
                     
                 elif param == 'favourite':
                     li.setProperty('commands', "%s,%s,%s,%s" % (MenuForm.CMD_MOVE_FAVOURITE, MenuForm.CMD_DEL_FAVOURITE, MenuForm.CMD_DOWN_FAVOURITE, MenuForm.CMD_UP_FAVOURITE))
-                    self.category[WMainForm.CHN_TYPE_FAVOURITE]["channels"].append(li)
+                    self.channel_groups.addChannel(WMainForm.CHN_TYPE_FAVOURITE, li)
                 
                     
     def getArcChannels(self, *args):
@@ -348,38 +386,16 @@ class WMainForm(xbmcgui.WindowXML):
         
         
     def get_epg_for_chid(self, chepg):        
-        programs = []
         try:
-#             if not self.cookie:
-#                 self.cookie = defines.AUTH()
-            http = defines.GET('http://{}/torrent-online.php?translation={}'.format(defines.SITE_MIRROR, chepg[1:]), trys=1, cookie=self.cookie)
-            soup = BeautifulSoup.BeautifulSoup(http)
-            elems = soup.findAll('div', attrs={'class':"on-air"})
-            for i, elem in enumerate(elems): 
-                try:               
-                    e = {}
-                    elist = elem.text.split('&ndash;', 2) 
-                    if len(elist) == 2:           
-                        e['name'] = elist[1].strip()
-                        t = time.strptime(elist[0].strip(), '%H:%M') 
-                        today = datetime.datetime.today()       
-                        e['btime'] = time.mktime(datetime.datetime(today.year, today.month, today.day, t.tm_hour, t.tm_min).timetuple())
-                        e['etime'] = time.mktime(datetime.datetime(today.year, today.month, today.day, t.tm_hour + 1, t.tm_min).timetuple())
-                        if i > 0:
-                            programs[i - 1]['etime'] = e['btime']
-            
-                        programs.append(e)
-                except Exception as e:
-                    log.e('get_epg_for_chid error: {0}'.format(e))
-                    log.d('get_epg_for_chid error: {0}'.format(elist))
-        #             msg = "Ошибка Torrent-TV.RU"
-        #             self.showStatus(msg)
-            
-            return programs 
+            chid = chepg[1:]
+            http = defines.GET(self.channel_groups.getChannel(self.cur_category, chid).getProperty('url'), trys=1, cookie=self.cookie)
+            m = re.search('var\s+epg\s*=\s*(?P<e>\[[^\]]+\])', http)
+            epgtext = re.sub('(?P<n>\w+\s*):\s*','"\g<n>":', m.group('e'))
+            epg = json.loads(epgtext)   
+            log.d('EPG_OBG={}'.format(epg))
+            return epg 
         except Exception as e:
             log.e('get_epg_for_chid error: {0}'.format(e))
-#             msg = "Ошибка Torrent-TV.RU"
-#             self.showStatus(msg)
             return
             
     def showScreen(self, cdn, timeout=0):
@@ -670,45 +686,43 @@ class WMainForm(xbmcgui.WindowXML):
 
     def showSimpleEpg(self, epg_id=None):
         controlEpg = self.getControl(WMainForm.LBL_FIRST_EPG)
-        if epg_id and len(self.epg[epg_id]) > 0:
-            ctime = time.time()
-            try:
-                curepg = filter(lambda x: (float(x['etime']) > ctime), self.epg[epg_id])
-            except:
-                return
-#                 pass
-            bt = float(float(curepg[0]['btime']))
-            et = float(float(curepg[0]['etime']))
-            sbt = time.localtime(bt)
-            sett = time.localtime(et)
-            self.progress.setPercent((ctime - bt) * 100 / (et - bt))
-            controlEpg.setLabel('%.2d:%.2d - %.2d:%.2d %s' % (sbt.tm_hour, sbt.tm_min, sett.tm_hour, sett.tm_min, curepg[0]['name']))
-            nextepg = ''
-            for i in range(1, 99):
-                ce = None
+        try:
+            ctime = datetime.datetime.now()
+            dt = (ctime - datetime.datetime.utcnow()) - datetime.timedelta(hours=3)
+            
+            curepg = []
+            for x in self.epg[epg_id]:                
+                bt = datetime.datetime.fromtimestamp(float(x['btime']))
+                et = datetime.datetime.fromtimestamp(float(x['etime']))               
+                if et > ctime and bt.date() == ctime.date():
+                    curepg.append(x)
+                    
+            for i, ep in enumerate(curepg):
                 try:
                     ce = self.getControl(WMainForm.LBL_FIRST_EPG + i)
+                    bt = datetime.datetime.fromtimestamp(float(ep['btime']))
+                    et = datetime.datetime.fromtimestamp(float(ep['etime']))
+                    if not ce:
+                        raise
+                    ce.setLabel(u"{} - {} {}".format(bt.strftime("%H:%M"), et.strftime("%H:%M"), ep['name'].replace('&quot;', '"')))
+                    if i==0:
+                        controlEpg.setLabel(u"{} - {} {}".format(bt.strftime("%H:%M"), et.strftime("%H:%M"), curepg[0]['name'].replace('&quot;', '"')))
                 except:
                     break
-                if ce == None:
-                    break
-                if i >= len(curepg):
-                    break
-                sbt = time.localtime(float(curepg[i]['btime']))
-                sett = time.localtime(float(curepg[i]['etime']))
-                nextepg = '%.2d:%.2d - %.2d:%.2d %s' % (sbt.tm_hour, sbt.tm_min, sett.tm_hour, sett.tm_min, curepg[i]['name'])
-                ce.setLabel(nextepg)
-            # controlEpg1.setLabel(nextepg)
 
-        else:
-            controlEpg.setLabel('Нет программы')
-            for i in range(1, 99):
-                ce = None
-                try:
-                    self.getControl(WMainForm.LBL_FIRST_EPG + i).setLabel('')
-                except:
-                    break
-            self.progress.setPercent(1)
+            return True
+                
+        except Exception as e:
+            log.e('showSimpleEpg error {}'.format(e))
+            
+        controlEpg.setLabel('Нет программы')
+        for i in range(1, 99):
+            ce = None
+            try:
+                self.getControl(WMainForm.LBL_FIRST_EPG + i).setLabel('')
+            except:
+                break
+        self.progress.setPercent(1)
             
             
     def onAction(self, action):                
@@ -756,15 +770,20 @@ class WMainForm(xbmcgui.WindowXML):
             thrs['favourite'] = defines.MyThread(self.getChannels, 'favourite', self.cur_category == WMainForm.CHN_TYPE_FAVOURITE)
         if WMainForm.CHN_TYPE_ONETTVNET in categ:
             thrs[WMainForm.CHN_TYPE_ONETTVNET] = defines.MyThread(self.getChannels, WMainForm.CHN_TYPE_ONETTVNET, self.cur_category == WMainForm.CHN_TYPE_ONETTVNET)
+        
         if 'archive' in categ:    
-            thrs['archive'] = defines.MyThread(self.getArcChannels, "", False)
-            
+            defines.MyThread(self.getArcChannels, "", False).start()
+                
         for thr in thrs:
             thrs[thr].start()            
 
         log.d('Ожидание результата')
         for thr in thrs:
-            thrs[thr].join(10)
+            thrs[thr].join(10)            
+        
+        
+            
+            
 #         if self.cur_category == WMainForm.CHN_TYPE_FAVOURITE:
 #             thrs['favourite'].join(10)
             
@@ -779,13 +798,12 @@ class WMainForm(xbmcgui.WindowXML):
 #             thrs['translation'].join(10)
 
         if 'channel' in categ or WMainForm.CHN_TYPE_ONETTVNET in categ:        
-            for cat in self.category:                    
-                if cat not in [WMainForm.CHN_TYPE_ONETTVNET]:
-                    for cli in self.category[cat]['channels']:
-                        for li in self.category[WMainForm.CHN_TYPE_ONETTVNET]["channels"]:
-                            if cli.getProperty('id') == li.getProperty('id'):
-                                self.category[WMainForm.CHN_TYPE_ONETTVNET]["channels"].remove(li)
-                                break
+            for gr in self.channel_groups.getGroups():                    
+                if gr not in [WMainForm.CHN_TYPE_ONETTVNET]:
+                    for cli in self.channel_groups.getChannels(gr):
+                        self.channel_groups.delChannel(WMainForm.CHN_TYPE_ONETTVNET, cli.getProperty('id'))
+                        
+                        
                             
 #         elif self.cur_category == WMainForm.CHN_TYPE_TRANSLATION:
 #             thrs['translation'].join(10)
@@ -833,13 +851,13 @@ class WMainForm(xbmcgui.WindowXML):
         self.list.reset()
         chnum_pattern = re.compile('^[0-9]+\.')
         
-        if len(self.category[self.cur_category]["channels"]) == 0:            
+        if not self.channel_groups.getChannels(self.cur_category):            
             self.fillCategory()          
             self.hideStatus()
         else:
             li = xbmcgui.ListItem('..')
             self.list.addItem(li)
-            for i, ch in enumerate(self.category[self.cur_category]["channels"]):
+            for i, ch in enumerate(self.channel_groups.getChannels(self.cur_category)):
                 chname = ch.getLabel()
                 if not chnum_pattern.match(chname):
                     chname = "{0}. {1}".format(i + 1, ch.getLabel())
@@ -879,8 +897,8 @@ class WMainForm(xbmcgui.WindowXML):
             return
         log.d('fillCategory: Clear list')
         self.list.reset()
-        for gr in self.category:
-            li = xbmcgui.ListItem(self.category[gr]["name"])
+        for gr in self.channel_groups.getGroups():
+            li = xbmcgui.ListItem(self.channel_groups[gr]["title"])
             li.setProperty('type', 'category')
             li.setProperty('id', '%s' % gr)
             self.list.addItem(li)

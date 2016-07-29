@@ -6,9 +6,10 @@
 import xbmcgui
 import threading
 import xbmc
-import time
+import time, datetime
 import defines
 import json
+
 from ext.onettvnet import Channels
 from tchannels import TChannels
 from ts import TSengine as tsengine
@@ -59,7 +60,8 @@ class MyPlayer(xbmcgui.WindowXML):
     def onInit(self):
         log.d('onInit')
         if not self.li:
-            return        
+            return      
+        self.progress = self.getControl(MyPlayer.CONTROL_PROGRESS_ID)  
         cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
         cicon.setImage(self.li.getProperty('icon'))
         self.control_window = self.getControl(MyPlayer.CONTROL_WINDOW_ID)
@@ -108,7 +110,7 @@ class MyPlayer(xbmcgui.WindowXML):
     def UpdateEpg(self, *args):
         controlEpg = self.getControl(MyPlayer.CONTROL_EPG_ID)
         controlEpg1 = self.getControl(MyPlayer.CONTROL_NEXT_EPG_ID)
-        progress = self.getControl(MyPlayer.CONTROL_PROGRESS_ID)
+        
         try:
             li = args[0]  
             with self.update_epg_lock:
@@ -122,24 +124,30 @@ class MyPlayer(xbmcgui.WindowXML):
                 if not self.parent.epg.has_key(epg_id):
                     self.parent.getEpg(epg_id, blocking=True)
                 if self.parent.epg.has_key(epg_id) and len(self.parent.epg[epg_id]) > 0:
-                    ctime = time.time()
+                    ctime = datetime.datetime.now()
+                    dt = (ctime - datetime.datetime.utcnow()) - datetime.timedelta(hours=3)
+                    
                     self.curepg = []
-                    self.curepg = filter(lambda x: (float(x['etime']) > ctime), self.parent.epg[epg_id])
-                    if self.curepg:
-                        bt = float(self.curepg[0]['btime'])
-                        et = float(self.curepg[0]['etime'])
-                        sbt = time.localtime(bt)
-                        sett = time.localtime(et)
-                        progress.setPercent((ctime - bt) * 100 / (et - bt))
-                        controlEpg.setLabel('%.2d:%.2d - %.2d:%.2d %s' % (sbt.tm_hour, sbt.tm_min, sett.tm_hour, sett.tm_min, self.curepg[0]['name']))
-                        self.setNextEpg()
-                        return True
+                    for x in self.parent.epg[epg_id]:
+                        bt = datetime.datetime.fromtimestamp(float(x['btime']))
+                        et = datetime.datetime.fromtimestamp(float(x['etime']))               
+                        if et > ctime and bt.date() == ctime.date():
+                            self.curepg.append(x)
+                            
+                    bt = datetime.datetime.fromtimestamp(float(self.curepg[0]['btime']))
+                    et = datetime.datetime.fromtimestamp(float(self.curepg[0]['etime']))
+                    self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
+    #                 controlEpg.setLabel('%.2d:%.2d - %.2d:%.2d %s' % (sbt.tm_hour, sbt.tm_min, sett.tm_hour, sett.tm_min, curepg[0]['name']))
+                    controlEpg.setLabel(u"{} - {} {}".format(bt.strftime("%H:%M"), et.strftime("%H:%M"), self.curepg[0]['name'].replace('&quot;', '"')))
+                    self.setNextEpg()
+                    return True
+                      
         except Exception as e:
             log.w('UpdateEpg error: {0}'.format(e))
             
         controlEpg.setLabel('Нет программы')
         controlEpg1.setLabel('')
-        progress.setPercent(1)
+        self.progress.setPercent(1)
         
             
     def setNextEpg(self):
@@ -154,9 +162,9 @@ class MyPlayer(xbmcgui.WindowXML):
                 
             controlEpg1 = self.getControl(112)  
                
-            sbt = time.localtime(self.curepg[self.nextepg_id]['btime'])
-            sett = time.localtime(self.curepg[self.nextepg_id]['etime'])
-            nextepg = nextepg + '%.2d:%.2d - %.2d:%.2d %s\n' % (sbt.tm_hour, sbt.tm_min, sett.tm_hour, sett.tm_min, self.curepg[self.nextepg_id]['name'])
+            bt = datetime.datetime.fromtimestamp(float(self.curepg[self.nextepg_id]['btime']))
+            et = datetime.datetime.fromtimestamp(float(self.curepg[self.nextepg_id]['etime']))
+            nextepg = nextepg + u"{} - {} {}".format(bt.strftime("%H:%M"), et.strftime("%H:%M"), self.curepg[self.nextepg_id]['name'].replace('&quot;', '"'))
                 
         controlEpg1.setLabel(nextepg)         
                
@@ -196,7 +204,13 @@ class MyPlayer(xbmcgui.WindowXML):
         ss2 = 'this.loadTorrent("'
         es = '",{autoplay: true})'
         
+        
+        
         try:
+#             import re
+#             m = re.search('var +epg *= *[(?P<e>[^\]]+)', http)
+#             print re.sub('(?P<n>\w+ *): *','"\g<n>":', m.group('e'))
+            
             if ss1 in http:
                 CID = mfindal(http, ss1, es)[0][len(ss1):]
                 return CID
@@ -209,21 +223,11 @@ class MyPlayer(xbmcgui.WindowXML):
             return
         
     def get_epg(self, url):
-        def mfindal(http, ss, es):
-            L = []
-            while http.find(es) > 0:
-                s = http.find(ss)
-                e = http.find(es)
-                i = http[s:e]
-                L.append(i)
-                http = http[e + 2:]
-            return L
-        
         import re
             
         http = defines.GET(url, trys=2)
-        m = re.search("var +epg *= *[(?<=epg[^\]]+)", http)
-        
+        m = re.search("var +epg *= *[(?P<e>[^\]]+)", http)
+        return re.sub('(?P<n>\w+ *): *','"\g<n>":', m.group('e'))
                
          
 
