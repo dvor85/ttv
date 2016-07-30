@@ -41,7 +41,7 @@ class ChannelGroups(UserDict):
         
     def getGroups(self):
         return self.data.keys()
-        
+    
     def setChannels(self, groupname, channels):
         self.data[groupname]["channels"] = channels
         
@@ -175,7 +175,7 @@ class WMainForm(xbmcgui.WindowXML):
         
 #         self.initTTV()
         if not self.channel_groups:            
-            self.updateList((WMainForm.CHN_TYPE_MODERATION, WMainForm.CHN_TYPE_FAVOURITE, WMainForm.CHN_TYPE_ONETTVNET, WMainForm.CHN_TYPE_TRANSLATION, "channel", 'archive'))
+            self.updateList()
         else:
             self.loadList()    
         self.hide_main_window(timeout=10)
@@ -227,21 +227,6 @@ class WMainForm(xbmcgui.WindowXML):
             self.selitem_id = defines.tryStringToInt(self.selitem_id)          
 
 
-    def initLists(self, categ=None): 
-        if not categ:
-            return       
-        if WMainForm.CHN_TYPE_MODERATION in categ:
-            self.channel_groups.setGroup(WMainForm.CHN_TYPE_MODERATION, '[COLOR FFFFFF00]' + WMainForm.CHN_TYPE_MODERATION + '[/COLOR]')
-            
-        if WMainForm.CHN_TYPE_FAVOURITE in categ:
-            self.channel_groups.setGroup(WMainForm.CHN_TYPE_FAVOURITE, '[COLOR FFFFFF00][B]' + WMainForm.CHN_TYPE_FAVOURITE + '[/B][/COLOR]')
-            
-        if WMainForm.CHN_TYPE_ONETTVNET in categ:
-            self.channel_groups.setGroup(WMainForm.CHN_TYPE_ONETTVNET, '[COLOR FFFFFF00][B]' + WMainForm.CHN_TYPE_ONETTVNET + '[/B][/COLOR]')
-        if WMainForm.CHN_TYPE_TRANSLATION in categ:
-            self.translation = []
-        
-                    
     def getChannels(self, *args):
         param = args[0]
         log.d('getChannels {0}'.format(param))        
@@ -291,6 +276,8 @@ class WMainForm(xbmcgui.WindowXML):
                 li.setProperty("id", '%s' % ch["id"])
                 li.setProperty("access_translation", '%s' % ch["access_translation"])
                 li.setProperty("access_user", '%s' % ch["access_user"])
+                if ch.has_key('url'):
+                    li.setProperty("url", ch['url'])
                 
                 if param == 'channel':
                     li.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
@@ -298,7 +285,6 @@ class WMainForm(xbmcgui.WindowXML):
                     
                 elif param == WMainForm.CHN_TYPE_ONETTVNET:
                     li.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
-                    li.setProperty("url", ch['url'])
                     self.channel_groups.addChannel(WMainForm.CHN_TYPE_ONETTVNET, li)
                     
                 elif param == 'moderation':
@@ -364,15 +350,13 @@ class WMainForm(xbmcgui.WindowXML):
                 selitem = self.list.getSelectedItem()
                 if selitem and selitem.getProperty('epg_cdn_id') == param:
                     self.showSimpleEpg(param)
+                    
+                self.hideStatus()
                    
             except Exception as e:
                 log.e('getEpg error: {0}'.format(e))
-    #             msg = "Ошибка Torrent-TV.RU"
-    #             self.showStatus(msg)
-                return
             
-            self.hideStatus()
-            
+
         if self.get_epg_timer:
             self.get_epg_timer.cancel()
             self.get_epg_timer = None
@@ -390,13 +374,12 @@ class WMainForm(xbmcgui.WindowXML):
             chid = chepg[1:]
             http = defines.GET(self.channel_groups.getChannel(self.cur_category, chid).getProperty('url'), trys=1, cookie=self.cookie)
             m = re.search('var\s+epg\s*=\s*(?P<e>\[[^\]]+\])', http)
-            epgtext = re.sub('(?P<n>\w+\s*):\s*','"\g<n>":', m.group('e'))
+            epgtext = re.sub('(?P<k>\w+\s*):\s*(?P<v>.+[,}])', '"\g<k>":\g<v>', m.group('e'))
             epg = json.loads(epgtext)   
-            log.d('EPG_OBG={}'.format(epg))
             return epg 
         except Exception as e:
             log.e('get_epg_for_chid error: {0}'.format(e))
-            return
+            
             
     def showScreen(self, cdn, timeout=0):
         def show(*args):
@@ -671,7 +654,14 @@ class WMainForm(xbmcgui.WindowXML):
         res = mnu.GetResult()
         log.d('Результат команды %s' % res)
         if res.startswith('OK'):
-            self.updateList((WMainForm.CHN_TYPE_FAVOURITE))
+            
+            self.channel_groups.setChannels(WMainForm.CHN_TYPE_FAVOURITE, [])
+            fthr = defines.MyThread(self.getChannels, 'favourite')
+            fthr.start()
+            if self.cur_category == WMainForm.CHN_TYPE_FAVOURITE:
+                fthr.join(10)
+                self.loadList()
+            
         elif res == WMainForm.API_ERROR_INCORRECT:
             self.showStatus('Пользователь не опознан по сессии')
         elif res == WMainForm.API_ERROR_NOCONNECT:
@@ -685,7 +675,6 @@ class WMainForm(xbmcgui.WindowXML):
     
 
     def showSimpleEpg(self, epg_id=None):
-        controlEpg = self.getControl(WMainForm.LBL_FIRST_EPG)
         try:
             ctime = datetime.datetime.now()
             dt = (ctime - datetime.datetime.utcnow()) - datetime.timedelta(hours=3)
@@ -694,7 +683,7 @@ class WMainForm(xbmcgui.WindowXML):
             for x in self.epg[epg_id]:                
                 bt = datetime.datetime.fromtimestamp(float(x['btime']))
                 et = datetime.datetime.fromtimestamp(float(x['etime']))               
-                if et > ctime and bt.date() == ctime.date():
+                if et > ctime and bt.date() >= ctime.date():
                     curepg.append(x)
                     
             for i, ep in enumerate(curepg):
@@ -704,9 +693,7 @@ class WMainForm(xbmcgui.WindowXML):
                     et = datetime.datetime.fromtimestamp(float(ep['etime']))
                     if not ce:
                         raise
-                    ce.setLabel(u"{} - {} {}".format(bt.strftime("%H:%M"), et.strftime("%H:%M"), ep['name'].replace('&quot;', '"')))
-                    if i==0:
-                        controlEpg.setLabel(u"{} - {} {}".format(bt.strftime("%H:%M"), et.strftime("%H:%M"), curepg[0]['name'].replace('&quot;', '"')))
+                    ce.setLabel(u"{0} - {1} {2}".format(bt.strftime("%H:%M"), et.strftime("%H:%M"), ep['name'].replace('&quot;', '"')))
                 except:
                     break
 
@@ -714,12 +701,13 @@ class WMainForm(xbmcgui.WindowXML):
                 
         except Exception as e:
             log.e('showSimpleEpg error {}'.format(e))
-            
-        controlEpg.setLabel('Нет программы')
-        for i in range(1, 99):
-            ce = None
+        
+        for i in range(99):
             try:
-                self.getControl(WMainForm.LBL_FIRST_EPG + i).setLabel('')
+                ce = self.getControl(WMainForm.LBL_FIRST_EPG + i)
+                if i == 0:
+                    ce.setLabel('Нет программы')
+                ce.setLabel('')
             except:
                 break
         self.progress.setPercent(1)
@@ -755,61 +743,40 @@ class WMainForm(xbmcgui.WindowXML):
             self.hide_main_window(timeout=10)
 
 
-    def updateList(self, categ):
-        self.showStatus("Получение списка каналов")
-        self.list = self.getControl(WMainForm.CONTROL_LIST)
-        self.initLists(categ)
-        thrs = {}
-        if 'channel' in categ:
-            thrs['channel'] = defines.MyThread(self.getChannels, 'channel', not (self.cur_category in (WMainForm.CHN_TYPE_TRANSLATION, WMainForm.CHN_TYPE_MODERATION, WMainForm.CHN_TYPE_FAVOURITE)))        
-        if WMainForm.CHN_TYPE_TRANSLATION in categ:    
-            thrs['translation'] = defines.MyThread(self.getChannels, 'translation', self.cur_category == WMainForm.CHN_TYPE_TRANSLATION)
-        if WMainForm.CHN_TYPE_MODERATION in categ:     
-            thrs['moderation'] = defines.MyThread(self.getChannels, 'moderation', self.cur_category == WMainForm.CHN_TYPE_MODERATION)
-        if WMainForm.CHN_TYPE_FAVOURITE in categ:
-            thrs['favourite'] = defines.MyThread(self.getChannels, 'favourite', self.cur_category == WMainForm.CHN_TYPE_FAVOURITE)
-        if WMainForm.CHN_TYPE_ONETTVNET in categ:
-            thrs[WMainForm.CHN_TYPE_ONETTVNET] = defines.MyThread(self.getChannels, WMainForm.CHN_TYPE_ONETTVNET, self.cur_category == WMainForm.CHN_TYPE_ONETTVNET)
-        
-        if 'archive' in categ:    
-            defines.MyThread(self.getArcChannels, "", False).start()
+    def updateList(self):
+        def LoadOther():
+            for thr in thrs:
+                thrs[thr].join(10)
                 
-        for thr in thrs:
-            thrs[thr].start()            
-
-        log.d('Ожидание результата')
-        for thr in thrs:
-            thrs[thr].join(10)            
-        
-        
-            
-            
-#         if self.cur_category == WMainForm.CHN_TYPE_FAVOURITE:
-#             thrs['favourite'].join(10)
-            
-#         elif self.cur_category == WMainForm.CHN_TYPE_MODERATION:
-#             thrs['moderation'].join(10)
-            
-#         elif self.cur_category == WMainForm.CHN_TYPE_ONETTVNET:            
-#             thrs[WMainForm.CHN_TYPE_ONETTVNET].join(10)
-#             thrs['favourite'].join(10)
-#             thrs['channel'].join(10)
-#             thrs['moderation'].join(10)
-#             thrs['translation'].join(10)
-
-        if 'channel' in categ or WMainForm.CHN_TYPE_ONETTVNET in categ:        
             for gr in self.channel_groups.getGroups():                    
-                if gr not in [WMainForm.CHN_TYPE_ONETTVNET]:
+                if gr not in [WMainForm.CHN_TYPE_ONETTVNET, WMainForm.CHN_TYPE_FAVOURITE]:
                     for cli in self.channel_groups.getChannels(gr):
                         self.channel_groups.delChannel(WMainForm.CHN_TYPE_ONETTVNET, cli.getProperty('id'))
                         
-                        
-                            
-#         elif self.cur_category == WMainForm.CHN_TYPE_TRANSLATION:
-#             thrs['translation'].join(10)
+        self.showStatus("Получение списка каналов")
+        self.list = self.getControl(WMainForm.CONTROL_LIST)
+        for groupname in (WMainForm.CHN_TYPE_MODERATION, WMainForm.CHN_TYPE_FAVOURITE, WMainForm.CHN_TYPE_ONETTVNET):
+            self.channel_groups.setGroup(groupname, '[COLOR FFFFFF00][B]' + groupname + '[/B][/COLOR]')
+        thrs = {}
             
-#         else:
-#             thrs['channel'].join(10)
+        thrs['channel'] = defines.MyThread(self.getChannels, 'channel')        
+        thrs['moderation'] = defines.MyThread(self.getChannels, 'moderation')
+        thrs['favourite'] = defines.MyThread(self.getChannels, 'favourite')
+        thrs[WMainForm.CHN_TYPE_ONETTVNET] = defines.MyThread(self.getChannels, WMainForm.CHN_TYPE_ONETTVNET)
+        
+        for thr in thrs:
+            thrs[thr].start()
+
+        log.d('Ожидание результата')
+        
+        defines.MyThread(LoadOther).start()
+        if self.cur_category not in (WMainForm.CHN_TYPE_MODERATION, WMainForm.CHN_TYPE_FAVOURITE, WMainForm.CHN_TYPE_ONETTVNET):
+            thrs['channel'].join(10)
+        elif self.cur_category in (WMainForm.CHN_TYPE_MODERATION):
+            thrs['moderation'].join(10)
+        elif self.cur_category in (WMainForm.CHN_TYPE_FAVOURITE):
+            thrs['favourite'].join(10)              
+        
         self.loadList()
     
     def loadList(self):

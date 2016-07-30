@@ -144,6 +144,9 @@ class LocalFDB(FDB):
                    'access_user': int(li.getProperty('access_user')),
                    'name': li.getProperty('name'),
                    'epg_id': li.getProperty('epg_cdn_id')}
+        if li.getProperty('url'):
+            channel['url'] = li.getProperty('url')
+        
         if self.find(chid) is None:
             self.channels.append(channel)
             return self.save()

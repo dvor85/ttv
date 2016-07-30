@@ -9,6 +9,7 @@ import xbmc
 import time, datetime
 import defines
 import json
+import re
 
 from ext.onettvnet import Channels
 from tchannels import TChannels
@@ -131,14 +132,14 @@ class MyPlayer(xbmcgui.WindowXML):
                     for x in self.parent.epg[epg_id]:
                         bt = datetime.datetime.fromtimestamp(float(x['btime']))
                         et = datetime.datetime.fromtimestamp(float(x['etime']))               
-                        if et > ctime and bt.date() == ctime.date():
+                        if et > ctime and bt.date() >= ctime.date():
                             self.curepg.append(x)
                             
                     bt = datetime.datetime.fromtimestamp(float(self.curepg[0]['btime']))
                     et = datetime.datetime.fromtimestamp(float(self.curepg[0]['etime']))
                     self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
     #                 controlEpg.setLabel('%.2d:%.2d - %.2d:%.2d %s' % (sbt.tm_hour, sbt.tm_min, sett.tm_hour, sett.tm_min, curepg[0]['name']))
-                    controlEpg.setLabel(u"{} - {} {}".format(bt.strftime("%H:%M"), et.strftime("%H:%M"), self.curepg[0]['name'].replace('&quot;', '"')))
+                    controlEpg.setLabel(u"{0} - {1} {2}".format(bt.strftime("%H:%M"), et.strftime("%H:%M"), self.curepg[0]['name'].replace('&quot;', '"')))
                     self.setNextEpg()
                     return True
                       
@@ -189,47 +190,14 @@ class MyPlayer(xbmcgui.WindowXML):
     
 
     def get_cid(self, url):
-        def mfindal(http, ss, es):
-            L = []
-            while http.find(es) > 0:
-                s = http.find(ss)
-                e = http.find(es)
-                i = http[s:e]
-                L.append(i)
-                http = http[e + 2:]
-            return L
-            
-        http = defines.GET(url, trys=2)
-        ss1 = 'this.loadPlayer("'
-        ss2 = 'this.loadTorrent("'
-        es = '",{autoplay: true})'
-        
-        
-        
         try:
-#             import re
-#             m = re.search('var +epg *= *[(?P<e>[^\]]+)', http)
-#             print re.sub('(?P<n>\w+ *): *','"\g<n>":', m.group('e'))
-            
-            if ss1 in http:
-                CID = mfindal(http, ss1, es)[0][len(ss1):]
-                return CID
-            elif ss2 in http:
-                AL = mfindal(http, ss2, es)[0][len(ss2):]
-                return AL
-            else: return
+            http = defines.GET(url, trys=2)
+            m = re.search('(loadPlayer|loadTorrent)\("(?P<cid>\w+)"', http)
+            return m.group('cid')            
         except Exception as e:
             log.e('get_cid error: {0}'.format(e))            
             return
         
-    def get_epg(self, url):
-        import re
-            
-        http = defines.GET(url, trys=2)
-        m = re.search("var +epg *= *[(?P<e>[^\]]+)", http)
-        return re.sub('(?P<n>\w+ *): *','"\g<n>":', m.group('e'))
-               
-         
 
     def Start(self, li):
         log("Start play")       

@@ -3,7 +3,7 @@
 # Writer (c) 2011, Welicobratov K.A., E-mail: 07pov23@gmail.com
 # Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-import sys
+import sys, os
 import defines
 
 
@@ -15,7 +15,9 @@ if defines.DEBUG:
     # special://xbmc/system/python/Lib/pysrc/_pydev_imps/_pydev_pluginbase.py
     try:        
         # try:
-        import pysrc.pydevd as pydevd  # with the addon script.module.pydevd, only use `import pydevd`            
+        sys.path.append(os.path.expanduser('~/liclipse/plugins/org.python.pydev_5.1.2.201606231040/pysrc'))
+        import pydevd  # with the addon script.module.pydevd, only use `import pydevd`
+              
         # except:
         # import os
         # sys.path.append(os.path.join(xbmc.translatePath("special://home/addons"), 'script.module.pydevd/lib'))
