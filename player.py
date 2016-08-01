@@ -10,9 +10,8 @@ import time, datetime
 import defines
 import json
 import re
+from ext.table import Channels as ExtChannels
 
-from ext.onettvnet import Channels
-from tchannels import TChannels
 from ts import TSengine as tsengine
 # defines
 CANCEL_DIALOG = (9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448,)
@@ -55,7 +54,6 @@ class MyPlayer(xbmcgui.WindowXML):
         self.chinfo = None
         self.swinfo = None
         self.control_window = None
-        self.onettvnet = TChannels(Channels)
         
 
     def onInit(self):
@@ -195,14 +193,15 @@ class MyPlayer(xbmcgui.WindowXML):
                 
     
 
-    def get_cid(self, url):
+    def get_source(self, url):
         try:
+            if url.rfind('.acelive') > -1:
+                return url
             http = defines.GET(url, trys=2)
-            m = re.search('(loadPlayer|loadTorrent)\("(?P<cid>\w+)"', http)
-            return m.group('cid')            
+            m = re.search('(loadPlayer|loadTorrent)\("(?P<src>[\w/_:.]+)"', http)
+            return m.group('src')            
         except Exception as e:
-            log.e('get_cid error: {0}'.format(e))            
-            return
+            log.e('get_source error: {0}'.format(e))            
         
 
     def Start(self, li):
@@ -234,12 +233,21 @@ class MyPlayer(xbmcgui.WindowXML):
             
         if not jdata["success"] or jdata["success"] == 0 or not jdata["source"]:
             msg = None
-            if li.getProperty("type") == "channel":                
-                cid = self.get_cid(self.onettvnet.find(li.getProperty("id")).get('url'))
-                if cid:
-                    jdata["source"] = cid 
-                    jdata["success"] = 1
-                    jdata["type"] = 'PID'
+            if li.getProperty("type") == "channel":     
+                for extgr in ExtChannels.keys():
+                    chli = ExtChannels[extgr].find_by_id(li.getProperty("id"))
+                    if not chli:
+                        chli = ExtChannels[extgr].find_by_title(li.getProperty('name'))
+                    if chli:
+                        src = self.get_source(chli.get('url'))
+                        if src:
+                            jdata["source"] = src 
+                            jdata["success"] = 1
+                            if src.rfind('.acelive') > -1:
+                                jdata["type"] = 'TORRENT'
+                            else:
+                                jdata["type"] = 'PID'
+                            break
                 else:    
                     msg = "Канал временно не доступен"
             else:    

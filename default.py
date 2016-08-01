@@ -27,7 +27,7 @@ if defines.DEBUG:
         pydevd.settrace('localhost', stdoutToServer=True, stderrToServer=True)
     except:
         t, v, tb = sys.exc_info()        
-        defines.log.e("{0}:{1} | For remote debug in eclipse you must add org.python.pydev.debug.pysrc to your PYTHONPATH or install script.module.pydevd addon.".format(t, v))
+        defines.log.e("{0}:{1} | For remote debug in eclipse you must add org.python.pydev.pysrc to your sys.path or install script.module.pydevd addon.".format(t, v))
         defines.log.e("CONTINUE WITHOUT DEBUGING")
         import traceback
         traceback.print_tb(tb)

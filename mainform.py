@@ -18,7 +18,7 @@ from adswnd import AdsForm
 from menu import MenuForm
 from infoform import InfoForm
 from dateform import DateForm
-from tchannels import TChannels
+from ext.table import Channels as ExtChannels
 import uuid
 import os
 import favdb
@@ -88,7 +88,6 @@ class WMainForm(xbmcgui.WindowXML):
     EXT_GROUPS = {'1ttv.net': '1ttv.net'}
     
     CHN_TYPE_FAVOURITE = 'Избранное'
-    CHN_TYPE_ONETTVNET = '1ttv.net'
     CHN_TYPE_TRANSLATION = 'Трансляции'
     CHN_TYPE_MODERATION = 'На модерации'
     API_ERROR_INCORRECT = 'incorrect'
@@ -234,10 +233,8 @@ class WMainForm(xbmcgui.WindowXML):
         param = args[0]
         log.d('getChannels {0}'.format(param))        
         try:
-            if param == WMainForm.CHN_TYPE_ONETTVNET:    
-                
-                from ext.onettvnet import Channels 
-                jdata = {'channels': TChannels(Channels).get(), 'categories':[], 'success': 1} 
+            if param in ExtChannels.keys():                
+                jdata = {'channels': ExtChannels[param].get(), 'categories':[], 'success': 1} 
             else:
                 data = defines.GET('http://{0}/v3/translation_list.php?session={1}&type={2}&typeresult=json'.format(defines.API_MIRROR, self.session, param), cookie=['PHPSESSID=%s' % self.session], trys=10)
                 jdata = json.loads(data)
@@ -268,7 +265,7 @@ class WMainForm(xbmcgui.WindowXML):
                     continue
                 if not ch['logo']:
                     ch['logo'] = ''
-                else:
+                elif not re.search('^(http://|file://)', ch['logo']):                    
                     ch['logo'] = 'http://{0}/uploads/{1}'.format(defines.SITE_MIRROR, ch['logo'])    
                             
                 li = xbmcgui.ListItem(ch["name"], '%s' % ch['id'], ch['logo'], ch['logo'])
@@ -286,9 +283,9 @@ class WMainForm(xbmcgui.WindowXML):
                     li.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
                     self.channel_groups.addChannel('%s' % ch['group'], li)
                     
-                elif param == WMainForm.CHN_TYPE_ONETTVNET:
+                elif param in ExtChannels.keys():
                     li.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
-                    self.channel_groups.addChannel(WMainForm.CHN_TYPE_ONETTVNET, li)
+                    self.channel_groups.addChannel(param, li)
                     
                 elif param == 'moderation':
                     li.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
@@ -459,6 +456,63 @@ class WMainForm(xbmcgui.WindowXML):
         self.show_screen_timer.name = 'show_screen'
         self.show_screen_timer.daemon = False
         self.show_screen_timer.start()
+        
+        
+    def updateList(self):
+        def LoadOther():
+            for thr in thrs:
+                thrs[thr].join(10)
+                
+            for gr in self.channel_groups.getGroups():  
+                for extgr in ExtChannels.keys():           
+                    if gr not in [x for x in ExtChannels.keys() + [WMainForm.CHN_TYPE_FAVOURITE] if x == extgr]:
+                        for cli in self.channel_groups.getChannels(gr):
+                            self.channel_groups.delChannel(extgr, cli.getProperty('id'))
+                        
+        self.showStatus("Получение списка каналов")
+        self.list = self.getControl(WMainForm.CONTROL_LIST)
+        for groupname in [WMainForm.CHN_TYPE_MODERATION, WMainForm.CHN_TYPE_FAVOURITE]:
+            self.channel_groups.setGroup(groupname, '[COLOR FFFFFF00][B]' + groupname + '[/B][/COLOR]')
+        for groupname in ExtChannels.keys():
+            self.channel_groups.setGroup(groupname, '[COLOR FF00FF00][B]' + groupname + '[/B][/COLOR]') 
+        thrs = {}
+            
+        thrs['channel'] = defines.MyThread(self.getChannels, 'channel')        
+        thrs['moderation'] = defines.MyThread(self.getChannels, 'moderation')
+        thrs['favourite'] = defines.MyThread(self.getChannels, 'favourite')
+        thrs['archive'] = defines.MyThread(self.getArcChannels)
+        for extgr in ExtChannels.keys():  
+            thrs[extgr] = defines.MyThread(self.getChannels, extgr)
+        
+        
+        for thr in thrs:
+            thrs[thr].start()
+
+        log.d('Ожидание результата')
+        
+        lo_thr = defines.MyThread(LoadOther)
+        lo_thr.start()
+        
+        if self.cur_category not in [WMainForm.CHN_TYPE_MODERATION, WMainForm.CHN_TYPE_FAVOURITE] + ExtChannels.keys():
+            thrs['channel'].join(10)
+        elif self.cur_category in (WMainForm.CHN_TYPE_MODERATION):
+            thrs['moderation'].join(10)
+        elif self.cur_category in (WMainForm.CHN_TYPE_FAVOURITE):
+            thrs['favourite'].join(10)         
+        else:
+            lo_thr.join(10)     
+        
+        self.loadList()
+    
+    def loadList(self):
+                
+        log.d('updateList: Clear list')    
+        self.list.reset()
+        self.setFocus(self.getControl(WMainForm.BTN_CHANNELS_ID))
+        self.img_progress.setVisible(False)
+        self.hideStatus()
+        log.d(self.selitem_id)    
+        
     
     def checkButton(self, controlId):
         control = self.getControl(controlId)
@@ -560,6 +614,8 @@ class WMainForm(xbmcgui.WindowXML):
                 buf.setProperty('icon', selItem.getProperty('icon'))
                 buf.setProperty("type", selItem.getProperty("type"))
                 buf.setProperty("id", selItem.getProperty("id"))
+                buf.setProperty("url", selItem.getProperty("url"))
+                buf.setProperty("name", selItem.getProperty("name"))
                 if selItem.getProperty("type") == "archive":
                     self.fillRecords(buf, datetime.datetime.today())                
                     break
@@ -750,58 +806,6 @@ class WMainForm(xbmcgui.WindowXML):
             
             self.hide_main_window(timeout=10)
 
-
-    def updateList(self):
-        def LoadOther():
-            for thr in thrs:
-                thrs[thr].join(10)
-                
-            for gr in self.channel_groups.getGroups():                    
-                if gr not in [WMainForm.CHN_TYPE_ONETTVNET, WMainForm.CHN_TYPE_FAVOURITE]:
-                    for cli in self.channel_groups.getChannels(gr):
-                        self.channel_groups.delChannel(WMainForm.CHN_TYPE_ONETTVNET, cli.getProperty('id'))
-                        
-        self.showStatus("Получение списка каналов")
-        self.list = self.getControl(WMainForm.CONTROL_LIST)
-        for groupname in (WMainForm.CHN_TYPE_MODERATION, WMainForm.CHN_TYPE_FAVOURITE, WMainForm.CHN_TYPE_ONETTVNET):
-            self.channel_groups.setGroup(groupname, '[COLOR FFFFFF00][B]' + groupname + '[/B][/COLOR]')
-        thrs = {}
-            
-        thrs['channel'] = defines.MyThread(self.getChannels, 'channel')        
-        thrs['moderation'] = defines.MyThread(self.getChannels, 'moderation')
-        thrs['favourite'] = defines.MyThread(self.getChannels, 'favourite')
-        thrs['archive'] = defines.MyThread(self.getArcChannels)
-        thrs[WMainForm.CHN_TYPE_ONETTVNET] = defines.MyThread(self.getChannels, WMainForm.CHN_TYPE_ONETTVNET)
-        
-        
-        for thr in thrs:
-            thrs[thr].start()
-
-        log.d('Ожидание результата')
-        
-        lo_thr = defines.MyThread(LoadOther)
-        lo_thr.start()
-        
-        if self.cur_category not in (WMainForm.CHN_TYPE_MODERATION, WMainForm.CHN_TYPE_FAVOURITE, WMainForm.CHN_TYPE_ONETTVNET):
-            thrs['channel'].join(10)
-        elif self.cur_category in (WMainForm.CHN_TYPE_MODERATION):
-            thrs['moderation'].join(10)
-        elif self.cur_category in (WMainForm.CHN_TYPE_FAVOURITE):
-            thrs['favourite'].join(10)         
-        else:
-            lo_thr.join(10)     
-        
-        self.loadList()
-    
-    def loadList(self):
-                
-        log.d('updateList: Clear list')    
-        self.list.reset()
-        self.setFocus(self.getControl(WMainForm.BTN_CHANNELS_ID))
-        self.img_progress.setVisible(False)
-        self.hideStatus()
-        log.d(self.selitem_id)
-        
 
     def showStatus(self, text):
         log.d("showStatus: %s" % text)

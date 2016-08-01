@@ -1,5 +1,4 @@
 ﻿# -*- coding: utf-8 -*-
-import os
 
 class TChannels():
 
@@ -10,10 +9,14 @@ class TChannels():
     def get(self): 
         if not self.tChannels:                
             for ch in self.Channels:
-                channel = {'id': ch['url'][ch['url'].rfind('=')+1:],
+                if  ch['url'].rfind('=') > -1:
+                    chid = ch['url'][ch['url'].rfind('=')+1:]
+                else:
+                    chid = ch['title']
+                channel = {'id': chid,
                            'url': ch['url'],
                            'type': 'channel',
-                           'logo': os.path.basename(ch['img']),
+                           'logo': ch['img'],
                            'access_translation': 1,
                            'access_user': 1,
                            'name': ch["title"].decode('utf-8', 'ignore')}
@@ -21,9 +24,16 @@ class TChannels():
                 self.tChannels.append(channel)            
         return self.tChannels   
     
-    def find(self, id):
+    def find_by_id(self, chid):
         if not self.tChannels:
             self.get()
         for ch in self.tChannels:
-            if ch['id'] == id:
+            if ch['id'] == chid:
+                return ch
+            
+    def find_by_title(self, title):
+        if not self.tChannels:
+            self.get()
+        for ch in self.tChannels:
+            if ch['name'].find(title):
                 return ch
