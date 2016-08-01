@@ -8,5 +8,6 @@
 <pydev_pathproperty name="org.python.pydev.PROJECT_EXTERNAL_SOURCE_PATH">
 <path>D:\python\workspaces\develop\xbmcstubs</path>
 <path>D:\python\workspaces\develop\beautifulsoup</path>
+<path>D:\python\eclipse\plugins\org.python.pydev_4.4.0.201510052309</path>
 </pydev_pathproperty>
 </pydev_project>

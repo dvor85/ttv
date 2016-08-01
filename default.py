@@ -16,6 +16,7 @@ if defines.DEBUG:
     try:        
         # try:
         sys.path.append(os.path.expanduser('~/liclipse/plugins/org.python.pydev_5.1.2.201606231040/pysrc'))
+        sys.path.append('d:/python/eclipse/plugins/org.python.pydev_4.4.0.201510052309/pysrc')
         import pydevd  # with the addon script.module.pydevd, only use `import pydevd`
               
         # except:

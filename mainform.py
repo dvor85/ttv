@@ -60,6 +60,7 @@ class ChannelGroups(UserDict):
         for li in self.data[groupname]["channels"]:
             if li.getProperty('id') == chid:
                 return li  
+            
 
 class WMainForm(xbmcgui.WindowXML):
     CANCEL_DIALOG = (9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448,)
@@ -83,6 +84,8 @@ class WMainForm(xbmcgui.WindowXML):
     
     BTN_INFO = 209
     LBL_FIRST_EPG = 300
+    
+    EXT_GROUPS = {'1ttv.net': '1ttv.net'}
     
     CHN_TYPE_FAVOURITE = 'Избранное'
     CHN_TYPE_ONETTVNET = '1ttv.net'
@@ -203,16 +206,16 @@ class WMainForm(xbmcgui.WindowXML):
                 img = self.getControl(WMainForm.IMG_SCREEN)
                 img.setImage("")
                 
-                if epg_id == '0':
-                    self.showSimpleEpg()
-                elif self.epg.has_key(epg_id):
-                    self.showSimpleEpg(epg_id)
+                if self.epg.get(epg_id):
+                    self.showEpg(epg_id)
                 else:
-                    self.getEpg(epg_id, timeout=1)
+                    self.getEpg(epg_id, timeout=1, callback=self.showEpg)
                 
                 self.showScreen(selItem.getProperty('id'), timeout=1)
                 img = self.getControl(1111)
                 img.setImage(selItem.getProperty('icon'))
+                
+    
         
         
     def load_selitem_info(self):        
@@ -330,55 +333,101 @@ class WMainForm(xbmcgui.WindowXML):
             self.archive.append(li)
 
 
-    def getEpg(self, epg_id, timeout=0, blocking=False):
-        def get(*args):
+    def getEpg(self, epg_id, timeout=0, callback=None):
+        def get():
             try:
-                log.d('getEpg')
-                self.showStatus('Загрузка программы')
-                param = args[0]
-                if param[0] != '#':
-                    data = defines.GET('http://{0}/v3/translation_epg.php?session={1}&epg_id={2}&typeresult=json'.format(defines.API_MIRROR, self.session, param), cookie=['PHPSESSID=%s' % self.session], trys=10)
-                    jdata = json.loads(data)
-                    if jdata['success'] == 0:
-                        self.epg[param] = []
-                        self.showSimpleEpg(param)
+                if epg_id and epg_id != '0':
+                    log.d('getEpg->get')
+                    self.showStatus('Загрузка программы')
+                    
+                    if epg_id[0] == '#':
+                        self.epg[epg_id] = get_from_url()
                     else:
-                        self.epg[param] = jdata['data']                    
-                else:
-                    self.epg[param] = self.get_epg_for_chid(param)
-                    
-                selitem = self.list.getSelectedItem()
-                if selitem and selitem.getProperty('epg_cdn_id') == param:
-                    self.showSimpleEpg(param)
-                    
-                self.hideStatus()
-                   
+                        self.epg[epg_id] = get_from_api()
+                
+                    self.hideStatus()
             except Exception as e:
-                log.e('getEpg error: {0}'.format(e))
+                log.e('getEpg->get error: {0}'.format(e))
+                
+            if callback:
+                callback(epg_id)
+                    
+        def get_from_api():  
+            try:          
+                data = defines.GET('http://{0}/v3/translation_epg.php?session={1}&epg_id={2}&typeresult=json'.format(defines.API_MIRROR, self.session, epg_id), cookie=['PHPSESSID=%s' % self.session], trys=1)
+                jdata = json.loads(data)
+                if jdata['success'] != 0:
+                    return jdata['data']  
+             
+            except Exception as e:
+                log.e('getEPG->get_from_api error: {0}'.format(e))                 
+                
+        def get_from_url():        
+            try:
+                chid = epg_id[1:]
+                http = defines.GET(self.channel_groups.getChannel(self.cur_category, chid).getProperty('url'), trys=1, cookie=self.cookie)
+                m = re.search('var\s+epg\s*=\s*(?P<e>\[[^\]]+\])', http)
+                epgtext = re.sub('(?P<k>\w+\s*):\s*(?P<v>.+[,}])', '"\g<k>":\g<v>', m.group('e'))
+                epg = json.loads(epgtext)   
+                return epg 
+            except Exception as e:
+                log.e('getEPG->get_from_url error: {0}'.format(e))
             
 
         if self.get_epg_timer:
             self.get_epg_timer.cancel()
             self.get_epg_timer = None
          
-        self.get_epg_timer = threading.Timer(timeout, get, [epg_id])
+        self.get_epg_timer = threading.Timer(timeout, get)
         self.get_epg_timer.name = 'getEpg'
         self.get_epg_timer.daemon = False
         self.get_epg_timer.start()
-        if blocking:
-            self.get_epg_timer.join(10)
         
-        
-    def get_epg_for_chid(self, chepg):        
-        try:
-            chid = chepg[1:]
-            http = defines.GET(self.channel_groups.getChannel(self.cur_category, chid).getProperty('url'), trys=1, cookie=self.cookie)
-            m = re.search('var\s+epg\s*=\s*(?P<e>\[[^\]]+\])', http)
-            epgtext = re.sub('(?P<k>\w+\s*):\s*(?P<v>.+[,}])', '"\g<k>":\g<v>', m.group('e'))
-            epg = json.loads(epgtext)   
-            return epg 
-        except Exception as e:
-            log.e('get_epg_for_chid error: {0}'.format(e))
+    
+    def showEpg(self, epg_id=None):
+        selitem = self.list.getSelectedItem()
+        if selitem and selitem.getProperty('epg_cdn_id') == epg_id:
+            try:        
+                ctime = datetime.datetime.now()
+                dt = (ctime - datetime.datetime.utcnow()) - datetime.timedelta(hours=3)
+                
+                prev_bt = 0
+                curepg = []
+                for x in self.epg[epg_id]:                
+                    bt = datetime.datetime.fromtimestamp(float(x['btime']))
+                    et = datetime.datetime.fromtimestamp(float(x['etime']))               
+                    if et > ctime and bt.date() >= ctime.date() and float(x['btime']) > prev_bt:
+                        curepg.append(x)
+                        prev_bt = float(x['btime'])
+                        
+                for i, ep in enumerate(curepg):
+                    try:
+                        ce = self.getControl(WMainForm.LBL_FIRST_EPG + i)
+                        bt = datetime.datetime.fromtimestamp(float(ep['btime']))
+                        et = datetime.datetime.fromtimestamp(float(ep['etime']))
+                        if not ce:
+                            raise
+                        ce.setLabel(u"{0} - {1} {2}".format(bt.strftime("%H:%M"), et.strftime("%H:%M"), ep['name'].replace('&quot;', '"')))
+                        if i == 0:
+                            self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
+                    except:
+                        break
+    
+                return True
+                    
+            except Exception as e:
+                log.e('showEpg error {}'.format(e))
+            
+        for i in range(99):
+            try:
+                ce = self.getControl(WMainForm.LBL_FIRST_EPG + i)                
+                if i == 0:
+                    ce.setLabel('Нет программы')
+                else:
+                    ce.setLabel('')
+            except:
+                break
+        self.progress.setPercent(1)
             
             
     def showScreen(self, cdn, timeout=0):
@@ -395,8 +444,6 @@ class WMainForm(xbmcgui.WindowXML):
                     raise Exception(jdata['error'])
             except Exception as e:
                 log.e('showScreen error: {0}'.format(e))
-    #             msg = "Ошибка Torrent-TV.RU"
-    #             self.showStatus(msg)
                 return
             
             img = self.getControl(WMainForm.IMG_SCREEN)
@@ -674,45 +721,6 @@ class WMainForm(xbmcgui.WindowXML):
             self.showStatus('Канал не найден в избранном')
     
 
-    def showSimpleEpg(self, epg_id=None):
-        try:
-            ctime = datetime.datetime.now()
-            dt = (ctime - datetime.datetime.utcnow()) - datetime.timedelta(hours=3)
-            
-            curepg = []
-            for x in self.epg[epg_id]:                
-                bt = datetime.datetime.fromtimestamp(float(x['btime']))
-                et = datetime.datetime.fromtimestamp(float(x['etime']))               
-                if et > ctime and bt.date() >= ctime.date():
-                    curepg.append(x)
-                    
-            for i, ep in enumerate(curepg):
-                try:
-                    ce = self.getControl(WMainForm.LBL_FIRST_EPG + i)
-                    bt = datetime.datetime.fromtimestamp(float(ep['btime']))
-                    et = datetime.datetime.fromtimestamp(float(ep['etime']))
-                    if not ce:
-                        raise
-                    ce.setLabel(u"{0} - {1} {2}".format(bt.strftime("%H:%M"), et.strftime("%H:%M"), ep['name'].replace('&quot;', '"')))
-                except:
-                    break
-
-            return True
-                
-        except Exception as e:
-            log.e('showSimpleEpg error {}'.format(e))
-        
-        for i in range(99):
-            try:
-                ce = self.getControl(WMainForm.LBL_FIRST_EPG + i)
-                if i == 0:
-                    ce.setLabel('Нет программы')
-                ce.setLabel('')
-            except:
-                break
-        self.progress.setPercent(1)
-            
-            
     def onAction(self, action):                
         # log.d('Событие {0}'.format(action.getId()))  
         if action in WMainForm.CANCEL_DIALOG:
@@ -762,20 +770,26 @@ class WMainForm(xbmcgui.WindowXML):
         thrs['channel'] = defines.MyThread(self.getChannels, 'channel')        
         thrs['moderation'] = defines.MyThread(self.getChannels, 'moderation')
         thrs['favourite'] = defines.MyThread(self.getChannels, 'favourite')
+        thrs['archive'] = defines.MyThread(self.getArcChannels)
         thrs[WMainForm.CHN_TYPE_ONETTVNET] = defines.MyThread(self.getChannels, WMainForm.CHN_TYPE_ONETTVNET)
+        
         
         for thr in thrs:
             thrs[thr].start()
 
         log.d('Ожидание результата')
         
-        defines.MyThread(LoadOther).start()
+        lo_thr = defines.MyThread(LoadOther)
+        lo_thr.start()
+        
         if self.cur_category not in (WMainForm.CHN_TYPE_MODERATION, WMainForm.CHN_TYPE_FAVOURITE, WMainForm.CHN_TYPE_ONETTVNET):
             thrs['channel'].join(10)
         elif self.cur_category in (WMainForm.CHN_TYPE_MODERATION):
             thrs['moderation'].join(10)
         elif self.cur_category in (WMainForm.CHN_TYPE_FAVOURITE):
-            thrs['favourite'].join(10)              
+            thrs['favourite'].join(10)         
+        else:
+            lo_thr.join(10)     
         
         self.loadList()
     
@@ -795,8 +809,8 @@ class WMainForm(xbmcgui.WindowXML):
             if self.img_progress: self.img_progress.setVisible(True)
             if self.txt_progress: self.txt_progress.setLabel(text)
             if self.infoform: self.infoform.printASStatus(text)
-        except Exception as ex:
-            log.w("showStatus error: {0}". format(ex))
+        except Exception as e:
+            log.w("showStatus error: {0}". format(e))
 
 
     def showInfoStatus(self, text):
@@ -805,9 +819,13 @@ class WMainForm(xbmcgui.WindowXML):
 
 
     def hideStatus(self):
-        if self.img_progress: self.img_progress.setVisible(False)
-        if self.txt_progress: self.txt_progress.setLabel("")
-
+        try:
+            if self.img_progress: 
+                self.img_progress.setVisible(False)
+            if self.txt_progress: 
+                self.txt_progress.setLabel("")
+        except Exception as e:
+            log.w("hideStatus error: {0}". format(e))
 
     def fillChannels(self):
         self.showStatus("Заполнение списка")

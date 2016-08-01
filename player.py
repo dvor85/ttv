@@ -79,8 +79,7 @@ class MyPlayer(xbmcgui.WindowXML):
         log.d("channel_number = %i" % self.channel_number)
         log.d("selitem_id = %i" % self.parent.selitem_id)    
         
-        defines.MyThread(self.UpdateEpg, self.li).start()
-        
+        self.UpdateEpg(self.li)
         
         self.control_window.setVisible(True)
         self.hide_control_window(timeout=5)
@@ -108,43 +107,50 @@ class MyPlayer(xbmcgui.WindowXML):
         self.hide_control_timer.start()
         
         
-    def UpdateEpg(self, *args):
+    def UpdateEpg(self, li):
+        try:
+            log.d('UpdateEpg')
+            if not li:
+                raise ValueError('param "li" is not set')
+            cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
+            cicon.setImage(li.getProperty('icon'))
+            epg_id = li.getProperty('epg_cdn_id')
+            
+            if self.parent.epg.get(epg_id):
+                self.showEpg(epg_id)
+            else:
+                self.parent.getEpg(epg_id, callback=self.showEpg)
+                      
+        except Exception as e:
+            log.w('UpdateEpg error: {0}'.format(e))
+            
+        
+    def showEpg(self, epg_id):        
         controlEpg = self.getControl(MyPlayer.CONTROL_EPG_ID)
         controlEpg1 = self.getControl(MyPlayer.CONTROL_NEXT_EPG_ID)
         
         try:
-            li = args[0]  
-            with self.update_epg_lock:
-                log.d('UpdateEpg')
-                if not li:
-                    raise ValueError('param "li" is not set')
-                cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
-                cicon.setImage(li.getProperty('icon'))
-                epg_id = li.getProperty('epg_cdn_id')
-                
-                if not self.parent.epg.has_key(epg_id):
-                    self.parent.getEpg(epg_id, blocking=True)
-                if self.parent.epg.has_key(epg_id) and len(self.parent.epg[epg_id]) > 0:
-                    ctime = datetime.datetime.now()
-                    dt = (ctime - datetime.datetime.utcnow()) - datetime.timedelta(hours=3)
+            ctime = datetime.datetime.now()
+            dt = (ctime - datetime.datetime.utcnow()) - datetime.timedelta(hours=3)
+            
+            prev_bt = 0
+            self.curepg = []
+            for x in self.parent.epg[epg_id]:
+                bt = datetime.datetime.fromtimestamp(float(x['btime']))
+                et = datetime.datetime.fromtimestamp(float(x['etime']))               
+                if et > ctime and bt.date() >= ctime.date()  and float(x['btime']) > prev_bt:
+                    self.curepg.append(x)
+                    prev_bt = float(x['btime'])
                     
-                    self.curepg = []
-                    for x in self.parent.epg[epg_id]:
-                        bt = datetime.datetime.fromtimestamp(float(x['btime']))
-                        et = datetime.datetime.fromtimestamp(float(x['etime']))               
-                        if et > ctime and bt.date() >= ctime.date():
-                            self.curepg.append(x)
-                            
-                    bt = datetime.datetime.fromtimestamp(float(self.curepg[0]['btime']))
-                    et = datetime.datetime.fromtimestamp(float(self.curepg[0]['etime']))
-                    self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
+            bt = datetime.datetime.fromtimestamp(float(self.curepg[0]['btime']))
+            et = datetime.datetime.fromtimestamp(float(self.curepg[0]['etime']))
+            self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
     #                 controlEpg.setLabel('%.2d:%.2d - %.2d:%.2d %s' % (sbt.tm_hour, sbt.tm_min, sett.tm_hour, sett.tm_min, curepg[0]['name']))
-                    controlEpg.setLabel(u"{0} - {1} {2}".format(bt.strftime("%H:%M"), et.strftime("%H:%M"), self.curepg[0]['name'].replace('&quot;', '"')))
-                    self.setNextEpg()
-                    return True
-                      
+            controlEpg.setLabel(u"{0} - {1} {2}".format(bt.strftime("%H:%M"), et.strftime("%H:%M"), self.curepg[0]['name'].replace('&quot;', '"')))
+            self.setNextEpg()
+            return True
         except Exception as e:
-            log.w('UpdateEpg error: {0}'.format(e))
+            log.e('showEpg error {}'.format(e))
             
         controlEpg.setLabel('Нет программы')
         controlEpg1.setLabel('')
@@ -306,7 +312,7 @@ class MyPlayer(xbmcgui.WindowXML):
             self.swinfo.setVisible(True) 
             li = self.parent.list.getListItem(self.channel_number)                            
             self.chinfo.setLabel(li.getLabel())
-            defines.MyThread(self.UpdateEpg, li).start()
+            self.UpdateEpg(li)
             
             self.run_selected_channel(timeout=5)
             
@@ -324,7 +330,7 @@ class MyPlayer(xbmcgui.WindowXML):
                 li = self.parent.list.getListItem(self.channel_number)                            
                 self.chinfo.setLabel(li.getLabel())
                 self.swinfo.setVisible(True)
-                defines.MyThread(self.UpdateEpg, li).start()
+                self.UpdateEpg(li)
                 
                 self.run_selected_channel(timeout=5) 
         elif action.getId() == 0 and action.getButtonCode() == 61530:
@@ -332,7 +338,7 @@ class MyPlayer(xbmcgui.WindowXML):
             xbmc.sleep(4000)
             xbmc.executebuiltin('Action(Back)')
         else:
-            defines.MyThread(self.UpdateEpg, self.li).start()
+            self.UpdateEpg(self.li)
 
         if not self.visible:            
             if self.focusId == MyPlayer.CONTROL_WINDOW_ID:
