@@ -195,6 +195,8 @@ class MyPlayer(xbmcgui.WindowXML):
 
     def get_source(self, url):
         try:
+            if url.find('acestream://') > -1:
+                return url.replace('acestream://', '')
             if url.rfind('.acelive') > -1:
                 return url
             http = defines.GET(url, trys=2)
@@ -240,13 +242,14 @@ class MyPlayer(xbmcgui.WindowXML):
                         chli = ExtChannels[extgr].find_by_title(li.getProperty('name'))
                     if chli:
                         src = self.get_source(chli.get('url'))
-                        if src:
-                            jdata["source"] = src 
+                        if src:                             
                             jdata["success"] = 1
                             if src.rfind('.acelive') > -1:
                                 jdata["type"] = 'TORRENT'
-                            else:
+                            else:                                
                                 jdata["type"] = 'PID'
+                                
+                            jdata["source"] = src
                             break
                 else:    
                     msg = "Канал временно не доступен"

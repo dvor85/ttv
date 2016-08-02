@@ -35,5 +35,5 @@ class TChannels():
         if not self.tChannels:
             self.get()
         for ch in self.tChannels:
-            if ch['name'].find(title):
+            if ch['name'].lower().strip() == title.lower().strip():
                 return ch

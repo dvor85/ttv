@@ -43,23 +43,37 @@ class ChannelGroups(UserDict):
         return self.data.keys()
     
     def setChannels(self, groupname, channels):
-        self.data[groupname]["channels"] = channels
+        self.data.get(groupname)["channels"] = channels
         
     def addChannel(self, groupname, channel):
-        self.data[groupname]["channels"].append(channel)
+        if self.data.get(groupname):
+            self.data.get(groupname).get("channels").append(channel)
         
-    def delChannel(self, groupname, chid):
-        for li in self.data[groupname]["channels"]:
-            if li.getProperty('id') == chid:
-                self.data[groupname]["channels"].remove(li)
+    def del_channel_by_id(self, groupname, chid):
+        chli = self.find_channel_by_id(groupname, chid)
+        if chli:
+            self.data.get(groupname).get("channels").remove(chli)
+        
+    def del_channel_by_name(self, groupname, name):
+        chli = self.find_channel_by_name(groupname, name)
+        if chli:
+            self.data.get(groupname).get("channels").remove(chli)
                 
     def getChannels(self, groupname):
-        return self.data[groupname]["channels"]
+        if self.data.get(groupname):
+            return self.data.get(groupname).get("channels")
         
-    def getChannel(self, groupname, chid):
-        for li in self.data[groupname]["channels"]:
-            if li.getProperty('id') == chid:
-                return li  
+    def find_channel_by_id(self, groupname, chid):
+        if self.data.get(groupname):
+            for li in self.data.get(groupname).get("channels"):
+                if li.getProperty('id') == chid:
+                    return li  
+            
+    def find_channel_by_name(self, groupname, name):
+        if self.data.get(groupname):
+            for li in self.data.get(groupname).get("channels"):
+                if li.getProperty('name').lower().strip() == name.lower().strip():
+                    return li
             
 
 class WMainForm(xbmcgui.WindowXML):
@@ -84,8 +98,6 @@ class WMainForm(xbmcgui.WindowXML):
     
     BTN_INFO = 209
     LBL_FIRST_EPG = 300
-    
-    EXT_GROUPS = {'1ttv.net': '1ttv.net'}
     
     CHN_TYPE_FAVOURITE = 'Избранное'
     CHN_TYPE_TRANSLATION = 'Трансляции'
@@ -214,8 +226,6 @@ class WMainForm(xbmcgui.WindowXML):
                 img = self.getControl(1111)
                 img.setImage(selItem.getProperty('icon'))
                 
-    
-        
         
     def load_selitem_info(self):        
         self.cur_category = defines.ADDON.getSetting('cur_category')
@@ -316,17 +326,17 @@ class WMainForm(xbmcgui.WindowXML):
         self.archive = []
         
         for ch in jdata['channels']:
-            chname = "%i. %s" % ((len(self.archive) + 1), ch["name"])
             if not ch["id"]:
                 continue
             if not ch["logo"]:
                 ch["logo"] = ""
             else:
                 ch["logo"] = "http://{0}/uploads/{1}".format(defines.SITE_MIRROR, ch["logo"])
-            li = xbmcgui.ListItem(chname, '%s' % ch["id"], ch["logo"], ch["logo"])
+            li = xbmcgui.ListItem(ch['name'], '%s' % ch["id"], ch["logo"], ch["logo"])
             li.setProperty("epg_cdn_id", '%s' % ch["epg_id"])
             li.setProperty("icon", ch["logo"])
             li.setProperty("type", "archive")
+            li.setProperty('name', ch['name'])
             self.archive.append(li)
 
 
@@ -362,7 +372,7 @@ class WMainForm(xbmcgui.WindowXML):
         def get_from_url():        
             try:
                 chid = epg_id[1:]
-                http = defines.GET(self.channel_groups.getChannel(self.cur_category, chid).getProperty('url'), trys=1, cookie=self.cookie)
+                http = defines.GET(self.channel_groups.find_channel_by_id(self.cur_category, chid).getProperty('url'), trys=1, cookie=self.cookie)
                 m = re.search('var\s+epg\s*=\s*(?P<e>\[[^\]]+\])', http)
                 epgtext = re.sub('(?P<k>\w+\s*):\s*(?P<v>.+[,}])', '"\g<k>":\g<v>', m.group('e'))
                 epg = json.loads(epgtext)   
@@ -463,11 +473,12 @@ class WMainForm(xbmcgui.WindowXML):
             for thr in thrs:
                 thrs[thr].join(10)
                 
-            for gr in self.channel_groups.getGroups():  
+            for gr in [x for x in self.channel_groups.getGroups() if x not in (WMainForm.CHN_TYPE_FAVOURITE)]: 
                 for extgr in ExtChannels.keys():           
-                    if gr not in [x for x in ExtChannels.keys() + [WMainForm.CHN_TYPE_FAVOURITE] if x == extgr]:
+                    if gr not in [x for x in ExtChannels.keys() if x == extgr]:
                         for cli in self.channel_groups.getChannels(gr):
-                            self.channel_groups.delChannel(extgr, cli.getProperty('id'))
+                            self.channel_groups.del_channel_by_id(extgr, cli.getProperty('id'))
+                            self.channel_groups.del_channel_by_name(extgr, cli.getProperty('name'))
                         
         self.showStatus("Получение списка каналов")
         self.list = self.getControl(WMainForm.CONTROL_LIST)
@@ -838,7 +849,6 @@ class WMainForm(xbmcgui.WindowXML):
             return
         log.d('fillChannels: Clear list')
         self.list.reset()
-        chnum_pattern = re.compile('^[0-9]+\.')
         
         if not self.channel_groups.getChannels(self.cur_category):            
             self.fillCategory()          
@@ -847,12 +857,10 @@ class WMainForm(xbmcgui.WindowXML):
             li = xbmcgui.ListItem('..')
             self.list.addItem(li)
             for i, ch in enumerate(self.channel_groups.getChannels(self.cur_category)):
-                chname = ch.getLabel()
-                if not chnum_pattern.match(chname):
-                    chname = "{0}. {1}".format(i + 1, ch.getLabel())
-                    if ch.getProperty("access_user") == 0:
-                        chname = "[COLOR FF646464]%s[/COLOR]" % chname
-                    ch.setLabel(chname)
+                chname = "{0}. {1}".format(i + 1, ch.getProperty('name'))
+                if ch.getProperty("access_user") == 0:
+                    chname = "[COLOR FF646464]%s[/COLOR]" % chname
+                ch.setLabel(chname)
                 self.list.addItem(ch)
             self.hideStatus()
             
@@ -875,22 +883,32 @@ class WMainForm(xbmcgui.WindowXML):
             return
         log.d('fillArchive: Clear list')
         self.list.reset()
-        for ch in self.archive:
+        for i, ch in enumerate(self.archive):
+            chname = "{0}. {1}".format(i + 1, ch.getProperty('name'))
+            ch.setLabel(chname)
             self.list.addItem(ch)
         log.d("fillArchive")
 
 
     def fillCategory(self):
+        def AddItem(groupname):
+            li = xbmcgui.ListItem(self.channel_groups[groupname]["title"])
+            li.setProperty('type', 'category')
+            li.setProperty('id', '%s' % groupname)
+            self.list.addItem(li)
+            
         if not self.list:
             self.showStatus("Список не инициализирован")
             return
         log.d('fillCategory: Clear list')
         self.list.reset()
+        for gr in ExtChannels.keys():
+            AddItem(gr)
+        for gr in [WMainForm.CHN_TYPE_FAVOURITE, WMainForm.CHN_TYPE_MODERATION]:
+            AddItem(gr)
         for gr in self.channel_groups.getGroups():
-            li = xbmcgui.ListItem(self.channel_groups[gr]["title"])
-            li.setProperty('type', 'category')
-            li.setProperty('id', '%s' % gr)
-            self.list.addItem(li)
+            if gr not in ExtChannels.keys() + [WMainForm.CHN_TYPE_FAVOURITE, WMainForm.CHN_TYPE_MODERATION]:
+                AddItem(gr)
 
 
     def fillRecords(self, li, date=time.localtime()):
