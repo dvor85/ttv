@@ -67,12 +67,12 @@
             <align>center</align>
             <aligny>center</aligny>
             <label>Каналы</label>
-            <onright>103</onright>
+            <onright>104</onright>
             <onleft>104</onleft>
             <ondown>50</ondown>
             <onfocus>SendClick(12345,102)</onfocus>
           </control>
-          <control type="button" id = "103">
+          <control type="button" id = "104">
             <description>from</description>
             <posx>160</posx>
             <posy>10</posy>
@@ -85,28 +85,9 @@
             <!--<texturenofocus>tabnofocus.png</texturenofocus>-->
             <align>center</align>
             <aligny>center</aligny>
-            <label>Трансляции</label>
-            <onright>104</onright>
-            <onleft>102</onleft>
-            <ondown>50</ondown>
-            <onfocus>SendClick(12345,103)</onfocus>
-          </control>
-          <control type="button" id = "104">
-            <description>from</description>
-            <posx>305</posx>
-            <posy>10</posy>
-            <width>130</width>
-            <height>20</height>
-            <font>font10</font>
-            <size>10</size>
-            <textcolor>FF99D8FF</textcolor>
-            <texturefocus>tabfocus.png</texturefocus>
-            <!--<texturenofocus>tabnofocus.png</texturenofocus>-->
-            <align>center</align>
-            <aligny>center</aligny>
             <label>Архив</label>
             <onright>102</onright>
-            <onleft>103</onleft>
+            <onleft>102</onleft>
             <ondown>50</ondown>
             <onfocus>SendClick(12345,104)</onfocus>
           </control>

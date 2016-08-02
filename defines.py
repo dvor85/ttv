@@ -35,6 +35,7 @@ if (skin != None) and (skin != "") and (skin != 'st.anger'):
 
 closeRequested = threading.Event()
 
+
 class Logger():
     
     def __init__(self, tag, minlevel=xbmc.LOGDEBUG):
@@ -125,6 +126,7 @@ def showNotification(msg, icon=ADDON_ICON):
        
 def isCancel():
     return xbmc.abortRequested or closeRequested.isSet()      
+
 
 def AUTH():
     try:        

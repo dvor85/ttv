@@ -191,22 +191,20 @@ class MyPlayer(xbmcgui.WindowXML):
                 self.parent.amalkerWnd.show()
                 log.d('END SHOW ADS Window')
                 
-    
-
-    def get_source(self, url):
-        try:
-            if url.find('acestream://') > -1:
-                return url.replace('acestream://', '')
-            if url.rfind('.acelive') > -1:
-                return url
-            http = defines.GET(url, trys=2)
-            m = re.search('(loadPlayer|loadTorrent)\("(?P<src>[\w/_:.]+)"', http)
-            return m.group('src')            
-        except Exception as e:
-            log.e('get_source error: {0}'.format(e))            
-        
 
     def Start(self, li):
+        def get_source(url):
+            try:
+                if url.find('acestream://') > -1:
+                    return url.replace('acestream://', '')
+                if url.rfind('.acelive') > -1:
+                    return url
+                http = defines.GET(url, trys=2)
+                m = re.search('(loadPlayer|loadTorrent)\("(?P<src>[\w/_:.]+)"', http)
+                return m.group('src')            
+            except Exception as e:
+                log.e('Start->get_source error: {0}'.format(e))  
+                
         log("Start play")       
 
         self.li = li
@@ -241,7 +239,7 @@ class MyPlayer(xbmcgui.WindowXML):
                     if not chli:
                         chli = ExtChannels[extgr].find_by_title(li.getProperty('name'))
                     if chli:
-                        src = self.get_source(chli.get('url'))
+                        src = get_source(chli.get('url'))
                         if src:                             
                             jdata["success"] = 1
                             if src.rfind('.acelive') > -1:

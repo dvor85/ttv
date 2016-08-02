@@ -11,7 +11,6 @@ import xbmc
 import time
 import datetime
 import threading
-import BeautifulSoup
 
 from player import MyPlayer
 from adswnd import AdsForm
@@ -66,13 +65,13 @@ class ChannelGroups(UserDict):
     def find_channel_by_id(self, groupname, chid):
         if self.data.get(groupname):
             for li in self.data.get(groupname).get("channels"):
-                if li.getProperty('id') == chid:
+                if li.getProperty('id') == chid and li.getProperty('access_user'):
                     return li  
             
     def find_channel_by_name(self, groupname, name):
         if self.data.get(groupname):
             for li in self.data.get(groupname).get("channels"):
-                if li.getProperty('name').lower().strip() == name.lower().strip():
+                if li.getProperty('name').lower().strip() == name.lower().strip() and li.getProperty('access_user'):
                     return li
             
 
@@ -83,7 +82,6 @@ class WMainForm(xbmcgui.WindowXML):
     DIGIT_BUTTONS = range(58, 68)
     ACTION_MOUSE = 107
     BTN_CHANNELS_ID = 102
-    BTN_TRANSLATIONS_ID = 103
     BTN_ARCHIVE_ID = 104
     BTN_VOD_ID = 113
     BTN_CLOSE = 101
@@ -100,7 +98,6 @@ class WMainForm(xbmcgui.WindowXML):
     LBL_FIRST_EPG = 300
     
     CHN_TYPE_FAVOURITE = 'Избранное'
-    CHN_TYPE_TRANSLATION = 'Трансляции'
     CHN_TYPE_MODERATION = 'На модерации'
     API_ERROR_INCORRECT = 'incorrect'
     API_ERROR_NOCONNECT = 'noconnect'
@@ -111,7 +108,6 @@ class WMainForm(xbmcgui.WindowXML):
 
     def __init__(self, *args, **kwargs):
         log.d('__init__')
-        self.translation = []
         self.channel_groups = ChannelGroups()
         self.seltab = 0
         self.epg = {}
@@ -178,8 +174,6 @@ class WMainForm(xbmcgui.WindowXML):
         self.user = {"login" : defines.ADDON.getSetting('login'), "balance" : jdata["balance"], "vip":jdata["balance"] > 1}
         
         self.session = jdata['session']
-#         self.cookie = defines.AUTH()
-#         self.cookie = ["PHPSESSID=710f1ae31db941b19ff75ac3a9d44dd0"]
         
     
     def onInit(self):
@@ -187,7 +181,6 @@ class WMainForm(xbmcgui.WindowXML):
         self.txt_progress = self.getControl(WMainForm.TXT_PROGRESS)
         self.progress = self.getControl(WMainForm.PROGRESS_BAR)
         
-#         self.initTTV()
         if not self.channel_groups:            
             self.updateList()
         else:
@@ -256,8 +249,7 @@ class WMainForm(xbmcgui.WindowXML):
             self.showStatus(msg)
             return
             
-        
-
+            
         for cat in jdata["categories"]:
             if not self.channel_groups.has_key('%s' % cat["id"]):
                 self.channel_groups.setGroup('%s' % cat["id"], cat["name"])
@@ -301,10 +293,6 @@ class WMainForm(xbmcgui.WindowXML):
                     li.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
                     self.channel_groups.addChannel(WMainForm.CHN_TYPE_MODERATION, li)
                             
-                elif param == 'translation':
-                    li.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
-                    self.translation.append(li)
-                    
                 elif param == 'favourite':
                     li.setProperty('commands', "%s,%s,%s,%s" % (MenuForm.CMD_MOVE_FAVOURITE, MenuForm.CMD_DEL_FAVOURITE, MenuForm.CMD_DOWN_FAVOURITE, MenuForm.CMD_UP_FAVOURITE))
                     self.channel_groups.addChannel(WMainForm.CHN_TYPE_FAVOURITE, li)
@@ -372,9 +360,9 @@ class WMainForm(xbmcgui.WindowXML):
         def get_from_url():        
             try:
                 chid = epg_id[1:]
-                http = defines.GET(self.channel_groups.find_channel_by_id(self.cur_category, chid).getProperty('url'), trys=1, cookie=self.cookie)
+                http = defines.GET(self.channel_groups.find_channel_by_id(self.cur_category, chid).getProperty('url'), trys=1)
                 m = re.search('var\s+epg\s*=\s*(?P<e>\[[^\]]+\])', http)
-                epgtext = re.sub('(?P<k>\w+\s*):\s*(?P<v>.+[,}])', '"\g<k>":\g<v>', m.group('e'))
+                epgtext = re.sub('(?P<k>\w+)\s*:\s*(?P<v>.+[,}])', '"\g<k>":\g<v>', m.group('e'))
                 epg = json.loads(epgtext)   
                 return epg 
             except Exception as e:
@@ -486,8 +474,8 @@ class WMainForm(xbmcgui.WindowXML):
             self.channel_groups.setGroup(groupname, '[COLOR FFFFFF00][B]' + groupname + '[/B][/COLOR]')
         for groupname in ExtChannels.keys():
             self.channel_groups.setGroup(groupname, '[COLOR FF00FF00][B]' + groupname + '[/B][/COLOR]') 
+
         thrs = {}
-            
         thrs['channel'] = defines.MyThread(self.getChannels, 'channel')        
         thrs['moderation'] = defines.MyThread(self.getChannels, 'moderation')
         thrs['favourite'] = defines.MyThread(self.getChannels, 'favourite')
@@ -495,14 +483,13 @@ class WMainForm(xbmcgui.WindowXML):
         for extgr in ExtChannels.keys():  
             thrs[extgr] = defines.MyThread(self.getChannels, extgr)
         
-        
         for thr in thrs:
             thrs[thr].start()
-
-        log.d('Ожидание результата')
-        
+            
         lo_thr = defines.MyThread(LoadOther)
         lo_thr.start()
+
+        log.d('Ожидание результата')
         
         if self.cur_category not in [WMainForm.CHN_TYPE_MODERATION, WMainForm.CHN_TYPE_FAVOURITE] + ExtChannels.keys():
             thrs['channel'].join(10)
@@ -515,8 +502,8 @@ class WMainForm(xbmcgui.WindowXML):
         
         self.loadList()
     
-    def loadList(self):
-                
+    
+    def loadList(self):                
         log.d('updateList: Clear list')    
         self.list.reset()
         self.setFocus(self.getControl(WMainForm.BTN_CHANNELS_ID))
@@ -592,12 +579,6 @@ class WMainForm(xbmcgui.WindowXML):
         if self.seltab != WMainForm.BTN_CHANNELS_ID:
             self.checkButton(WMainForm.BTN_CHANNELS_ID)
             
-            
-    def onClickTranslations(self):
-        self.fillTranslation()
-        if self.seltab != WMainForm.BTN_TRANSLATIONS_ID:
-            self.checkButton(WMainForm.BTN_TRANSLATIONS_ID)
-
 
     def onClickArchive(self):
         self.fillArchive()        
@@ -685,14 +666,6 @@ class WMainForm(xbmcgui.WindowXML):
                 self.list.selectItem(self.playditem)
                 self.playditem = -1
                
-                
-        elif controlID == WMainForm.BTN_TRANSLATIONS_ID: 
-            self.onClickTranslations()
-            if self.playditem > -1:
-                self.setFocus(self.list)
-                self.list.selectItem(self.selitem_id)
-                self.playditem = -1
-
         elif controlID == WMainForm.BTN_ARCHIVE_ID: 
             self.onClickArchive()
             
@@ -842,6 +815,7 @@ class WMainForm(xbmcgui.WindowXML):
         except Exception as e:
             log.w("hideStatus error: {0}". format(e))
 
+
     def fillChannels(self):
         self.showStatus("Заполнение списка")
         if not self.list:
@@ -865,18 +839,6 @@ class WMainForm(xbmcgui.WindowXML):
             self.hideStatus()
             
             
-    def fillTranslation(self):
-        if not self.list:
-            self.showStatus("Список не инициализирован")
-            return
-        self.showStatus("Заполнение списка")
-        log.d('fillTranslation: Clear list')
-        self.list.reset()
-        for ch in self.translation:
-            self.list.addItem(ch)
-        self.hideStatus()
-
-
     def fillArchive(self):
         if not self.list:
             self.showStatus("Список не инициализирован")
