@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+﻿  # -*- coding: utf-8 -*-
 
 class TChannels():
 
@@ -10,7 +10,7 @@ class TChannels():
         if not self.tChannels:                
             for ch in self.Channels:
                 if  ch['url'].rfind('=') > -1:
-                    chid = ch['url'][ch['url'].rfind('=')+1:]
+                    chid = ch['url'][ch['url'].rfind('=') + 1:]
                 else:
                     chid = ch['title']
                 channel = {'id': chid,

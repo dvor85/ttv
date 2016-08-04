@@ -10,8 +10,6 @@ import defines
 if defines.DEBUG:
     # append pydev remote debugger
     # Make pydev debugger works for auto reload.
-    # Note pydevd module need to be copied in XBMC\system\python\Lib\pysrc
-    # special://xbmc/system/python/Lib/pysrc/_pydev_imps/_pydev_pluginbase.py
     try:        
         sys.path.append(os.path.expanduser('~/liclipse/plugins/org.python.pydev_5.1.2.201606231040/pysrc'))
         sys.path.append('d:/python/eclipse/plugins/org.python.pydev_4.4.0.201510052309/pysrc')
@@ -21,7 +19,9 @@ if defines.DEBUG:
         pydevd.settrace('localhost', stdoutToServer=True, stderrToServer=True)
     except:
         t, v, tb = sys.exc_info()        
-        defines.log.e("{0}:{1} | For remote debug in eclipse you must add org.python.pydev.pysrc to your sys.path or install script.module.pydevd addon.".format(t, v))
+        defines.log.e("""{0}:{1} | For remote debug in eclipse you must append org.python.pydev.pysrc to sys.path.
+        Or install script.module.pydevd addon.
+        Append it to your PYTHONPATH for code completion.""".format(t, v))
         defines.log.e("CONTINUE WITHOUT DEBUGING")
         import traceback
         traceback.print_tb(tb)

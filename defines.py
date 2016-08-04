@@ -113,7 +113,7 @@ class MyThread(threading.Thread):
     def __init__(self, func, *args, **kwargs):
         threading.Thread.__init__(self, target=func, name=func.__name__, args=args)        
         self.daemon = False
-
+        
 
 def showNotification(msg, icon=ADDON_ICON):
     try:

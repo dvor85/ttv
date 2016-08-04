@@ -336,7 +336,7 @@ class WMainForm(xbmcgui.WindowXML):
                     self.showStatus('Загрузка программы')
                     
                     if epg_id[0] == '#':
-                        self.epg[epg_id] = get_from_url()
+                        self.epg[epg_id] = get_from_ext()
                     else:
                         self.epg[epg_id] = get_from_api()
                 
@@ -357,7 +357,7 @@ class WMainForm(xbmcgui.WindowXML):
             except Exception as e:
                 log.e('getEPG->get_from_api error: {0}'.format(e))                 
                 
-        def get_from_url():        
+        def get_from_ext():        
             try:
                 chid = epg_id[1:]
                 http = defines.GET(self.channel_groups.find_channel_by_id(self.cur_category, chid).getProperty('url'), trys=1)
@@ -400,8 +400,6 @@ class WMainForm(xbmcgui.WindowXML):
                         ce = self.getControl(WMainForm.LBL_FIRST_EPG + i)
                         bt = datetime.datetime.fromtimestamp(float(ep['btime']))
                         et = datetime.datetime.fromtimestamp(float(ep['etime']))
-                        if not ce:
-                            raise
                         ce.setLabel(u"{0} - {1} {2}".format(bt.strftime("%H:%M"), et.strftime("%H:%M"), ep['name'].replace('&quot;', '"')))
                         if i == 0:
                             self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
@@ -465,8 +463,9 @@ class WMainForm(xbmcgui.WindowXML):
                 for extgr in ExtChannels.keys():           
                     if gr not in [x for x in ExtChannels.keys() if x == extgr]:
                         for cli in self.channel_groups.getChannels(gr):
-                            self.channel_groups.del_channel_by_id(extgr, cli.getProperty('id'))
-                            self.channel_groups.del_channel_by_name(extgr, cli.getProperty('name'))
+                            if not self.IsCanceled():
+                                self.channel_groups.del_channel_by_id(extgr, cli.getProperty('id'))
+                                self.channel_groups.del_channel_by_name(extgr, cli.getProperty('name'))
                         
         self.showStatus("Получение списка каналов")
         self.list = self.getControl(WMainForm.CONTROL_LIST)
@@ -509,7 +508,6 @@ class WMainForm(xbmcgui.WindowXML):
         self.setFocus(self.getControl(WMainForm.BTN_CHANNELS_ID))
         self.img_progress.setVisible(False)
         self.hideStatus()
-        log.d(self.selitem_id)    
         
     
     def checkButton(self, controlId):
@@ -594,12 +592,12 @@ class WMainForm(xbmcgui.WindowXML):
                 if selItem.getProperty("access_user") == 0:
                     access = selItem.getProperty("access_translation")
                     if access == "registred":
-                        defines.showNotification("Трансляция доступна для зарегестрированных пользователей", xbmcgui.NOTIFICATION_ERROR)
+                        log.d("Трансляция доступна для зарегестрированных пользователей")
                     elif access == "vip":
-                        defines.showNotification("Трансляция доступна для VIP пользователей", xbmcgui.NOTIFICATION_ERROR)
+                        log.d("Трансляция доступна для VIP пользователей")
                     else:
-                        defines.showNotification("На данный момент трансляция не доступна", xbmcgui.NOTIFICATION_ERROR)
-                    break
+                        log.d("На данный момент трансляция не доступна")
+#                     break
                      
                 buf = xbmcgui.ListItem(selItem.getLabel())
                 buf.setProperty('epg_cdn_id', selItem.getProperty('epg_cdn_id'))
@@ -611,7 +609,6 @@ class WMainForm(xbmcgui.WindowXML):
                 if selItem.getProperty("type") == "archive":
                     self.fillRecords(buf, datetime.datetime.today())                
                     break
-                log.d(selItem.getProperty("type"))
                 self.playditem = self.selitem_id
                 defines.ADDON.setSetting('cur_category', self.cur_category)
                 defines.ADDON.setSetting('cur_channel', str(self.selitem_id))

@@ -19,9 +19,8 @@ CANCEL_DIALOG = (9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448,)
 log = defines.Logger('MyPlayer')
 
 class MyPlayer(xbmcgui.WindowXML):
-    CONTROL_EPG_ID = 109
-    CONTROL_NEXT_EPG_ID = 112
-    CONTROL_PROGRESS_ID = 110
+    CONTROL_FIRST_EPG_ID = 109
+    CONTROL_PROGRESS_ID = 310
     CONTROL_ICON_ID = 202
     CONTROL_WINDOW_ID = 203
     CONTROL_BUTTON_PAUSE = 204
@@ -41,13 +40,10 @@ class MyPlayer(xbmcgui.WindowXML):
         self.li = None
         self.visible = False        
         self.focusId = MyPlayer.CONTROL_WINDOW_ID
-        self.nextepg_id = 1
-        self.curepg = None
         
         self.select_timer = None
         self.hide_control_timer = None
         self.hide_swinfo_timer = None
-        self.update_epg_lock = threading.Lock()
         
         self.channel_number = 0
         self.channel_number_str = ''
@@ -124,56 +120,47 @@ class MyPlayer(xbmcgui.WindowXML):
             
         
     def showEpg(self, epg_id):        
-        controlEpg = self.getControl(MyPlayer.CONTROL_EPG_ID)
-        controlEpg1 = self.getControl(MyPlayer.CONTROL_NEXT_EPG_ID)
-        
         try:
             ctime = datetime.datetime.now()
             dt = (ctime - datetime.datetime.utcnow()) - datetime.timedelta(hours=3)
             
             prev_bt = 0
-            self.curepg = []
+            curepg = []
             for x in self.parent.epg[epg_id]:
                 bt = datetime.datetime.fromtimestamp(float(x['btime']))
                 et = datetime.datetime.fromtimestamp(float(x['etime']))               
-                if et > ctime and bt.date() >= ctime.date()  and float(x['btime']) > prev_bt:
-                    self.curepg.append(x)
+                if et > ctime and bt.date() >= ctime.date() and float(x['btime']) > prev_bt:
+                    curepg.append(x)
                     prev_bt = float(x['btime'])
-                    
-            bt = datetime.datetime.fromtimestamp(float(self.curepg[0]['btime']))
-            et = datetime.datetime.fromtimestamp(float(self.curepg[0]['etime']))
-            self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
-    #                 controlEpg.setLabel('%.2d:%.2d - %.2d:%.2d %s' % (sbt.tm_hour, sbt.tm_min, sett.tm_hour, sett.tm_min, curepg[0]['name']))
-            controlEpg.setLabel(u"{0} - {1} {2}".format(bt.strftime("%H:%M"), et.strftime("%H:%M"), self.curepg[0]['name'].replace('&quot;', '"')))
-            self.setNextEpg()
+            
+            for i, ep in enumerate(curepg):
+                try:
+                    ce = self.getControl(MyPlayer.CONTROL_FIRST_EPG_ID + i)
+                    bt = datetime.datetime.fromtimestamp(float(ep['btime']))
+                    et = datetime.datetime.fromtimestamp(float(ep['etime']))
+                    ce.setLabel(u"{0} - {1} {2}".format(bt.strftime("%H:%M"), et.strftime("%H:%M"), ep['name'].replace('&quot;', '"')))
+                    if i == 0:
+                        self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
+                except:
+                    break
+                
             return True
+        
         except Exception as e:
             log.e('showEpg error {}'.format(e))
             
-        controlEpg.setLabel('Нет программы')
-        controlEpg1.setLabel('')
+        for i in range(99):
+            try:
+                ce = self.getControl(MyPlayer.CONTROL_FIRST_EPG_ID + i)                
+                if i == 0:
+                    ce.setLabel('Нет программы')
+                else:
+                    ce.setLabel('')
+            except:
+                break
         self.progress.setPercent(1)
         
             
-    def setNextEpg(self):
-        nextepg = ''
-        if len(self.curepg) > 1:
-            if self.nextepg_id < 1:
-                self.nextepg_id = 1
-                return
-            elif self.nextepg_id >= len(self.curepg):
-                self.nextepg_id = len(self.curepg) - 1
-                return
-                
-            controlEpg1 = self.getControl(112)  
-               
-            bt = datetime.datetime.fromtimestamp(float(self.curepg[self.nextepg_id]['btime']))
-            et = datetime.datetime.fromtimestamp(float(self.curepg[self.nextepg_id]['etime']))
-            nextepg = nextepg + u"{} - {} {}".format(bt.strftime("%H:%M"), et.strftime("%H:%M"), self.curepg[self.nextepg_id]['name'].replace('&quot;', '"'))
-                
-        controlEpg1.setLabel(nextepg)         
-               
-
     def Stop(self):
         log('AutoStop')
         # xbmc.executebuiltin('PlayerControl(Stop)')
@@ -193,17 +180,50 @@ class MyPlayer(xbmcgui.WindowXML):
                 
 
     def Start(self, li):
-        def get_source(url):
+        def get_channel_from_ext():
+            def get_src(url):
+                try:
+                    if url.find('acestream://') > -1:
+                        return url.replace('acestream://', '')
+                    if url.rfind('.acelive') > -1:
+                        return url
+                    http = defines.GET(url, trys=2)
+                    m = re.search('(loadPlayer|loadTorrent)\("(?P<src>[\w/_:.]+)"', http)
+                    return m.group('src')            
+                except Exception as e:
+                    log.w('Start->get_from_ext->get_src error: {0}'.format(e))  
+            
+            for extgr in ExtChannels.keys():
+                chli = ExtChannels[extgr].find_by_id(li.getProperty("id"))
+                if not chli:
+                    chli = ExtChannels[extgr].find_by_title(li.getProperty('name'))
+                if chli:
+                    src = get_src(chli.get('url'))
+                    if src:                             
+                        jdata["success"] = 1
+                        if src.rfind('.acelive') > -1:
+                            jdata["type"] = 'TORRENT'
+                        else:                                
+                            jdata["type"] = 'PID'
+                            
+                        jdata["source"] = src
+                        return jdata
+             
+        def get_channel_from_api():           
+            data = defines.GET("http://{0}/v3/translation_stream.php?session={1}&channel_id={2}&typeresult=json".format(defines.API_MIRROR, self.parent.session, li.getProperty("id")))
             try:
-                if url.find('acestream://') > -1:
-                    return url.replace('acestream://', '')
-                if url.rfind('.acelive') > -1:
-                    return url
-                http = defines.GET(url, trys=2)
-                m = re.search('(loadPlayer|loadTorrent)\("(?P<src>[\w/_:.]+)"', http)
-                return m.group('src')            
+                jdata = json.loads(data)
+                return jdata
             except Exception as e:
-                log.e('Start->get_source error: {0}'.format(e))  
+                log.w('Start->get_from_api error: {0}'.format(e))
+                
+        def get_record_from_api():
+            data = defines.GET("http://{0}/v3/arc_stream.php?session={1}&record_id={2}&typeresult=json".format(defines.API_MIRROR, self.parent.session, li.getProperty("id")))
+            try:
+                jdata = json.loads(data)
+                return jdata
+            except Exception as e:
+                log.w('Start->get_record_from_api error: {0}'.format(e))
                 
         log("Start play")       
 
@@ -211,54 +231,25 @@ class MyPlayer(xbmcgui.WindowXML):
         self.channel_number = self.parent.selitem_id
         
         self.parent.showStatus("Получение ссылки...")
-        data = None
-        log.d(li.getProperty("type"))
-        log.d(li.getProperty("id"))
+        
         if (li.getProperty("type") == "channel"):
-            data = defines.GET("http://{0}/v3/translation_stream.php?session={1}&channel_id={2}&typeresult=json".format(defines.API_MIRROR, self.parent.session, li.getProperty("id")))
+            jdata = get_channel_from_api()
+                        
+            if not jdata or not jdata.get("success") or jdata.get("success") == 0 or not jdata.get("source"):
+                jdata = get_channel_from_ext()
+            
         elif (li.getProperty("type") == "record"):
-            data = defines.GET("http://{0}/v3/arc_stream.php?session={1}&record_id={2}&typeresult=json".format(defines.API_MIRROR, self.parent.session, li.getProperty("id")))
+            jdata = get_record_from_api()
         else:
             msg = "Неизвестный тип контента"
             self.parent.showStatus(msg)
             raise Exception(msg)
             
-        try:
-            jdata = json.loads(data)
-        except Exception as e:
-            log.e('Start error: {0}'.format(e))
-            msg = "Ошибка Torrent-TV.RU"
+        if not jdata or not jdata.get("success") or jdata.get("success") == 0 or not jdata.get("source"):
+            msg = "Канал временно не доступен"
             self.parent.showStatus(msg)
-            raise
-            
-        if not jdata["success"] or jdata["success"] == 0 or not jdata["source"]:
-            msg = None
-            if li.getProperty("type") == "channel":     
-                for extgr in ExtChannels.keys():
-                    chli = ExtChannels[extgr].find_by_id(li.getProperty("id"))
-                    if not chli:
-                        chli = ExtChannels[extgr].find_by_title(li.getProperty('name'))
-                    if chli:
-                        src = get_source(chli.get('url'))
-                        if src:                             
-                            jdata["success"] = 1
-                            if src.rfind('.acelive') > -1:
-                                jdata["type"] = 'TORRENT'
-                            else:                                
-                                jdata["type"] = 'PID'
-                                
-                            jdata["source"] = src
-                            break
-                else:    
-                    msg = "Канал временно не доступен"
-            else:    
-                msg = "Канал временно не доступен"
-            
-            if msg:    
-                self.parent.showStatus(msg)            
-                raise Exception(msg)
-        
-        
+            raise Exception(msg)
+
         url = jdata["source"]
         mode = jdata["type"].upper().replace("CONTENTID", "PID")
         self.parent.hideStatus()
