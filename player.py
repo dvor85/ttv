@@ -122,16 +122,8 @@ class MyPlayer(xbmcgui.WindowXML):
     def showEpg(self, epg_id):        
         try:
             ctime = datetime.datetime.now()
-            dt = (ctime - datetime.datetime.utcnow()) - datetime.timedelta(hours=3)
-            
-            prev_bt = 0
-            curepg = []
-            for x in self.parent.epg[epg_id]:
-                bt = datetime.datetime.fromtimestamp(float(x['btime']))
-                et = datetime.datetime.fromtimestamp(float(x['etime']))               
-                if et > ctime and bt.date() >= ctime.date() and float(x['btime']) > prev_bt:
-                    curepg.append(x)
-                    prev_bt = float(x['btime'])
+            dt = (ctime - datetime.datetime.utcnow()) - datetime.timedelta(hours=3)            
+            curepg = self.parent.getCurEpg(epg_id)
             
             for i, ep in enumerate(curepg):
                 try:

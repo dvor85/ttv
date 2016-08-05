@@ -378,23 +378,36 @@ class WMainForm(xbmcgui.WindowXML):
         self.get_epg_timer.daemon = False
         self.get_epg_timer.start()
         
+        
+    def getCurEpg(self, epg_id):
+        try:        
+            ctime = datetime.datetime.now()
+            dt = (ctime - datetime.datetime.utcnow()) - datetime.timedelta(hours=3)
+            
+            prev_bt = 0
+            prev_et = 0
+            curepg = []
+            for x in self.epg[epg_id]:                
+                bt = datetime.datetime.fromtimestamp(float(x['btime']))
+                et = datetime.datetime.fromtimestamp(float(x['etime']))               
+                if et > ctime and bt.date() >= ctime.date() and prev_et <= float(x['btime']) > prev_bt:
+                    curepg.append(x)
+                    prev_bt = float(x['btime'])
+                    prev_et = float(x['etime'])
+            return curepg        
+        
+        except Exception as e:
+            log.e('getCurEpg error {}'.format(e))
+        
     
     def showEpg(self, epg_id=None):
         selitem = self.list.getSelectedItem()
         if selitem and selitem.getProperty('epg_cdn_id') == epg_id:
-            try:        
+            try:       
                 ctime = datetime.datetime.now()
-                dt = (ctime - datetime.datetime.utcnow()) - datetime.timedelta(hours=3)
-                
-                prev_bt = 0
-                curepg = []
-                for x in self.epg[epg_id]:                
-                    bt = datetime.datetime.fromtimestamp(float(x['btime']))
-                    et = datetime.datetime.fromtimestamp(float(x['etime']))               
-                    if et > ctime and bt.date() >= ctime.date() and float(x['btime']) > prev_bt:
-                        curepg.append(x)
-                        prev_bt = float(x['btime'])
-                        
+                dt = (ctime - datetime.datetime.utcnow()) - datetime.timedelta(hours=3) 
+                curepg = self.getCurEpg(epg_id)
+                                        
                 for i, ep in enumerate(curepg):
                     try:
                         ce = self.getControl(WMainForm.LBL_FIRST_EPG + i)
