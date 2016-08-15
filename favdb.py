@@ -31,8 +31,12 @@ class FDB():
         pass
     
     
+    def get_json(self):
+        pass
+    
+    
     def delete(self, li):
-        chid = int(li.getProperty('id'))
+        chid = defines.tryStringToInt(li.getProperty('id'))
         log.d('delete channel id={0}'.format(chid))
         k = self.find(chid)
         if not k is None:            
@@ -46,7 +50,7 @@ class FDB():
     
     def moveTo(self, li, to_id):
         to_id -= 1
-        chid = int(li.getProperty('id'))        
+        chid = defines.tryStringToInt(li.getProperty('id'))        
         if not self.channels:
             self.get()
         if self.channels and to_id < len(self.channels):
@@ -88,13 +92,13 @@ class FDB():
     
     
     def down(self, li):
-        chid = int(li.getProperty('id'))
+        chid = defines.tryStringToInt(li.getProperty('id'))
         to_id = self.find(chid) + 1   
         return self.moveTo(li, to_id + 1)
         
     
     def up(self, li):
-        chid = int(li.getProperty('id'))  
+        chid = defines.tryStringToInt(li.getProperty('id'))  
         to_id = self.find(chid) + 1 
         return self.moveTo(li, to_id - 1)
     
@@ -117,8 +121,16 @@ class LocalFDB(FDB):
                 except Exception as e:
                     log.w('get error: {0}'.format(e))
         return self.channels
+    
+    
+    def get_json(self):
+        if not self.channels:
+            self.get()
+        if self.channels:
+            return {'channels': self.channels, 'categories': [], 'success': 1}
+        else:
+            return {'channels': [], 'categories': [], 'success': 0, 'error': 'Error by loading local channels'}
             
-                    
                 
     def save(self, obj=None):
         log.d('save channels')
@@ -135,13 +147,13 @@ class LocalFDB(FDB):
             
     
     def add(self, li):
-        chid = int(li.getProperty('id'))
+        chid = defines.tryStringToInt(li.getProperty('id'))
         log.d('add channels {0}'.format(chid))
         channel = {'id': chid,
                    'type': li.getProperty('type'),
                    'logo': os.path.basename(li.getProperty('icon')),
                    'access_translation': li.getProperty('access_translation'),
-                   'access_user': int(li.getProperty('access_user')),
+                   'access_user': defines.tryStringToInt(li.getProperty('access_user')),
                    'name': li.getProperty('name'),
                    'epg_id': li.getProperty('epg_cdn_id')}
         if li.getProperty('url'):
@@ -154,7 +166,6 @@ class LocalFDB(FDB):
         return FDB.API_ERROR_ALREADY
 
     
-
             
 class RemoteFDB(FDB):
     
@@ -167,8 +178,7 @@ class RemoteFDB(FDB):
         
     def get(self):        
         try:
-            data = defines.GET('http://{0}/v3/translation_list.php?session={1}&type={2}&typeresult=json'.format(defines.API_MIRROR, self.session, 'favourite'), cookie=['PHPSESSID=%s' % self.session], trys=10)
-            jdata = json.loads(data)
+            jdata = self.get_json()
             if jdata['success'] != 0:
                 channels = jdata['channels']
                 self.channels = []
@@ -178,10 +188,19 @@ class RemoteFDB(FDB):
         except Exception as e:
             log.e('get error: {0}'.format(e))
         return self.channels
+    
+    
+    def get_json(self):
+        try:
+            data = defines.GET('http://{0}/v3/translation_list.php?session={1}&type={2}&typeresult=json'.format(defines.API_MIRROR, self.session, 'favourite'), cookie=['PHPSESSID=%s' % self.session], trys=10)
+            jdata = json.loads(data)
+            return jdata
+        except Exception as e:
+            log.e('get_json error: {0}'.format(e))
         
         
     def add(self, li):
-        chid = int(li.getProperty('id'))
+        chid = defines.tryStringToInt(li.getProperty('id'))
         log.d('add channels {0}'.format(chid))
           
         if self.find(chid) is None:
@@ -289,7 +308,7 @@ class RemoteFDB(FDB):
                 data = self.__post_to_site('http://{0}/store_sorted.php'.format(defines.SITE_MIRROR), jdata)
                 try:
                     jdata = json.loads(data)
-                    if int(jdata['success']) == 1:
+                    if defines.tryStringToInt(jdata['success']) == 1:
                         return True
                     
                 except Exception as e:

@@ -22,6 +22,9 @@ SITE_MIRROR = '1ttv.org' if API_MIRROR == '1ttvxbmc.top' else 'torrent-tv.ru'
 DATA_PATH = xbmc.translatePath(os.path.join("special://profile/addon_data", ADDON_ID))
 TTV_VERSION = '1.5.3'
 AUTOSTART = ADDON.getSetting('autostart') == 'true'
+GENDER = ADDON.getSetting('gender')
+AGE = ADDON.getSetting('age')
+FAVOURITE = ADDON.getSetting('favourite')
 DEBUG = ADDON.getSetting('debug') == 'true'
     
 if sys.platform.startswith('win'):

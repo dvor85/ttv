@@ -69,7 +69,7 @@ class TSengine(xbmc.Player):
                 
         if self.aceport == 0:
             if defines.ADDON.getSetting('port'):
-                self.aceport = int(defines.ADDON.getSetting('port'))
+                self.aceport = defines.tryStringToInt(defines.ADDON.getSetting('port'))
             else:
                 self.aceport = 62062
 
@@ -415,7 +415,7 @@ class TSengine(xbmc.Player):
                     
         elif state.getType() == TSMessage.EVENT:
             if state.getParams() == 'getuserdata':
-                self.sendCommand('USERDATA [{"gender": %s}, {"age": %s}]' % (int(defines.ADDON.getSetting('gender')) + 1, int(defines.ADDON.getSetting('age')) + 1))
+                self.sendCommand('USERDATA [{"gender": %s}, {"age": %s}]' % (defines.tryStringToInt(defines.GENDER) + 1, defines.tryStringToInt(defines.AGE) + 1))
         elif state.getType() == TSMessage.ERROR:
             self.parent.showStatus(state.getParams())
             

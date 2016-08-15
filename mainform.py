@@ -25,6 +25,7 @@ import json
 import re
 from UserDict import UserDict
 
+
 log = defines.Logger('MainForm')
 
 
@@ -99,6 +100,7 @@ class WMainForm(xbmcgui.WindowXML):
     
     CHN_TYPE_FAVOURITE = 'Избранное'
     CHN_TYPE_MODERATION = 'На модерации'
+    
     API_ERROR_INCORRECT = 'incorrect'
     API_ERROR_NOCONNECT = 'noconnect'
     API_ERROR_ALREADY = 'already'
@@ -111,6 +113,8 @@ class WMainForm(xbmcgui.WindowXML):
         self.channel_groups = ChannelGroups()
         self.seltab = 0
         self.epg = {}
+        self._re_1ttv_epg_text = re.compile('var\s+epg\s*=\s*(?P<e>\[[^\]]+\])')
+        self._re_1ttv_epg_json = re.compile('(?P<k>\w+)\s*:\s*(?P<v>.+[,}])')
         self.archive = []
         self.selitem = '0'
         self.img_progress = None
@@ -125,9 +129,8 @@ class WMainForm(xbmcgui.WindowXML):
         self.infoform = None
         self.init = True
         self.session = None
-        self.cookie = None
-        self.onettvnet = None
         self.channel_number_str = ''
+        
         self.select_timer = None
         self.hide_window_timer = None
         self.get_epg_timer = None
@@ -229,18 +232,38 @@ class WMainForm(xbmcgui.WindowXML):
         if self.selitem_id == '':
             self.selitem_id = -1 
         else:
-            self.selitem_id = defines.tryStringToInt(self.selitem_id)          
+            self.selitem_id = defines.tryStringToInt(self.selitem_id)
+            
+    
+    def getFavourites(self):
+        try:
+            if defines.tryStringToInt(defines.FAVOURITE) == 0 and self.user["vip"]:
+                jdata = favdb.RemoteFDB(self.session).get_json()
+                if self.init and jdata and len(jdata['channels']) > 0:
+                    favdb.LocalFDB().save(jdata['channels'])
+                    self.init = False  
+                return jdata
+            else:
+                return favdb.LocalFDB().get_json()                
+                   
+        except Exception as e:
+            log.e('getFavourites error: {0}'.format(e))
 
 
     def getChannels(self, *args):
         param = args[0]
-        log.d('getChannels {0}'.format(param))        
+
+        log.d('getChannels {0}'.format(param))
+        _re_url_match = re.compile('^(?:https?|ftps?|file)://')
         try:
             if param in ExtChannels.keys():                
-                jdata = {'channels': ExtChannels[param].get(), 'categories':[], 'success': 1} 
+                jdata = {'channels': ExtChannels[param].get(), 'categories': [], 'success': 1}              
+            elif param == 'favourite':
+                jdata = self.getFavourites() 
             else:
                 data = defines.GET('http://{0}/v3/translation_list.php?session={1}&type={2}&typeresult=json'.format(defines.API_MIRROR, self.session, param), cookie=['PHPSESSID=%s' % self.session], trys=10)
                 jdata = json.loads(data)
+                
             if jdata['success'] == 0:
                 raise Exception(jdata['error'])            
         except Exception as e:
@@ -254,20 +277,14 @@ class WMainForm(xbmcgui.WindowXML):
             if not self.channel_groups.has_key('%s' % cat["id"]):
                 self.channel_groups.setGroup('%s' % cat["id"], cat["name"])
         
-        if param == 'favourite':  
-            fdb = favdb.LocalFDB()          
-            if len(jdata['channels']) > 0 and self.user["vip"] and self.init:
-                fdb.save(jdata['channels'])
-            elif not self.user["vip"]:
-                jdata['channels'] = fdb.get()
-                
+        
         if jdata['channels']:
             for ch in jdata['channels']:
                 if not ch["name"]:
                     continue
                 if not ch['logo']:
                     ch['logo'] = ''
-                elif not re.search('^(http://|file://)', ch['logo']):                    
+                elif not _re_url_match.search(ch['logo']):                    
                     ch['logo'] = 'http://{0}/uploads/{1}'.format(defines.SITE_MIRROR, ch['logo'])    
                             
                 li = xbmcgui.ListItem(ch["name"], '%s' % ch['id'], ch['logo'], ch['logo'])
@@ -335,14 +352,20 @@ class WMainForm(xbmcgui.WindowXML):
                     log.d('getEpg->get')
                     self.showStatus('Загрузка программы')
                     
-                    if epg_id[0] == '#':
-                        self.epg[epg_id] = get_from_ext()
+                    param = epg_id.split('=', 1)
+                    if len(param) > 1:
+                        if param[0] == 'channel':
+                            self.epg[epg_id] = get_from_1ttv(param[1])
+                        elif param[0] == 'title':
+                            pass
+                        else:
+                            pass
                     else:
-                        self.epg[epg_id] = get_from_api()
-                
+                        self.epg[epg_id] = get_from_api()                        
+                            
                     self.hideStatus()
             except Exception as e:
-                log.e('getEpg->get error: {0}'.format(e))
+                log.d('getEpg->get error: {0}'.format(e))
                 
             if callback:
                 callback(epg_id)
@@ -355,18 +378,17 @@ class WMainForm(xbmcgui.WindowXML):
                     return jdata['data']  
              
             except Exception as e:
-                log.e('getEPG->get_from_api error: {0}'.format(e))                 
+                log.d('getEPG->get_from_api error: {0}'.format(e))                 
                 
-        def get_from_ext():        
+        def get_from_1ttv(chid):        
             try:
-                chid = epg_id[1:]
                 http = defines.GET(self.channel_groups.find_channel_by_id(self.cur_category, chid).getProperty('url'), trys=1)
-                m = re.search('var\s+epg\s*=\s*(?P<e>\[[^\]]+\])', http)
-                epgtext = re.sub('(?P<k>\w+)\s*:\s*(?P<v>.+[,}])', '"\g<k>":\g<v>', m.group('e'))
+                m = self._re_1ttv_epg_text.search(http)
+                epgtext = self._re_1ttv_epg_json.sub('"\g<k>":\g<v>', m.group('e'))
                 epg = json.loads(epgtext)   
                 return epg 
             except Exception as e:
-                log.e('getEPG->get_from_url error: {0}'.format(e))
+                log.d('getEPG->get_from_url error: {0}'.format(e))
             
 
         if self.get_epg_timer:
@@ -390,7 +412,7 @@ class WMainForm(xbmcgui.WindowXML):
             for x in self.epg[epg_id]:                
                 bt = datetime.datetime.fromtimestamp(float(x['btime']))
                 et = datetime.datetime.fromtimestamp(float(x['etime']))               
-                if et > ctime and bt.date() >= ctime.date() and prev_et <= float(x['btime']) > prev_bt:
+                if et > ctime and abs((bt.date() - ctime.date()).days) <= 1 and prev_et <= float(x['btime']) > prev_bt:
                     curepg.append(x)
                     prev_bt = float(x['btime'])
                     prev_et = float(x['etime'])
@@ -471,7 +493,7 @@ class WMainForm(xbmcgui.WindowXML):
         def LoadOther():
             for thr in thrs:
                 thrs[thr].join(10)
-                
+            # удалить дубликаты каналов, присутствующих в оригинальном torrent-tv.    
             for gr in [x for x in self.channel_groups.getGroups() if x not in (WMainForm.CHN_TYPE_FAVOURITE)]: 
                 for extgr in ExtChannels.keys():           
                     if gr not in [x for x in ExtChannels.keys() if x == extgr]:
