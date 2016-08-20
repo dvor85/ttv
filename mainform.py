@@ -257,7 +257,7 @@ class WMainForm(xbmcgui.WindowXML):
         _re_url_match = re.compile('^(?:https?|ftps?|file)://')
         try:
             if param in ExtChannels.keys():                
-                jdata = {'channels': ExtChannels[param].get(), 'categories': [], 'success': 1}              
+                jdata = ExtChannels[param].get_json()              
             elif param == 'favourite':
                 jdata = self.getFavourites() 
             else:
@@ -295,8 +295,6 @@ class WMainForm(xbmcgui.WindowXML):
                 li.setProperty("id", '%s' % ch["id"])
                 li.setProperty("access_translation", '%s' % ch["access_translation"])
                 li.setProperty("access_user", '%s' % ch["access_user"])
-                if ch.has_key('url'):
-                    li.setProperty("url", ch['url'])
                 
                 if param == 'channel':
                     li.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
@@ -382,11 +380,14 @@ class WMainForm(xbmcgui.WindowXML):
                 
         def get_from_1ttv(chid):        
             try:
-                http = defines.GET(self.channel_groups.find_channel_by_id(self.cur_category, chid).getProperty('url'), trys=1)
-                m = self._re_1ttv_epg_text.search(http)
-                epgtext = self._re_1ttv_epg_json.sub('"\g<k>":\g<v>', m.group('e'))
-                epg = json.loads(epgtext)   
-                return epg 
+                for tch in ExtChannels.itervalues():
+                    chli = tch.find_by_id(chid)
+                if chli:                    
+                    http = defines.GET(chli.get('url'), trys=1)
+                    m = self._re_1ttv_epg_text.search(http)
+                    epgtext = self._re_1ttv_epg_json.sub('"\g<k>":\g<v>', m.group('e'))
+                    epg = json.loads(epgtext)   
+                    return epg 
             except Exception as e:
                 log.d('getEPG->get_from_url error: {0}'.format(e))
             
@@ -470,14 +471,16 @@ class WMainForm(xbmcgui.WindowXML):
                 jdata = json.loads(data)
                 if jdata['success'] == 0:
                     raise Exception(jdata['error'])
-            except Exception as e:
-                log.e('showScreen error: {0}'.format(e))
-                return
             
-            img = self.getControl(WMainForm.IMG_SCREEN)
-            img.setImage("")
-            log.d('showScreen: %s' % jdata['screens'][0]['filename'])
-            img.setImage(jdata['screens'][0]['filename'])
+                img = self.getControl(WMainForm.IMG_SCREEN)
+                img.setImage("")
+                log.d('showScreen: %s' % jdata['screens'][0]['filename'])
+                img.setImage(jdata['screens'][0]['filename'])
+                
+            except Exception as e:
+                log.w('showScreen error: {0}'.format(e))
+            
+            
         
         if self.show_screen_timer:
             self.show_screen_timer.cancel()
@@ -495,8 +498,8 @@ class WMainForm(xbmcgui.WindowXML):
                 thrs[thr].join(10)
             # удалить дубликаты каналов, присутствующих в оригинальном torrent-tv.    
             for gr in [x for x in self.channel_groups.getGroups() if x not in (WMainForm.CHN_TYPE_FAVOURITE)]: 
-                for extgr in ExtChannels.keys():           
-                    if gr not in [x for x in ExtChannels.keys() if x == extgr]:
+                for extgr in ExtChannels.iterkeys():           
+                    if gr not in [x for x in ExtChannels.iterkeys() if x == extgr]:
                         for cli in self.channel_groups.getChannels(gr):
                             if not self.IsCanceled():
                                 self.channel_groups.del_channel_by_id(extgr, cli.getProperty('id'))
@@ -506,7 +509,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.list = self.getControl(WMainForm.CONTROL_LIST)
         for groupname in [WMainForm.CHN_TYPE_MODERATION, WMainForm.CHN_TYPE_FAVOURITE]:
             self.channel_groups.setGroup(groupname, '[COLOR FFFFFF00][B]' + groupname + '[/B][/COLOR]')
-        for groupname in ExtChannels.keys():
+        for groupname in ExtChannels.iterkeys():
             self.channel_groups.setGroup(groupname, '[COLOR FF00FF00][B]' + groupname + '[/B][/COLOR]') 
 
         thrs = {}
@@ -514,7 +517,7 @@ class WMainForm(xbmcgui.WindowXML):
         thrs['moderation'] = defines.MyThread(self.getChannels, 'moderation')
         thrs['favourite'] = defines.MyThread(self.getChannels, 'favourite')
         thrs['archive'] = defines.MyThread(self.getArcChannels)
-        for extgr in ExtChannels.keys():  
+        for extgr in ExtChannels.iterkeys():  
             thrs[extgr] = defines.MyThread(self.getChannels, extgr)
         
         for thr in thrs:
@@ -556,7 +559,8 @@ class WMainForm(xbmcgui.WindowXML):
         if (self.list) and (0 < self.selitem_id < self.list.size()):     
             self.list.selectItem(self.selitem_id)  
             if self.init:
-                self.init = False             
+                self.init = False     
+#                 self.LoopPlay(self.list.getListItem(self.selitem_id))        
                 self.emulate_startChannel()
                
                 
@@ -622,6 +626,10 @@ class WMainForm(xbmcgui.WindowXML):
     def LoopPlay(self, *args):  
         while not self.IsCanceled():
             try: 
+#                 if len(args)>0:
+#                     selItem = args[0]
+#                     args = []
+#                 else:
                 selItem = self.list.getListItem(self.selitem_id)
                 
                 if selItem.getProperty("access_user") == 0:
@@ -639,7 +647,6 @@ class WMainForm(xbmcgui.WindowXML):
                 buf.setProperty('icon', selItem.getProperty('icon'))
                 buf.setProperty("type", selItem.getProperty("type"))
                 buf.setProperty("id", selItem.getProperty("id"))
-                buf.setProperty("url", selItem.getProperty("url"))
                 buf.setProperty("name", selItem.getProperty("name"))
                 if selItem.getProperty("type") == "archive":
                     self.fillRecords(buf, datetime.datetime.today())                
@@ -896,7 +903,7 @@ class WMainForm(xbmcgui.WindowXML):
             return
         log.d('fillCategory: Clear list')
         self.list.reset()
-        for gr in ExtChannels.keys():
+        for gr in ExtChannels.iterkeys():
             AddItem(gr)
         for gr in [WMainForm.CHN_TYPE_FAVOURITE, WMainForm.CHN_TYPE_MODERATION]:
             AddItem(gr)

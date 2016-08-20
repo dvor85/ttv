@@ -25,7 +25,16 @@ class TChannels():
                            'name': title,
                            'epg_id': epg_id}
                 self.tChannels.append(channel)            
-        return self.tChannels   
+        return self.tChannels  
+    
+    
+    def get_json(self):
+        self.get()
+        if self.tChannels:
+            return {'channels': self.tChannels, 'categories': [], 'success': 1}
+        else:
+            return {'channels': [], 'categories': [], 'success': 0, 'error': 'Error by loading local ext channels'} 
+        
     
     def find_by_id(self, chid):
         if not self.tChannels:

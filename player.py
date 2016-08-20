@@ -185,10 +185,10 @@ class MyPlayer(xbmcgui.WindowXML):
                 except Exception as e:
                     log.w('Start->get_from_ext->get_src error: {0}'.format(e))  
             
-            for extgr in ExtChannels.keys():
-                chli = ExtChannels[extgr].find_by_id(li.getProperty("id"))
+            for tch in ExtChannels.itervalues():
+                chli = tch.find_by_id(li.getProperty("id"))
                 if not chli:
-                    chli = ExtChannels[extgr].find_by_title(li.getProperty('name'))
+                    chli = tch.find_by_title(li.getProperty('name'))
                 if chli:
                     src = get_src(chli.get('url'))
                     if src:                             
