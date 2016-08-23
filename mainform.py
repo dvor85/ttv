@@ -183,11 +183,12 @@ class WMainForm(xbmcgui.WindowXML):
         self.img_progress = self.getControl(WMainForm.IMG_PROGRESS)
         self.txt_progress = self.getControl(WMainForm.TXT_PROGRESS)
         self.progress = self.getControl(WMainForm.PROGRESS_BAR)
+        self.list = self.getControl(WMainForm.CONTROL_LIST)
         
         if not self.channel_groups:            
             self.updateList()
         else:
-            self.loadList()    
+            self.loadList()   
         self.hide_main_window(timeout=10)
         
         
@@ -480,8 +481,6 @@ class WMainForm(xbmcgui.WindowXML):
             except Exception as e:
                 log.w('showScreen error: {0}'.format(e))
             
-            
-        
         if self.show_screen_timer:
             self.show_screen_timer.cancel()
             self.show_screen_timer = None
@@ -506,7 +505,7 @@ class WMainForm(xbmcgui.WindowXML):
                                 self.channel_groups.del_channel_by_name(extgr, cli.getProperty('name'))
                         
         self.showStatus("Получение списка каналов")
-        self.list = self.getControl(WMainForm.CONTROL_LIST)
+        
         for groupname in [WMainForm.CHN_TYPE_MODERATION, WMainForm.CHN_TYPE_FAVOURITE]:
             self.channel_groups.setGroup(groupname, '[COLOR FFFFFF00][B]' + groupname + '[/B][/COLOR]')
         for groupname in ExtChannels.iterkeys():
@@ -606,7 +605,7 @@ class WMainForm(xbmcgui.WindowXML):
             
     def emulate_startChannel(self):
         self.setFocusId(WMainForm.CONTROL_LIST)
-        xbmc.sleep(1000)
+        xbmc.sleep(122)
         self.onClick(WMainForm.CONTROL_LIST)
 
 

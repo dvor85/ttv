@@ -196,7 +196,7 @@ def AUTH():
         return [] 
             
 
-def GET(target, post=None, cookie=None, headers=None, trys=-1):
+def GET(target, post=None, cookie=None, headers=None, trys=1):
     log.d('try to get: {0}'.format(target))
     if not target:
         return
