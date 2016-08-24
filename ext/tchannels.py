@@ -31,9 +31,9 @@ class TChannels():
     def get_json(self):
         self.get()
         if self.tChannels:
-            return {'channels': self.tChannels, 'categories': [], 'success': 1}
+            return {'channels': self.tChannels, 'success': 1}
         else:
-            return {'channels': [], 'categories': [], 'success': 0, 'error': 'Error by loading local ext channels'} 
+            return {'channels': [], 'success': 0, 'error': 'Error by loading local ext channels'} 
         
     
     def find_by_id(self, chid):

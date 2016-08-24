@@ -127,9 +127,9 @@ class LocalFDB(FDB):
         if not self.channels:
             self.get()
         if self.channels:
-            return {'channels': self.channels, 'categories': [], 'success': 1}
+            return {'channels': self.channels, 'success': 1}
         else:
-            return {'channels': [], 'categories': [], 'success': 0, 'error': 'Error by loading local channels'}
+            return {'channels': [], 'success': 0, 'error': 'Error by loading local channels'}
             
                 
     def save(self, obj=None):

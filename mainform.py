@@ -116,7 +116,6 @@ class WMainForm(xbmcgui.WindowXML):
         self._re_1ttv_epg_text = re.compile('var\s+epg\s*=\s*(?P<e>\[[^\]]+\])')
         self._re_1ttv_epg_json = re.compile('(?P<k>\w+)\s*:\s*(?P<v>.+[,}])')
         self.archive = []
-        self.selitem = '0'
         self.img_progress = None
         self.txt_progress = None
         self.list = None
@@ -124,7 +123,6 @@ class WMainForm(xbmcgui.WindowXML):
         self.player.parent = self
         self.amalkerWnd = AdsForm("adsdialog.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
         self.load_selitem_info()            
-        self.playditem = -1
         self.user = None
         self.infoform = None
         self.init = True
@@ -174,7 +172,7 @@ class WMainForm(xbmcgui.WindowXML):
             self.close()             
             return
         
-        self.user = {"login" : defines.ADDON.getSetting('login'), "balance" : jdata["balance"], "vip":jdata["balance"] > 1}
+        self.user = {"login": defines.ADDON.getSetting('login'), "balance": jdata["balance"], "vip": jdata["balance"] > 1}
         
         self.session = jdata['session']
         
@@ -204,12 +202,7 @@ class WMainForm(xbmcgui.WindowXML):
             if not self.list:
                 return
             selItem = self.list.getSelectedItem()
-            if selItem:
-                if selItem.getLabel2() == self.selitem or selItem.getLabel() == '..':
-                    return
-                self.selitem = selItem.getLabel2()
-                self.selitem_id = self.list.getSelectedPosition()
-                log.d('Selected %s' % self.selitem_id)
+            if selItem and not selItem.getLabel() == '..':
                 epg_id = selItem.getProperty('epg_cdn_id')
                 img = self.getControl(WMainForm.IMG_SCREEN)
                 img.setImage("")
@@ -266,7 +259,7 @@ class WMainForm(xbmcgui.WindowXML):
                 jdata = json.loads(data)
                 
             if jdata['success'] == 0:
-                raise Exception(jdata['error'])            
+                raise Exception(jdata.get('error'))            
         except Exception as e:
             log.e('getChannels error: {0}'.format(e))
             msg = "Ошибка Torrent-TV.RU"
@@ -274,12 +267,12 @@ class WMainForm(xbmcgui.WindowXML):
             return
             
             
-        for cat in jdata["categories"]:
+        for cat in jdata.get("categories", []):
             if not self.channel_groups.has_key('%s' % cat["id"]):
                 self.channel_groups.setGroup('%s' % cat["id"], cat["name"])
         
         
-        if jdata['channels']:
+        if jdata.get('channels'):
             for ch in jdata['channels']:
                 if not ch["name"]:
                     continue
@@ -542,8 +535,7 @@ class WMainForm(xbmcgui.WindowXML):
     def loadList(self):                
         log.d('updateList: Clear list')    
         self.list.reset()
-        self.setFocus(self.getControl(WMainForm.BTN_CHANNELS_ID))
-        self.img_progress.setVisible(False)
+        self.setFocusId(WMainForm.BTN_CHANNELS_ID)
         self.hideStatus()
         
     
@@ -555,23 +547,22 @@ class WMainForm(xbmcgui.WindowXML):
             btn.setLabel(btn.getLabel().replace('<', '').replace('>', ''))
         self.seltab = controlId
         log.d('Focused %s %s' % (WMainForm.CONTROL_LIST, self.selitem_id))
-        if (self.list) and (0 < self.selitem_id < self.list.size()):     
-            self.list.selectItem(self.selitem_id)  
+        if (self.list) and (0 < self.selitem_id < self.list.size()):
             if self.init:
                 self.init = False     
 #                 self.LoopPlay(self.list.getListItem(self.selitem_id))        
                 self.emulate_startChannel()
                
                 
-    def select_channel(self, sch='', timeout=0): 
-        if sch != '':
-            self.channel_number_str = str(sch)
+    def select_channel(self, sch='', timeout=0):
+        self.channel_number_str = str(sch) if sch != '' else str(self.selitem_id) 
         chnum = defines.tryStringToInt(self.channel_number_str)                       
         log('CHANNEL NUMBER IS: %i' % chnum)              
         if 0 < chnum < self.list.size():            
             self.selitem_id = chnum
             self.setFocus(self.list)
-            self.list.selectItem(self.selitem_id)    
+            self.list.selectItem(self.selitem_id)
+                
         if self.select_timer:
             self.select_timer.cancel()
             self.select_timer = None      
@@ -604,7 +595,7 @@ class WMainForm(xbmcgui.WindowXML):
                 
             
     def emulate_startChannel(self):
-        self.setFocusId(WMainForm.CONTROL_LIST)
+        self.select_channel()
         xbmc.sleep(122)
         self.onClick(WMainForm.CONTROL_LIST)
 
@@ -612,12 +603,15 @@ class WMainForm(xbmcgui.WindowXML):
     def onClickChannels(self):
         log.d('onClickChannels')
         self.fillChannels()
+#         self.select_channel()
         if self.seltab != WMainForm.BTN_CHANNELS_ID:
             self.checkButton(WMainForm.BTN_CHANNELS_ID)
             
 
     def onClickArchive(self):
-        self.fillArchive()        
+        log.d('onClickArchive')
+        self.fillArchive()
+#         self.select_channel()        
         if self.seltab != WMainForm.BTN_ARCHIVE_ID:
             self.checkButton(WMainForm.BTN_ARCHIVE_ID)
             
@@ -650,7 +644,6 @@ class WMainForm(xbmcgui.WindowXML):
                 if selItem.getProperty("type") == "archive":
                     self.fillRecords(buf, datetime.datetime.today())                
                     break
-                self.playditem = self.selitem_id
                 defines.ADDON.setSetting('cur_category', self.cur_category)
                 defines.ADDON.setSetting('cur_channel', str(self.selitem_id))
             
@@ -660,7 +653,7 @@ class WMainForm(xbmcgui.WindowXML):
                     break       
                 if not self.IsCanceled():
                     xbmc.sleep(223)   
-                    self.select_channel(str(self.selitem_id))  
+                    self.select_channel()  
                      
             except Exception as e:
                 log.e('LoopPlay error: {0}'.format(e))
@@ -683,7 +676,7 @@ class WMainForm(xbmcgui.WindowXML):
 #         elif xbmc.getCondVisibility("Window.IsMedia"):
 #             self.close()
 #             log.d("Is media Window")
-        elif xbmc.getCondVisibility("Window.IsVisible(12346)"):
+        elif xbmc.getCondVisibility("Window.IsVisible(12345)"):
             self.close()
             log.d("Is plugin Window")
         else:
@@ -698,11 +691,6 @@ class WMainForm(xbmcgui.WindowXML):
         log.d('onClick %s' % controlID)
         if controlID == WMainForm.BTN_CHANNELS_ID: 
             self.onClickChannels()
-            log.d("playditem = %s" % self.playditem)
-            if self.playditem > -1:
-                self.setFocus(self.list)
-                self.list.selectItem(self.playditem)
-                self.playditem = -1
                
         elif controlID == WMainForm.BTN_ARCHIVE_ID: 
             self.onClickArchive()
@@ -710,7 +698,7 @@ class WMainForm(xbmcgui.WindowXML):
         elif controlID == 200: 
             self.setFocusId(WMainForm.CONTROL_LIST)
         elif controlID == WMainForm.CONTROL_LIST:
-            selItem = control.getSelectedItem()
+            selItem = control.getSelectedItem()           
             
             if not selItem:
                 return
@@ -724,6 +712,7 @@ class WMainForm(xbmcgui.WindowXML):
 
             if selItem.getProperty('type') == 'category':
                 self.cur_category = selItem.getProperty("id")
+                self.selitem_id = -1
 #                 self.updateList()
                 self.fillChannels()
                 return
@@ -738,19 +727,16 @@ class WMainForm(xbmcgui.WindowXML):
 
                 stime = time.strptime(selItem.getProperty("date"), "%Y-%m-%d")
                 datefrm.date = datetime.date(stime.tm_year, stime.tm_mon, stime.tm_mday)
-                # datefrm.date =datetime.fromtimestamp(time.mktime(time.strptime(selItem.getProperty("date"), "%Y-%m-%d")))
-                # datefrm.date = datetime.strptime(selItem.getProperty("date"), "%Y-%m-%d")
                 datefrm.doModal()
-                find = False
                 for li in self.archive:
                     if li.getProperty("epg_cdn_id") == selItem.getProperty("epg_cdn_id"):
                         self.fillRecords(li, datefrm.date)
-                        find = True
-                        return
-                if not find:
-                    self.fillRecords(self.archive[0], datefrm.date)
+                        break
+                else:
                     return
+                self.fillRecords(self.archive[0], datefrm.date)
             
+            self.selitem_id = self.list.getSelectedPosition()
             self.LoopPlay()
             
         elif controlID == WMainForm.BTN_FULLSCREEN:
