@@ -136,6 +136,7 @@
                 <info>ListItem.Label</info>
               </control>
               <control type="image">
+              	<aspectratio>keep</aspectratio>
                 <posx>209</posx>
                 <posy>1</posy>
                 <width>31</width>
@@ -165,6 +166,7 @@
                 <info>ListItem.Label</info>
               </control>
               <control type="image">
+              	<aspectratio>keep</aspectratio>
                 <posx>209</posx>
                 <posy>1</posy>
                 <width>31</width>
@@ -268,7 +270,6 @@
           <width>200</width>
           <height>150</height>
           <visible>true</visible>
-          <texture>unkchannel.jpg</texture>
           <aspectratio>keep</aspectratio>
         </control>
         <control type="label" id = "300">
@@ -399,7 +400,6 @@
             <width>120</width>
             <height>110</height>
             <visible>true</visible>
-            <texture>unkchannel.jpg</texture>
             <aspectratio>keep</aspectratio>
         </control>
       </control>

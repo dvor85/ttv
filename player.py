@@ -227,7 +227,7 @@ class MyPlayer(xbmcgui.WindowXML):
         if (li.getProperty("type") == "channel"):
             jdata = get_channel_from_api()
                         
-            if not jdata or not jdata.get("success") or jdata.get("success") == 0 or not jdata.get("source"):
+            if not jdata or defines.tryStringToInt(jdata.get("success")) == 0 or not jdata.get("source"):
                 jdata = get_channel_from_ext()
             
         elif (li.getProperty("type") == "record"):
@@ -237,7 +237,7 @@ class MyPlayer(xbmcgui.WindowXML):
             self.parent.showStatus(msg)
             raise Exception(msg)
             
-        if not jdata or not jdata.get("success") or jdata.get("success") == 0 or not jdata.get("source"):
+        if not jdata or defines.tryStringToInt(jdata.get("success")) == 0 or not jdata.get("source"):
             msg = "Канал временно не доступен"
             self.parent.showStatus(msg)
             raise Exception(msg)

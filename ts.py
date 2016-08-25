@@ -268,17 +268,16 @@ class TSengine(xbmc.Player):
                 if msg.getType() == TSMessage.HELLOTS: 
                     if not msg.getParams().get('key'):
                         raise IOError('Incorrect msg from AceEngine')
-                    ace_version = msg.getParams()['version']
+                    ace_version = msg.getParams().get('version')
                     if ace_version < '3':
                         raise ValueError("It's necessary to update AceStream")
                 
                 self.sock_thr.msg = TSMessage()
-                if self.sendCommand('READY key=' + self.get_key(msg.getParams()['key'])):
+                if self.sendCommand('READY key=' + self.get_key(msg.getParams().get('key'))):
                     self.Wait(TSMessage.AUTH)
                     msg = self.sock_thr.getTSMessage()
                     if msg.getType() == TSMessage.AUTH:
-                        if msg.getParams() == '0':
-#                             raise IOError('Пользователь не зарегистрирован')
+                        if defines.tryStringToInt(msg.getParams()) == 0:
                             log.w('Пользователь не зарегистрирован')
                     else:
                         raise IOError('Incorrect msg from AceEngine')
@@ -708,7 +707,6 @@ class SockThread(threading.Thread):
             msg = TSMessage()
             msg.setType(_msg)
             self.state_method(msg)
-
 
 
     def getTSMessage(self):

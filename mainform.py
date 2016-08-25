@@ -125,7 +125,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.load_selitem_info()            
         self.user = None
         self.infoform = None
-        self.init = True
+        self.first_init = True
         self.session = None
         self.channel_number_str = ''
         
@@ -140,8 +140,8 @@ class WMainForm(xbmcgui.WindowXML):
         data = defines.GET('http://{0}/v3/version.php?application=xbmc&version={1}'.format(defines.API_MIRROR, defines.TTV_VERSION))
         try:
             jdata = json.loads(data)
-            if jdata['success'] == 0:                
-                raise Exception(jdata['error'])
+            if defines.tryStringToInt(jdata.get('success')) == 0:                
+                raise Exception(jdata.get('error'))
 #             raise Exception('Test')    
         except Exception as e:
             log.e('onInit error: {0}'.format(e))
@@ -149,7 +149,7 @@ class WMainForm(xbmcgui.WindowXML):
             defines.showNotification(msg, xbmcgui.NOTIFICATION_ERROR)
             self.close()
             return
-        if jdata['support'] == 0:
+        if defines.tryStringToInt(jdata['support']) == 0:
             self.showDialog("Текущая версия приложения (%s) не поддерживается. Последняя версия %s " % (defines.TTV_VERSION, jdata['last_version'].encode('utf-8')))
             self.close()
             return
@@ -163,8 +163,8 @@ class WMainForm(xbmcgui.WindowXML):
         data = defines.GET('http://{0}/v3/auth.php?username={1}&password={2}&typeresult=json&application=xbmc&guid={3}'.format(defines.API_MIRROR, defines.ADDON.getSetting('login'), defines.ADDON.getSetting('password'), guid))
         try:
             jdata = json.loads(data)
-            if jdata['success'] == 0:                
-                raise Exception(jdata['error'])
+            if defines.tryStringToInt(jdata.get('success')) == 0:                
+                raise Exception(jdata.get('error'))
         except Exception as e:
             log.e('onInit error: {0}'.format(e))
             msg = 'Ошибка Torrent-TV.RU'
@@ -182,6 +182,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.txt_progress = self.getControl(WMainForm.TXT_PROGRESS)
         self.progress = self.getControl(WMainForm.PROGRESS_BAR)
         self.list = self.getControl(WMainForm.CONTROL_LIST)
+        self.init = True
         
         if not self.channel_groups:            
             self.updateList()
@@ -213,8 +214,9 @@ class WMainForm(xbmcgui.WindowXML):
                     self.getEpg(epg_id, timeout=1, callback=self.showEpg)
                 
                 self.showScreen(selItem.getProperty('id'), timeout=1)
-                img = self.getControl(1111)
-                img.setImage(selItem.getProperty('icon'))
+                
+                for controlId in (1111, WMainForm.IMG_SCREEN):
+                    self.getControl(controlId).setImage(selItem.getProperty('icon'))
                 
         
     def load_selitem_info(self):        
@@ -233,9 +235,9 @@ class WMainForm(xbmcgui.WindowXML):
         try:
             if defines.tryStringToInt(defines.FAVOURITE) == 0 and self.user["vip"]:
                 jdata = favdb.RemoteFDB(self.session).get_json()
-                if self.init and jdata and len(jdata['channels']) > 0:
+                if self.first_init and jdata and len(jdata['channels']) > 0:
                     favdb.LocalFDB().save(jdata['channels'])
-                    self.init = False  
+                    self.first_init = False  
                 return jdata
             else:
                 return favdb.LocalFDB().get_json()                
@@ -258,7 +260,7 @@ class WMainForm(xbmcgui.WindowXML):
                 data = defines.GET('http://{0}/v3/translation_list.php?session={1}&type={2}&typeresult=json'.format(defines.API_MIRROR, self.session, param), cookie=['PHPSESSID=%s' % self.session], trys=10)
                 jdata = json.loads(data)
                 
-            if jdata['success'] == 0:
+            if defines.tryStringToInt(jdata.get('success')) == 0:
                 raise Exception(jdata.get('error'))            
         except Exception as e:
             log.e('getChannels error: {0}'.format(e))
@@ -312,8 +314,8 @@ class WMainForm(xbmcgui.WindowXML):
         try:
             data = defines.GET('http://{0}/v3/arc_list.php?session={1}&typeresult=json'.format(defines.API_MIRROR, self.session), cookie=['PHPSESSID=%s' % self.session], trys=10)
             jdata = json.loads(data)
-            if jdata['success'] == 0:
-                raise Exception(jdata['error'])
+            if defines.tryStringToInt(jdata.get('success')) == 0:
+                raise Exception(jdata.get('error'))
         except Exception as e:
             log.e('getArcChannels error: {0}'.format(e))
             msg = "Ошибка Torrent-TV.RU"
@@ -366,7 +368,7 @@ class WMainForm(xbmcgui.WindowXML):
             try:          
                 data = defines.GET('http://{0}/v3/translation_epg.php?session={1}&epg_id={2}&typeresult=json'.format(defines.API_MIRROR, self.session, epg_id), cookie=['PHPSESSID=%s' % self.session], trys=1)
                 jdata = json.loads(data)
-                if jdata['success'] != 0:
+                if defines.tryStringToInt(jdata.get('success')) != 0:
                     return jdata['data']  
              
             except Exception as e:
@@ -454,31 +456,28 @@ class WMainForm(xbmcgui.WindowXML):
             
             
     def showScreen(self, cdn, timeout=0):
-        def show(*args):
+        def show():
             log.d('showScreen')
-            cdn = args[0]
             if defines.tryStringToInt(cdn) < 1:
                 return
             
             try:
                 data = defines.GET('http://{0}/v3/translation_screen.php?session={1}&channel_id={2}&typeresult=json&count=1'.format(defines.API_MIRROR, self.session, cdn), cookie=['PHPSESSID=%s' % self.session], trys=10)
                 jdata = json.loads(data)
-                if jdata['success'] == 0:
-                    raise Exception(jdata['error'])
-            
-                img = self.getControl(WMainForm.IMG_SCREEN)
-                img.setImage("")
+                 
+                if defines.tryStringToInt(jdata.get('success')) != 0:  
+                    img = self.getControl(WMainForm.IMG_SCREEN)                  
+                    img.setImage(jdata['screens'][0]['filename'])
                 log.d('showScreen: %s' % jdata['screens'][0]['filename'])
-                img.setImage(jdata['screens'][0]['filename'])
                 
-            except Exception as e:
-                log.w('showScreen error: {0}'.format(e))
+            except Exception as e:                
+                log.w('showScreen error: {0}'.format(e))                
             
         if self.show_screen_timer:
             self.show_screen_timer.cancel()
             self.show_screen_timer = None
          
-        self.show_screen_timer = threading.Timer(timeout, show, [cdn])
+        self.show_screen_timer = threading.Timer(timeout, show)
         self.show_screen_timer.name = 'show_screen'
         self.show_screen_timer.daemon = False
         self.show_screen_timer.start()
@@ -486,8 +485,8 @@ class WMainForm(xbmcgui.WindowXML):
         
     def updateList(self):
         def LoadOther():
-            for thr in thrs:
-                thrs[thr].join(10)
+            for thr in thrs.itervalues():
+                thr.join(10)
             # удалить дубликаты каналов, присутствующих в оригинальном torrent-tv.    
             for gr in [x for x in self.channel_groups.getGroups() if x not in (WMainForm.CHN_TYPE_FAVOURITE)]: 
                 for extgr in ExtChannels.iterkeys():           
@@ -512,8 +511,8 @@ class WMainForm(xbmcgui.WindowXML):
         for extgr in ExtChannels.iterkeys():  
             thrs[extgr] = defines.MyThread(self.getChannels, extgr)
         
-        for thr in thrs:
-            thrs[thr].start()
+        for thr in thrs.itervalues():
+            thr.start()
             
         lo_thr = defines.MyThread(LoadOther)
         lo_thr.start()
@@ -548,10 +547,9 @@ class WMainForm(xbmcgui.WindowXML):
         self.seltab = controlId
         log.d('Focused %s %s' % (WMainForm.CONTROL_LIST, self.selitem_id))
         if (self.list) and (0 < self.selitem_id < self.list.size()):
-            if self.init:
-                self.init = False     
-#                 self.LoopPlay(self.list.getListItem(self.selitem_id))        
-                self.emulate_startChannel()
+            if self.first_init:  # автостарт канала
+                self.first_init = False     
+                self.startChannel()
                
                 
     def select_channel(self, sch='', timeout=0):
@@ -594,16 +592,17 @@ class WMainForm(xbmcgui.WindowXML):
         self.hide_window_timer.start()
                 
             
-    def emulate_startChannel(self):
+    def startChannel(self):
         self.select_channel()
-        xbmc.sleep(122)
-        self.onClick(WMainForm.CONTROL_LIST)
+        self.LoopPlay()
 
 
     def onClickChannels(self):
         log.d('onClickChannels')
         self.fillChannels()
-#         self.select_channel()
+        if self.init:
+            self.select_channel()
+            self.init = False
         if self.seltab != WMainForm.BTN_CHANNELS_ID:
             self.checkButton(WMainForm.BTN_CHANNELS_ID)
             
@@ -611,7 +610,9 @@ class WMainForm(xbmcgui.WindowXML):
     def onClickArchive(self):
         log.d('onClickArchive')
         self.fillArchive()
-#         self.select_channel()        
+        if self.init:
+            self.select_channel()
+            self.init = False        
         if self.seltab != WMainForm.BTN_ARCHIVE_ID:
             self.checkButton(WMainForm.BTN_ARCHIVE_ID)
             
@@ -625,7 +626,7 @@ class WMainForm(xbmcgui.WindowXML):
 #                 else:
                 selItem = self.list.getListItem(self.selitem_id)
                 
-                if selItem.getProperty("access_user") == 0:
+                if defines.tryStringToInt(selItem.getProperty("access_user")) == 0:
                     access = selItem.getProperty("access_translation")
                     if access == "registred":
                         log.d("Трансляция доступна для зарегестрированных пользователей")
@@ -698,7 +699,7 @@ class WMainForm(xbmcgui.WindowXML):
         elif controlID == 200: 
             self.setFocusId(WMainForm.CONTROL_LIST)
         elif controlID == WMainForm.CONTROL_LIST:
-            selItem = control.getSelectedItem()           
+            selItem = self.list.getSelectedItem()           
             
             if not selItem:
                 return
@@ -772,7 +773,7 @@ class WMainForm(xbmcgui.WindowXML):
             if self.cur_category == WMainForm.CHN_TYPE_FAVOURITE:
                 fthr.join(10)
                 self.loadList()
-            
+                
         elif res == WMainForm.API_ERROR_INCORRECT:
             self.showStatus('Пользователь не опознан по сессии')
         elif res == WMainForm.API_ERROR_NOCONNECT:
@@ -856,7 +857,7 @@ class WMainForm(xbmcgui.WindowXML):
             self.list.addItem(li)
             for i, ch in enumerate(self.channel_groups.getChannels(self.cur_category)):
                 chname = "{0}. {1}".format(i + 1, ch.getProperty('name'))
-                if ch.getProperty("access_user") == 0:
+                if defines.tryStringToInt(ch.getProperty("access_user")) == 0:
                     chname = "[COLOR FF646464]%s[/COLOR]" % chname
                 ch.setLabel(chname)
                 self.list.addItem(ch)
@@ -912,24 +913,21 @@ class WMainForm(xbmcgui.WindowXML):
         try:
             data = defines.GET("http://{0}/v3/arc_records.php?session={1}&date={2}-{3}-{4}&epg_id={5}&typeresult=json".format(defines.API_MIRROR, self.session, date.day, date.month, date.year, li.getProperty("epg_cdn_id")), cookie=['PHPSESSID=%s' % self.session], trys=10)
             jdata = json.loads(data)
+            if defines.tryStringToInt(jdata.get('success')) == 0:
+                raise Exception(jdata.get("error"))
+            
+            for rec in jdata["records"]:
+                rec_date = time.localtime(float(rec["time"]))
+                rec_li = xbmcgui.ListItem("[COLOR FFC0C0C0]%.2d:%.2d[/COLOR] %s" % (rec_date.tm_hour, rec_date.tm_min, rec["name"]), rec["name"], li.getProperty("icon"), li.getProperty("icon"))
+                rec_li.setProperty("type", "record")
+                rec_li.setProperty("id", '%s' % rec["record_id"])
+                rec_li.setProperty("epg_cdn_id", '%s' % rec["epg_id"])
+                rec_li.setProperty("icon", li.getProperty("icon"))
+                self.list.addItem(rec_li)
         except Exception as e:
             log.e('fillRecords error: {0}'.format(e))
             msg = "Ошибка Torrent-TV.RU"
             self.showStatus(msg)
-            return
-        
-        if jdata["success"] == 0:
-            self.showStatus(jdata["error"])
-            return
-
-        for rec in jdata["records"]:
-            rec_date = time.localtime(float(rec["time"]))
-            rec_li = xbmcgui.ListItem("[COLOR FFC0C0C0]%.2d:%.2d[/COLOR] %s" % (rec_date.tm_hour, rec_date.tm_min, rec["name"]), rec["name"], li.getProperty("icon"), li.getProperty("icon"))
-            rec_li.setProperty("type", "record")
-            rec_li.setProperty("id", '%s' % rec["record_id"])
-            rec_li.setProperty("epg_cdn_id", '%s' % rec["epg_id"])
-            rec_li.setProperty("icon", li.getProperty("icon"))
-            self.list.addItem(rec_li)
 
         self.hideStatus()
 

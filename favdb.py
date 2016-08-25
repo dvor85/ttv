@@ -177,7 +177,7 @@ class RemoteFDB(FDB):
     def get(self):        
         try:
             jdata = self.get_json()
-            if jdata['success'] != 0:
+            if defines.tryStringToInt(jdata['success']) != 0:
                 channels = jdata['channels']
                 self.channels = []
                 for i, ch in enumerate(channels):
@@ -228,8 +228,8 @@ class RemoteFDB(FDB):
             channel_id = li.getProperty('id')
             data = defines.GET('http://{0}/v3/{1}.php?session={2}&channel_id={3}&typeresult=json'.format(defines.API_MIRROR, self.session, channel_id), cookie=['PHPSESSID=%s' % self.session], trys=10)
             jdata = json.loads(data)
-            if jdata['success'] == 0:
-                return jdata['error']
+            if defines.tryStringToInt(jdata['success']) == 0:
+                return jdata.get('error')
         except Exception as e:
             msg = 'exec_cmd error: {0}'.format(e)
             log.e(msg)

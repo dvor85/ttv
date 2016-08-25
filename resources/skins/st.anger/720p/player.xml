@@ -143,7 +143,6 @@
             <width>100</width>
             <height>100</height>
             <visible>true</visible>
-            <texture>unkchannel.jpg</texture>
             <aspectratio>keep</aspectratio>
           </control>
           <control type="group">
