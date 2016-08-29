@@ -6,7 +6,7 @@
 <pydev_property name="org.python.pydev.PYTHON_PROJECT_VERSION">python 2.7</pydev_property>
 <pydev_property name="org.python.pydev.PYTHON_PROJECT_INTERPRETER">Default</pydev_property>
 <pydev_pathproperty name="org.python.pydev.PROJECT_EXTERNAL_SOURCE_PATH">
-<path>D:\python\workspaces\develop\xbmcstubs</path>
 <path>/home/demon/Documents/LiClipse Workspace/xbmcstubs</path>
+<path>D:\python\workspaces\develop\Kodistubs</path>
 </pydev_pathproperty>
 </pydev_project>

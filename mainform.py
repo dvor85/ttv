@@ -74,6 +74,30 @@ class ChannelGroups(UserDict):
             for li in self.data.get(groupname).get("channels"):
                 if li.getProperty('name').lower().strip() == name.lower().strip() and li.getProperty('access_user'):
                     return li
+                
+                
+class RotateScreen(threading.Thread):    
+    def __init__(self, img_control, screens):
+        threading.Thread.__init__(self)
+        self.active = False
+        self.img_control = img_control
+        self.screens = screens
+        self.daemon = False
+        
+    def run(self):
+        self.active = True
+        while self.active:
+            for screen in self.screens:
+                if self.active:
+                    self.img_control.setImage(screen['filename'])
+                    for i in range(16):
+                        if self.active:
+                            xbmc.sleep(100)
+                
+    def stop(self):
+        self.active = False
+        self.img_control.setImage('')
+            
             
 
 class WMainForm(xbmcgui.WindowXML):
@@ -88,6 +112,7 @@ class WMainForm(xbmcgui.WindowXML):
     BTN_CLOSE = 101
     BTN_FULLSCREEN = 208
     IMG_SCREEN = 210
+    IMG_LOGO = 1111
     CONTROL_LIST = 50
     PANEL_ADS = 105
     
@@ -133,6 +158,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.hide_window_timer = None
         self.get_epg_timer = None
         self.show_screen_timer = None
+        self.rotate_screen_thr = None
         
         self.initTTV()
         
@@ -199,6 +225,12 @@ class WMainForm(xbmcgui.WindowXML):
         
     
     def onFocus(self, ControlID):
+        if self.rotate_screen_thr:
+            self.rotate_screen_thr.stop()
+        
+        for controlId in (WMainForm.IMG_LOGO, WMainForm.IMG_SCREEN):
+            self.getControl(controlId).setImage('')
+            
         self.showNoEpg()
         if ControlID == WMainForm.CONTROL_LIST:
             if not self.list:
@@ -214,7 +246,7 @@ class WMainForm(xbmcgui.WindowXML):
                 
                 self.showScreen(selItem.getProperty('id'), timeout=0.5)
                 
-                for controlId in (1111, WMainForm.IMG_SCREEN):
+                for controlId in (WMainForm.IMG_LOGO, WMainForm.IMG_SCREEN):
                     self.getControl(controlId).setImage(selItem.getProperty('icon'))
                 
         
@@ -462,14 +494,19 @@ class WMainForm(xbmcgui.WindowXML):
                 return
             
             try:
-                data = defines.GET('http://{0}/v3/translation_screen.php?session={1}&channel_id={2}&typeresult=json&count=1'.format(defines.API_MIRROR, self.session, cdn), cookie=['PHPSESSID=%s' % self.session], trys=10)
+                count_screens = 2
+                data = defines.GET('http://{0}/v3/translation_screen.php?session={1}&channel_id={2}&typeresult=json&count={3}'.format(defines.API_MIRROR, self.session, cdn, count_screens), cookie=['PHPSESSID=%s' % self.session], trys=10)
                 jdata = json.loads(data)
                  
-                if defines.tryStringToInt(jdata.get('success')) != 0:  
-                    img = self.getControl(WMainForm.IMG_SCREEN)                  
-                    img.setImage(jdata['screens'][0]['filename'])
-                log.d('showScreen: %s' % jdata['screens'][0]['filename'])
-                
+                if defines.tryStringToInt(jdata.get('success')) != 0:
+                    if self.rotate_screen_thr:  
+                        self.rotate_screen_thr.stop()
+                        self.rotate_screen_thr.join(0.2)
+                        self.rotate_screen_thr = None
+
+                    self.rotate_screen_thr = RotateScreen(self.getControl(WMainForm.IMG_SCREEN), jdata['screens'])
+                    self.rotate_screen_thr.start()
+                    
             except Exception as e:                
                 log.w('showScreen error: {0}'.format(e))                
             
@@ -949,6 +986,9 @@ class WMainForm(xbmcgui.WindowXML):
             self.get_epg_timer.cancel()
         if self.show_screen_timer:
             self.show_screen_timer.cancel()
+        if self.rotate_screen_thr:
+            self.rotate_screen_thr.stop()    
+        
         xbmcgui.WindowXML.close(self)
         
 

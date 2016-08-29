@@ -72,7 +72,6 @@ class MyPlayer(xbmcgui.WindowXML):
         
         log.d("channel_number = %i" % self.channel_number)
         log.d("selitem_id = %i" % self.parent.selitem_id)    
-        
         self.UpdateEpg(self.li)
         
         self.control_window.setVisible(True)
@@ -104,7 +103,6 @@ class MyPlayer(xbmcgui.WindowXML):
     def UpdateEpg(self, li):
         try:
             log.d('UpdateEpg')
-            self.showNoEpg()
             if not li:
                 raise ValueError('param "li" is not set')
             cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
@@ -115,9 +113,10 @@ class MyPlayer(xbmcgui.WindowXML):
                 self.showEpg(epg_id)
             else:
                 self.parent.getEpg(epg_id, callback=self.showEpg)
-                      
+                                      
         except Exception as e:
             log.w('UpdateEpg error: {0}'.format(e))
+            
             
         
     def showEpg(self, epg_id):        
@@ -141,6 +140,8 @@ class MyPlayer(xbmcgui.WindowXML):
         
         except Exception as e:
             log.e('showEpg error {}'.format(e))
+        
+        self.showNoEpg()
         
             
     def showNoEpg(self):            
