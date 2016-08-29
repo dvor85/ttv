@@ -104,6 +104,7 @@ class MyPlayer(xbmcgui.WindowXML):
     def UpdateEpg(self, li):
         try:
             log.d('UpdateEpg')
+            self.showNoEpg()
             if not li:
                 raise ValueError('param "li" is not set')
             cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
@@ -124,23 +125,25 @@ class MyPlayer(xbmcgui.WindowXML):
             ctime = datetime.datetime.now()
             dt = (ctime - datetime.datetime.utcnow()) - datetime.timedelta(hours=3)            
             curepg = self.parent.getCurEpg(epg_id)
-            
-            for i, ep in enumerate(curepg):
-                try:
-                    ce = self.getControl(MyPlayer.CONTROL_FIRST_EPG_ID + i)
-                    bt = datetime.datetime.fromtimestamp(float(ep['btime']))
-                    et = datetime.datetime.fromtimestamp(float(ep['etime']))
-                    ce.setLabel(u"{0} - {1} {2}".format(bt.strftime("%H:%M"), et.strftime("%H:%M"), ep['name'].replace('&quot;', '"')))
-                    if i == 0:
-                        self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
-                except:
-                    break
-                
-            return True
+            if len(curepg) > 0:
+                for i, ep in enumerate(curepg):
+                    try:
+                        ce = self.getControl(MyPlayer.CONTROL_FIRST_EPG_ID + i)
+                        bt = datetime.datetime.fromtimestamp(float(ep['btime']))
+                        et = datetime.datetime.fromtimestamp(float(ep['etime']))
+                        ce.setLabel(u"{0} - {1} {2}".format(bt.strftime("%H:%M"), et.strftime("%H:%M"), ep['name'].replace('&quot;', '"')))
+                        if i == 0:
+                            self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
+                    except:
+                        break
+                    
+                return True
         
         except Exception as e:
             log.e('showEpg error {}'.format(e))
+        
             
+    def showNoEpg(self):            
         for i in range(99):
             try:
                 ce = self.getControl(MyPlayer.CONTROL_FIRST_EPG_ID + i)                

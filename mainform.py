@@ -113,8 +113,8 @@ class WMainForm(xbmcgui.WindowXML):
         self.channel_groups = ChannelGroups()
         self.seltab = 0
         self.epg = {}
-        self._re_1ttv_epg_text = re.compile('var\s+epg\s*=\s*(?P<e>\[[^\]]+\])')
-        self._re_1ttv_epg_json = re.compile('(?P<k>\w+)\s*:\s*(?P<v>.+[,}])')
+        self._re_1ttv_epg_text = re.compile('var\s+epg\s*=\s*(?P<e>\[.+?\])\s*;.*?</script>', re.DOTALL)
+        self._re_1ttv_epg_json = re.compile('(?P<k>\w+)\s*:\s*(?P<v>.+?[,}])')
         self.archive = []
         self.img_progress = None
         self.txt_progress = None
@@ -199,21 +199,20 @@ class WMainForm(xbmcgui.WindowXML):
         
     
     def onFocus(self, ControlID):
+        self.showNoEpg()
         if ControlID == WMainForm.CONTROL_LIST:
             if not self.list:
                 return
             selItem = self.list.getSelectedItem()
             if selItem and not selItem.getLabel() == '..':
                 epg_id = selItem.getProperty('epg_cdn_id')
-                img = self.getControl(WMainForm.IMG_SCREEN)
-                img.setImage("")
-                
+
                 if self.epg.get(epg_id):
                     self.showEpg(epg_id)
                 else:
-                    self.getEpg(epg_id, timeout=1, callback=self.showEpg)
+                    self.getEpg(epg_id, timeout=0.5, callback=self.showEpg)
                 
-                self.showScreen(selItem.getProperty('id'), timeout=1)
+                self.showScreen(selItem.getProperty('id'), timeout=0.5)
                 
                 for controlId in (1111, WMainForm.IMG_SCREEN):
                     self.getControl(controlId).setImage(selItem.getProperty('icon'))
@@ -387,7 +386,6 @@ class WMainForm(xbmcgui.WindowXML):
             except Exception as e:
                 log.d('getEPG->get_from_url error: {0}'.format(e))
             
-
         if self.get_epg_timer:
             self.get_epg_timer.cancel()
             self.get_epg_timer = None
@@ -426,23 +424,25 @@ class WMainForm(xbmcgui.WindowXML):
                 ctime = datetime.datetime.now()
                 dt = (ctime - datetime.datetime.utcnow()) - datetime.timedelta(hours=3) 
                 curepg = self.getCurEpg(epg_id)
-                                        
-                for i, ep in enumerate(curepg):
-                    try:
-                        ce = self.getControl(WMainForm.LBL_FIRST_EPG + i)
-                        bt = datetime.datetime.fromtimestamp(float(ep['btime']))
-                        et = datetime.datetime.fromtimestamp(float(ep['etime']))
-                        ce.setLabel(u"{0} - {1} {2}".format(bt.strftime("%H:%M"), et.strftime("%H:%M"), ep['name'].replace('&quot;', '"')))
-                        if i == 0:
-                            self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
-                    except:
-                        break
-    
-                return True
+                if len(curepg) > 0:                                        
+                    for i, ep in enumerate(curepg):
+                        try:
+                            ce = self.getControl(WMainForm.LBL_FIRST_EPG + i)
+                            bt = datetime.datetime.fromtimestamp(float(ep['btime']))
+                            et = datetime.datetime.fromtimestamp(float(ep['etime']))
+                            ce.setLabel(u"{0} - {1} {2}".format(bt.strftime("%H:%M"), et.strftime("%H:%M"), ep['name'].replace('&quot;', '"')))
+                            if i == 0:
+                                self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
+                        except:
+                            break
+        
+                    return True
                     
             except Exception as e:
                 log.e('showEpg error {}'.format(e))
-            
+                
+                
+    def showNoEpg(self):            
         for i in range(99):
             try:
                 ce = self.getControl(WMainForm.LBL_FIRST_EPG + i)                
