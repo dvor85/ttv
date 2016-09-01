@@ -3,31 +3,15 @@
 # Writer (c) 2011, Welicobratov K.A., E-mail: 07pov23@gmail.com
 # Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-import sys, os
 import defines
 
 
-if defines.DEBUG:
-    # append pydev remote debugger
-    # Make pydev debugger works for auto reload.
-    try:        
-        sys.path.append(os.path.expanduser('~/liclipse/plugins/org.python.pydev_5.1.2.201606231040/pysrc'))
-        sys.path.append('d:/python/eclipse/plugins/org.python.pydev_4.4.0.201510052309/pysrc')
-        
-        import pydevd  # with the addon script.module.pydevd, only use `import pydevd`
-              
-        pydevd.settrace('localhost', stdoutToServer=True, stderrToServer=True)
-    except:
-        t, v, tb = sys.exc_info()        
-        defines.log.e("{0}:{1}").format(t, v)
-        defines.log.e("For remote debug in eclipse you must append org.python.pydev.pysrc to sys.path.")
-        defines.log.e("Or install script.module.pydevd addon.")
-        defines.log.e("Append it to your PYTHONPATH for code completion.")
-        defines.log.e("CONTINUE WITHOUT DEBUGING")
-        import traceback
-        traceback.print_tb(tb)
-        del tb
-    
+try:
+    if defines.DEBUG:
+        import debug    
+except:
+    pass
+
     
 def checkPort(*args):
     param = args[0]

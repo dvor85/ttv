@@ -105,8 +105,7 @@ class MyPlayer(xbmcgui.WindowXML):
             log.d('UpdateEpg')
             if not li:
                 raise ValueError('param "li" is not set')
-            if li.getProperty('id') != self.li.getProperty('id'):
-                self.showNoEpg()
+            
             cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
             cicon.setImage(li.getProperty('icon'))
             epg_id = li.getProperty('epg_cdn_id')
@@ -114,13 +113,14 @@ class MyPlayer(xbmcgui.WindowXML):
             if self.parent.epg.get(epg_id):
                 self.showEpg(epg_id)
             else:
+                if li.getProperty('id') != self.li.getProperty('id'):
+                    self.showNoEpg()
                 self.parent.getEpg(epg_id, callback=self.showEpg)
                                       
         except Exception as e:
             log.w('UpdateEpg error: {0}'.format(e))
             
             
-        
     def showEpg(self, epg_id):        
         try:
             ctime = datetime.datetime.now()
