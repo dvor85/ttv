@@ -105,6 +105,8 @@ class MyPlayer(xbmcgui.WindowXML):
             log.d('UpdateEpg')
             if not li:
                 raise ValueError('param "li" is not set')
+            if li.getProperty('id') != self.li.getProperty('id'):
+                self.showNoEpg()
             cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
             cicon.setImage(li.getProperty('icon'))
             epg_id = li.getProperty('epg_cdn_id')
