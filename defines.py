@@ -11,6 +11,8 @@ import os
 import time
 from BeautifulSoup import BeautifulSoup
 
+
+
 ADDON = xbmcaddon.Addon()
 ADDON_ID = ADDON.getAddonInfo('id')
 ADDON_ICON = ADDON.getAddonInfo('icon')
@@ -39,8 +41,8 @@ if (skin != None) and (skin != "") and (skin != 'st.anger'):
 closeRequested = threading.Event()
 
 
-class Logger():
-    
+
+class Logger():    
     def __init__(self, tag, minlevel=xbmc.LOGDEBUG):
         self.tag = tag
         self.minlevel = minlevel

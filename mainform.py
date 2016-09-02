@@ -29,6 +29,7 @@ from UserDict import UserDict
 log = defines.Logger('MainForm')
 
 
+
 class ChannelGroups(UserDict):
     def __init__(self):
         self.data = {}
@@ -76,6 +77,7 @@ class ChannelGroups(UserDict):
                     return li
                 
                 
+                
 class RotateScreen(threading.Thread):    
     def __init__(self, img_control, screens):
         threading.Thread.__init__(self)
@@ -98,7 +100,7 @@ class RotateScreen(threading.Thread):
         self.active = False
         self.img_control.setImage('')
             
-            
+
 
 class WMainForm(xbmcgui.WindowXML):
     CANCEL_DIALOG = (9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448,)
@@ -140,6 +142,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.epg = {}
         self._re_1ttv_epg_text = re.compile('var\s+epg\s*=\s*(?P<e>\[.+?\])\s*;.*?</script>', re.DOTALL)
         self._re_1ttv_epg_json = re.compile('(?P<k>\w+)\s*:\s*(?P<v>.+?[,}])')
+        self._re_url_match = re.compile('^(?:https?|ftps?|file)://')
         self.archive = []
         self.img_progress = None
         self.txt_progress = None
@@ -281,7 +284,7 @@ class WMainForm(xbmcgui.WindowXML):
         param = args[0]
 
         log.d('getChannels {0}'.format(param))
-        _re_url_match = re.compile('^(?:https?|ftps?|file)://')
+        
         try:
             if param in ExtChannels.keys():                
                 jdata = ExtChannels[param].get_json()              
@@ -307,21 +310,20 @@ class WMainForm(xbmcgui.WindowXML):
         
         if jdata.get('channels'):
             for ch in jdata['channels']:
-                if not ch["name"]:
+                if not (ch.get("name") or ch.get("id")):
                     continue
-                if not ch['logo']:
-                    ch['logo'] = ''
-                elif not _re_url_match.search(ch['logo']):                    
-                    ch['logo'] = 'http://{0}/uploads/{1}'.format(defines.SITE_MIRROR, ch['logo'])    
+                if ch.get('logo'):
+                    if not self._re_url_match.search(ch['logo']):                    
+                        ch['logo'] = 'http://{0}/uploads/{1}'.format(defines.SITE_MIRROR, ch['logo'])    
                             
-                li = xbmcgui.ListItem(ch["name"], '%s' % ch['id'], ch['logo'], ch['logo'])
+                li = xbmcgui.ListItem(ch["name"], '%s' % ch['id'], ch.get('logo'), ch.get('logo'))
                 li.setProperty('name', ch["name"])
                 li.setProperty('epg_cdn_id', '%s' % ch['epg_id'])
-                li.setProperty('icon', ch['logo'])
+                li.setProperty('icon', ch.get('logo'))
                 li.setProperty("type", "channel")
                 li.setProperty("id", '%s' % ch["id"])
-                li.setProperty("access_translation", '%s' % ch["access_translation"])
-                li.setProperty("access_user", '%s' % ch["access_user"])
+                li.setProperty("access_translation", '%s' % ch.get("access_translation"))
+                li.setProperty("access_user", '%s' % ch.get("access_user"))
                 
                 if param == 'channel':
                     li.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
@@ -356,15 +358,14 @@ class WMainForm(xbmcgui.WindowXML):
         self.archive = []
         
         for ch in jdata['channels']:
-            if not ch["id"]:
+            if not (ch.get("name") or ch.get("id")):
                 continue
-            if not ch["logo"]:
-                ch["logo"] = ""
-            else:
-                ch["logo"] = "http://{0}/uploads/{1}".format(defines.SITE_MIRROR, ch["logo"])
-            li = xbmcgui.ListItem(ch['name'], '%s' % ch["id"], ch["logo"], ch["logo"])
+            if ch.get('logo'):
+                if not self._re_url_match.search(ch['logo']):                    
+                    ch['logo'] = 'http://{0}/uploads/{1}'.format(defines.SITE_MIRROR, ch['logo'])    
+            li = xbmcgui.ListItem(ch['name'], '%s' % ch["id"], ch.get("logo"), ch.get("logo"))
             li.setProperty("epg_cdn_id", '%s' % ch["epg_id"])
-            li.setProperty("icon", ch["logo"])
+            li.setProperty("icon", ch.get("logo"))
             li.setProperty("type", "archive")
             li.setProperty('name', ch['name'])
             self.archive.append(li)
@@ -588,6 +589,11 @@ class WMainForm(xbmcgui.WindowXML):
                 self.first_init = False     
                 self.startChannel()
                
+    
+    def startChannel(self):
+        self.select_channel()
+        self.LoopPlay()
+        
                 
     def select_channel(self, sch='', timeout=0):
         self.channel_number_str = str(sch) if sch != '' else str(self.selitem_id) 
@@ -629,11 +635,6 @@ class WMainForm(xbmcgui.WindowXML):
         self.hide_window_timer.start()
                 
             
-    def startChannel(self):
-        self.select_channel()
-        self.LoopPlay()
-
-
     def onClickChannels(self):
         log.d('onClickChannels')
         self.fillChannels()
@@ -657,10 +658,6 @@ class WMainForm(xbmcgui.WindowXML):
     def LoopPlay(self, *args):  
         while not self.IsCanceled():
             try: 
-#                 if len(args)>0:
-#                     selItem = args[0]
-#                     args = []
-#                 else:
                 selItem = self.list.getListItem(self.selitem_id)
                 
                 if defines.tryStringToInt(selItem.getProperty("access_user")) == 0:
@@ -671,7 +668,6 @@ class WMainForm(xbmcgui.WindowXML):
                         log.d("Трансляция доступна для VIP пользователей")
                     else:
                         log.d("На данный момент трансляция не доступна")
-#                     break
                      
                 buf = xbmcgui.ListItem(selItem.getLabel())
                 buf.setProperty('epg_cdn_id', selItem.getProperty('epg_cdn_id'))
@@ -679,6 +675,7 @@ class WMainForm(xbmcgui.WindowXML):
                 buf.setProperty("type", selItem.getProperty("type"))
                 buf.setProperty("id", selItem.getProperty("id"))
                 buf.setProperty("name", selItem.getProperty("name"))
+                
                 if selItem.getProperty("type") == "archive":
                     self.fillRecords(buf, datetime.datetime.today())                
                     break
@@ -725,7 +722,6 @@ class WMainForm(xbmcgui.WindowXML):
              
             
     def onClick(self, controlID):
-        control = self.getControl(controlID)
         log.d('onClick %s' % controlID)
         if controlID == WMainForm.BTN_CHANNELS_ID: 
             self.onClickChannels()
@@ -751,7 +747,6 @@ class WMainForm(xbmcgui.WindowXML):
             if selItem.getProperty('type') == 'category':
                 self.cur_category = selItem.getProperty("id")
                 self.selitem_id = -1
-#                 self.updateList()
                 self.fillChannels()
                 return
 

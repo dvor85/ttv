@@ -41,6 +41,7 @@ def main():
 #     defines.showNotification('Close plugin')
     del w
 
+
 if __name__ == '__main__':
     main()
     

@@ -20,7 +20,6 @@ class TChannels():
                            'url': ch['url'],
                            'type': 'channel',
                            'logo': ch['img'],
-                           'access_translation': 1,
                            'access_user': 1,
                            'name': title,
                            'epg_id': epg_id}

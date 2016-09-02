@@ -19,12 +19,11 @@ import json
 
 from adswnd import AdsForm
 
-# defines
-DEFAULT_TIMEOUT = 122
+
 
 log = defines.Logger('TSEngine')
 
-# classes
+
 class TSengine(xbmc.Player):
     MODE_TORRENT = 'TORRENT'
     MODE_INFOHASH = 'INFOHASH'
@@ -40,7 +39,6 @@ class TSengine(xbmc.Player):
         self.amalker = False
         self.parent = parent
         self.stream = False
-        # self.playing = False
         self.ace_engine = ''
         self.aceport = 0
         self.port_file = ''
@@ -328,9 +326,9 @@ class TSengine(xbmc.Player):
         a = 0
         try:
             while self.sock_thr.getTSMessage().getType() != msg and not self.sock_thr.error and not self.isCancel():
-                xbmc.sleep(DEFAULT_TIMEOUT)
+                xbmc.sleep(122)
                 if not self.stream: 
-                    xbmc.sleep(DEFAULT_TIMEOUT)
+                    xbmc.sleep(122)
                 a += 1
                 if a >= 120:
                     log.w('AceEngine is freeze')
@@ -552,6 +550,7 @@ class TSengine(xbmc.Player):
             self.sock_thr = None
         self.last_error = None
         xbmc.Player.stop(self)
+        
         
         
 class TSMessage:

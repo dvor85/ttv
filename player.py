@@ -11,14 +11,15 @@ import defines
 import json
 import re
 from ext.table import Channels as ExtChannels
-
 from ts import TSengine as tsengine
-# defines
-CANCEL_DIALOG = (9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448,)
+
 
 log = defines.Logger('MyPlayer')
 
+
+
 class MyPlayer(xbmcgui.WindowXML):
+    CANCEL_DIALOG = (9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448,)
     CONTROL_FIRST_EPG_ID = 109
     CONTROL_PROGRESS_ID = 310
     CONTROL_ICON_ID = 202
@@ -32,6 +33,7 @@ class MyPlayer(xbmcgui.WindowXML):
     DIGIT_BUTTONS = range(58, 68)
     CH_NAME_ID = 399
     DLG_SWITCH_ID = 299
+
 
     def __init__(self, *args, **kwargs):
         log.d('__init__')
@@ -296,7 +298,7 @@ class MyPlayer(xbmcgui.WindowXML):
             
     def onAction(self, action):
         # log.d('Action {0} | ButtonCode {1}'.format(action.getId(), action.getButtonCode()))
-        if action in CANCEL_DIALOG or action.getId() == MyPlayer.ACTION_RBC:
+        if action in MyPlayer.CANCEL_DIALOG or action.getId() == MyPlayer.ACTION_RBC:
             log.d('Close player %s %s' % (action.getId(), action.getButtonCode()))
             self.close()
         elif action.getId() in (3, 4, 5, 6): 

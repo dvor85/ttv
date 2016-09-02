@@ -6,7 +6,10 @@ import defines
 import json
 import xbmc
 
+
+
 log = defines.Logger('FDB')
+
 
 class FDB():
     API_ERROR_INCORRECT = 'incorrect'

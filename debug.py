@@ -1,5 +1,5 @@
-﻿# -*- coding: utf-8 -*-
-import sys,os
+﻿  # -*- coding: utf-8 -*-
+import sys, os
 
 # append pydev remote debugger
 # Make pydev debugger works for auto reload.
