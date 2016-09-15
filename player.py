@@ -6,20 +6,22 @@
 import xbmcgui
 import threading
 import xbmc
-import time
+import time, datetime
 import defines
 import json
-
+import re
+from ext.table import Channels as ExtChannels
 from ts import TSengine as tsengine
-# defines
-CANCEL_DIALOG = (9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448,)
+
 
 log = defines.Logger('MyPlayer')
 
+
+
 class MyPlayer(xbmcgui.WindowXML):
-    CONTROL_EPG_ID = 109
-    CONTROL_NEXT_EPG_ID = 112
-    CONTROL_PROGRESS_ID = 110
+    CANCEL_DIALOG = (9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448,)
+    CONTROL_FIRST_EPG_ID = 109
+    CONTROL_PROGRESS_ID = 310
     CONTROL_ICON_ID = 202
     CONTROL_WINDOW_ID = 203
     CONTROL_BUTTON_PAUSE = 204
@@ -32,6 +34,7 @@ class MyPlayer(xbmcgui.WindowXML):
     CH_NAME_ID = 399
     DLG_SWITCH_ID = 299
 
+
     def __init__(self, *args, **kwargs):
         log.d('__init__')
         self.TSPlayer = None
@@ -39,13 +42,10 @@ class MyPlayer(xbmcgui.WindowXML):
         self.li = None
         self.visible = False        
         self.focusId = MyPlayer.CONTROL_WINDOW_ID
-        self.nextepg_id = 1
-        self.curepg = None
         
         self.select_timer = None
         self.hide_control_timer = None
         self.hide_swinfo_timer = None
-        self.update_epg_lock = threading.Lock()
         
         self.channel_number = 0
         self.channel_number_str = ''
@@ -57,7 +57,8 @@ class MyPlayer(xbmcgui.WindowXML):
     def onInit(self):
         log.d('onInit')
         if not self.li:
-            return        
+            return      
+        self.progress = self.getControl(MyPlayer.CONTROL_PROGRESS_ID)  
         cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
         cicon.setImage(self.li.getProperty('icon'))
         self.control_window = self.getControl(MyPlayer.CONTROL_WINDOW_ID)
@@ -73,8 +74,8 @@ class MyPlayer(xbmcgui.WindowXML):
         
         log.d("channel_number = %i" % self.channel_number)
         log.d("selitem_id = %i" % self.parent.selitem_id)    
+        self.UpdateEpg(self.li)
         
-        defines.MyThread(self.UpdateEpg, self.li).start()
         self.control_window.setVisible(True)
         self.hide_control_window(timeout=5)
         
@@ -101,61 +102,65 @@ class MyPlayer(xbmcgui.WindowXML):
         self.hide_control_timer.start()
         
         
-    def UpdateEpg(self, *args):
-        controlEpg = self.getControl(MyPlayer.CONTROL_EPG_ID)
-        controlEpg1 = self.getControl(MyPlayer.CONTROL_NEXT_EPG_ID)
-        progress = self.getControl(MyPlayer.CONTROL_PROGRESS_ID)
+    def UpdateEpg(self, li):
         try:
-            li = args[0]  
-            with self.update_epg_lock:
-                log.d('UpdateEpg')
-                if not li:
-                    raise ValueError('param "li" is not set')
-                cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
-                cicon.setImage(li.getProperty('icon'))
-                epg_id = li.getProperty('epg_cdn_id')
-                
-                if not self.parent.epg.has_key(epg_id):
-                    self.parent.getEpg(epg_id)
-                if self.parent.epg.has_key(epg_id) and len(self.parent.epg[epg_id]) > 0:
-                    ctime = time.time()
-                    self.curepg = filter(lambda x: (float(x['etime']) > ctime), self.parent.epg[epg_id])
-                    if self.curepg:
-                        bt = float(self.curepg[0]['btime'])
-                        et = float(self.curepg[0]['etime'])
-                        sbt = time.localtime(bt)
-                        sett = time.localtime(et)
-                        progress.setPercent((ctime - bt) * 100 / (et - bt))
-                        controlEpg.setLabel('%.2d:%.2d - %.2d:%.2d %s' % (sbt.tm_hour, sbt.tm_min, sett.tm_hour, sett.tm_min, self.curepg[0]['name']))
-                        self.setNextEpg()
-                        return True
+            log.d('UpdateEpg')
+            if not li:
+                raise ValueError('param "li" is not set')
+            
+            cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
+            cicon.setImage(li.getProperty('icon'))
+            epg_id = li.getProperty('epg_cdn_id')
+            
+            if self.parent.epg.get(epg_id):
+                self.showEpg(epg_id)
+            else:
+                if li.getProperty('id') != self.li.getProperty('id'):
+                    self.showNoEpg()
+                self.parent.getEpg(epg_id, callback=self.showEpg)
+                                      
         except Exception as e:
             log.w('UpdateEpg error: {0}'.format(e))
             
-        controlEpg.setLabel('Нет программы')
-        controlEpg1.setLabel('')
-        progress.setPercent(1)
+            
+    def showEpg(self, epg_id):        
+        try:
+            ctime = datetime.datetime.now()
+            dt = (ctime - datetime.datetime.utcnow()) - datetime.timedelta(hours=3)            
+            curepg = self.parent.getCurEpg(epg_id)
+            if len(curepg) > 0:
+                for i, ep in enumerate(curepg):
+                    try:
+                        ce = self.getControl(MyPlayer.CONTROL_FIRST_EPG_ID + i)
+                        bt = datetime.datetime.fromtimestamp(float(ep['btime']))
+                        et = datetime.datetime.fromtimestamp(float(ep['etime']))
+                        ce.setLabel(u"{0} - {1} {2}".format(bt.strftime("%H:%M"), et.strftime("%H:%M"), ep['name'].replace('&quot;', '"')))
+                        if i == 0:
+                            self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
+                    except:
+                        break
+                    
+                return True
+        
+        except Exception as e:
+            log.e('showEpg error {}'.format(e))
+        
+        self.showNoEpg()
         
             
-    def setNextEpg(self):
-        nextepg = ''
-        if len(self.curepg) > 1:
-            if self.nextepg_id < 1:
-                self.nextepg_id = 1
-                return
-            elif self.nextepg_id >= len(self.curepg):
-                self.nextepg_id = len(self.curepg) - 1
-                return
-                
-            controlEpg1 = self.getControl(112)  
-               
-            sbt = time.localtime(self.curepg[self.nextepg_id]['btime'])
-            sett = time.localtime(self.curepg[self.nextepg_id]['etime'])
-            nextepg = nextepg + '%.2d:%.2d - %.2d:%.2d %s\n' % (sbt.tm_hour, sbt.tm_min, sett.tm_hour, sett.tm_min, self.curepg[self.nextepg_id]['name'])
-                
-        controlEpg1.setLabel(nextepg)         
-               
-
+    def showNoEpg(self):            
+        for i in range(99):
+            try:
+                ce = self.getControl(MyPlayer.CONTROL_FIRST_EPG_ID + i)                
+                if i == 0:
+                    ce.setLabel('Нет программы')
+                else:
+                    ce.setLabel('')
+            except:
+                break
+        self.progress.setPercent(1)
+        
+            
     def Stop(self):
         log('AutoStop')
         # xbmc.executebuiltin('PlayerControl(Stop)')
@@ -172,40 +177,79 @@ class MyPlayer(xbmcgui.WindowXML):
                 log.d('SHOW ADS Window')
                 self.parent.amalkerWnd.show()
                 log.d('END SHOW ADS Window')
-            
+                
 
     def Start(self, li):
+        def get_channel_from_ext():
+            def get_src(url):
+                try:
+                    if url.find('acestream://') > -1:
+                        return url.replace('acestream://', '')
+                    if url.rfind('.acelive') > -1:
+                        return url
+                    http = defines.GET(url, trys=2)
+                    m = re.search('(loadPlayer|loadTorrent)\("(?P<src>[\w/_:.]+)"', http)
+                    return m.group('src')            
+                except Exception as e:
+                    log.w('Start->get_from_ext->get_src error: {0}'.format(e))  
+            
+            for tch in ExtChannels.itervalues():
+                chli = tch.find_by_id(li.getProperty("id"))
+                if not chli:
+                    chli = tch.find_by_title(li.getProperty('name'))
+                if chli:
+                    src = get_src(chli.get('url'))
+                    if src:                             
+                        jdata["success"] = 1
+                        if src.rfind('.acelive') > -1:
+                            jdata["type"] = 'TORRENT'
+                        else:                                
+                            jdata["type"] = 'PID'
+                            
+                        jdata["source"] = src
+                        return jdata
+             
+        def get_channel_from_api():           
+            data = defines.GET("http://{0}/v3/translation_stream.php?session={1}&channel_id={2}&typeresult=json".format(defines.API_MIRROR, self.parent.session, li.getProperty("id")))
+            try:
+                jdata = json.loads(data)
+                return jdata
+            except Exception as e:
+                log.w('Start->get_from_api error: {0}'.format(e))
+                
+        def get_record_from_api():
+            data = defines.GET("http://{0}/v3/arc_stream.php?session={1}&record_id={2}&typeresult=json".format(defines.API_MIRROR, self.parent.session, li.getProperty("id")))
+            try:
+                jdata = json.loads(data)
+                return jdata
+            except Exception as e:
+                log.w('Start->get_record_from_api error: {0}'.format(e))
+                
         log("Start play")       
 
         self.li = li
         self.channel_number = self.parent.selitem_id
         
         self.parent.showStatus("Получение ссылки...")
-        data = None
-        log.d(li.getProperty("type"))
-        log.d(li.getProperty("id"))
+        
         if (li.getProperty("type") == "channel"):
-            data = defines.GET("http://{0}/v3/translation_stream.php?session={1}&channel_id={2}&typeresult=json".format(defines.API_MIRROR, self.parent.session, li.getProperty("id")))
+            jdata = get_channel_from_api()
+                        
+            if not jdata or defines.tryStringToInt(jdata.get("success")) == 0 or not jdata.get("source"):
+                jdata = get_channel_from_ext()
+            
         elif (li.getProperty("type") == "record"):
-            data = defines.GET("http://{0}/v3/arc_stream.php?session={1}&record_id={2}&typeresult=json".format(defines.API_MIRROR, self.parent.session, li.getProperty("id")))
+            jdata = get_record_from_api()
         else:
             msg = "Неизвестный тип контента"
             self.parent.showStatus(msg)
             raise Exception(msg)
             
-        try:
-            jdata = json.loads(data)
-        except Exception as e:
-            log.e('Start error: {0}'.format(e))
-            msg = "Ошибка Torrent-TV.RU"
-            self.parent.showStatus(msg)
-            raise
-        
-        if not jdata["success"] or jdata["success"] == 0 or not jdata["source"]:
+        if not jdata or defines.tryStringToInt(jdata.get("success")) == 0 or not jdata.get("source"):
             msg = "Канал временно не доступен"
-            self.parent.showStatus(msg)            
+            self.parent.showStatus(msg)
             raise Exception(msg)
-        
+
         url = jdata["source"]
         mode = jdata["type"].upper().replace("CONTENTID", "PID")
         self.parent.hideStatus()
@@ -254,7 +298,7 @@ class MyPlayer(xbmcgui.WindowXML):
             
     def onAction(self, action):
         # log.d('Action {0} | ButtonCode {1}'.format(action.getId(), action.getButtonCode()))
-        if action in CANCEL_DIALOG or action.getId() == MyPlayer.ACTION_RBC:
+        if action in MyPlayer.CANCEL_DIALOG or action.getId() == MyPlayer.ACTION_RBC:
             log.d('Close player %s %s' % (action.getId(), action.getButtonCode()))
             self.close()
         elif action.getId() in (3, 4, 5, 6): 
@@ -268,7 +312,7 @@ class MyPlayer(xbmcgui.WindowXML):
             self.swinfo.setVisible(True) 
             li = self.parent.list.getListItem(self.channel_number)                            
             self.chinfo.setLabel(li.getLabel())
-            defines.MyThread(self.UpdateEpg, li).start()
+            self.UpdateEpg(li)
             
             self.run_selected_channel(timeout=5)
             
@@ -286,7 +330,7 @@ class MyPlayer(xbmcgui.WindowXML):
                 li = self.parent.list.getListItem(self.channel_number)                            
                 self.chinfo.setLabel(li.getLabel())
                 self.swinfo.setVisible(True)
-                defines.MyThread(self.UpdateEpg, li).start()
+                self.UpdateEpg(li)
                 
                 self.run_selected_channel(timeout=5) 
         elif action.getId() == 0 and action.getButtonCode() == 61530:
@@ -294,7 +338,7 @@ class MyPlayer(xbmcgui.WindowXML):
             xbmc.sleep(4000)
             xbmc.executebuiltin('Action(Back)')
         else:
-            defines.MyThread(self.UpdateEpg, self.li).start()
+            self.UpdateEpg(self.li)
 
         if not self.visible:            
             if self.focusId == MyPlayer.CONTROL_WINDOW_ID:

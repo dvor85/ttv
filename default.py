@@ -3,32 +3,15 @@
 # Writer (c) 2011, Welicobratov K.A., E-mail: 07pov23@gmail.com
 # Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-import sys
 import defines
 
 
-if defines.DEBUG:
-    # append pydev remote debugger
-    # Make pydev debugger works for auto reload.
-    # Note pydevd module need to be copied in XBMC\system\python\Lib\pysrc
-    # Add "sys.path.append(os.path.normpath(os.path.join(os.path.dirname(__file__), '..')))" to 
-    # special://xbmc/system/python/Lib/pysrc/_pydev_imps/_pydev_pluginbase.py
-    try:        
-        # try:
-        import pysrc.pydevd as pydevd  # with the addon script.module.pydevd, only use `import pydevd`            
-        # except:
-        # import os
-        # sys.path.append(os.path.join(xbmc.translatePath("special://home/addons"), 'script.module.pydevd/lib'))
-        # import pydev
-        # stdoutToServer and stderrToServer redirect stdout and stderr to eclipse console
-        pydevd.settrace('localhost', stdoutToServer=True, stderrToServer=True)
-    except:
-        t, v, tb = sys.exc_info()        
-        defines.log.e("{0}:{1} | For remote debug in eclipse you must add org.python.pydev.debug.pysrc to your PYTHONPATH or install script.module.pydevd addon.".format(t, v))
-        defines.log.e("CONTINUE WITHOUT DEBUGING")
-        import traceback
-        traceback.print_tb(tb)
-        del tb
+try:
+    if defines.DEBUG:
+        import debug    
+except:
+    pass
+
     
 def checkPort(*args):
     param = args[0]
@@ -36,6 +19,7 @@ def checkPort(*args):
         mess = "Порт %s закрыт. Для стабильной работы сервиса и трансляций, настоятельно рекомендуется его открыть." % defines.ADDON.getSetting('outport')
         defines.showNotification(mess)
         defines.log(mess)
+        
         
 def main():
     import mainform 
@@ -56,6 +40,7 @@ def main():
     defines.log('Close plugin')
 #     defines.showNotification('Close plugin')
     del w
+
 
 if __name__ == '__main__':
     main()
