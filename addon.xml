@@ -15,5 +15,6 @@
         <summary>Torrent-TV [COLOR FFFFFF00]PLUS PLUS[/COLOR]</summary>
         <description>Доработанная версия официального плагина Торрент ТВ.</description>
         <platform>all</platform>
+        <forum>http://xbmc.ru/forum/showthread.php?p=76182</forum>
     </extension>
 </addon>
