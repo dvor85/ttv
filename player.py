@@ -45,7 +45,6 @@ class MyPlayer(xbmcgui.WindowXML):
         
         self.select_timer = None
         self.hide_control_timer = None
-        self.hide_swinfo_timer = None
         
         self.channel_number = 0
         self.channel_number_str = ''
@@ -56,7 +55,7 @@ class MyPlayer(xbmcgui.WindowXML):
 
     def onInit(self):
         log.d('onInit')
-        if not self.li:
+        if not (self.li and self.parent):
             return      
         self.progress = self.getControl(MyPlayer.CONTROL_PROGRESS_ID)  
         cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
@@ -66,8 +65,6 @@ class MyPlayer(xbmcgui.WindowXML):
         self.chinfo.setLabel(self.li.getLabel())
         self.swinfo = self.getControl(MyPlayer.DLG_SWITCH_ID)
         self.swinfo.setVisible(False)
-        if not self.parent:
-            return
     
         if not self.select_timer:
             self.init_channel_number()
@@ -92,6 +89,7 @@ class MyPlayer(xbmcgui.WindowXML):
             self.control_window.setVisible(False)
             self.setFocusId(MyPlayer.CONTROL_WINDOW_ID)
             self.focusId = MyPlayer.CONTROL_WINDOW_ID 
+            self.hide_control_timer = None
             
         if self.hide_control_timer:
             self.hide_control_timer.cancel()
@@ -274,6 +272,7 @@ class MyPlayer(xbmcgui.WindowXML):
             self.channel_number = self.parent.selitem_id  
             self.chinfo.setLabel(self.parent.list.getListItem(self.parent.selitem_id).getLabel()) 
             self.channel_number_str = ''
+            self.select_timer = None
         
         if self.select_timer: 
             self.select_timer.cancel() 
@@ -300,7 +299,11 @@ class MyPlayer(xbmcgui.WindowXML):
         # log.d('Action {0} | ButtonCode {1}'.format(action.getId(), action.getButtonCode()))
         if action in MyPlayer.CANCEL_DIALOG or action.getId() == MyPlayer.ACTION_RBC:
             log.d('Close player %s %s' % (action.getId(), action.getButtonCode()))
-            self.close()
+            if self.select_timer:
+                self.channel_number_str = str(self.parent.selitem_id)
+                self.run_selected_channel()
+            else:                
+                self.close()
         elif action.getId() in (3, 4, 5, 6): 
             ############### IF ARROW UP AND DOWN PRESSED - SWITCH CHANNEL ###############
             if action.getId() in (3, 5):
@@ -359,9 +362,7 @@ class MyPlayer(xbmcgui.WindowXML):
     
     def close(self):
         if self.hide_control_timer:
-            self.hide_control_timer.cancel()
-        if self.hide_swinfo_timer:
-            self.hide_swinfo_timer.cancel()
+            self.hide_control_timer.cancel()        
         if self.select_timer:
             self.select_timer.cancel()
         xbmcgui.WindowXML.close(self)

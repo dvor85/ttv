@@ -418,6 +418,7 @@ class WMainForm(xbmcgui.WindowXML):
                     return epg 
             except Exception as e:
                 log.d('getEPG->get_from_url error: {0}'.format(e))
+            self.get_epg_timer = None
             
         if self.get_epg_timer:
             self.get_epg_timer.cancel()
@@ -491,25 +492,24 @@ class WMainForm(xbmcgui.WindowXML):
     def showScreen(self, cdn, timeout=0):
         def show():
             log.d('showScreen')
-            if defines.tryStringToInt(cdn) < 1:
-                return
-            
-            try:
-                count_screens = 2
-                data = defines.GET('http://{0}/v3/translation_screen.php?session={1}&channel_id={2}&typeresult=json&count={3}'.format(defines.API_MIRROR, self.session, cdn, count_screens), cookie=['PHPSESSID=%s' % self.session], trys=10)
-                jdata = json.loads(data)
-                 
-                if defines.tryStringToInt(jdata.get('success')) != 0:
-                    if self.rotate_screen_thr:  
-                        self.rotate_screen_thr.stop()
-                        self.rotate_screen_thr.join(0.2)
-                        self.rotate_screen_thr = None
-
-                    self.rotate_screen_thr = RotateScreen(self.getControl(WMainForm.IMG_SCREEN), jdata['screens'])
-                    self.rotate_screen_thr.start()
-                    
-            except Exception as e:                
-                log.w('showScreen error: {0}'.format(e))                
+            if defines.tryStringToInt(cdn) > 0:             
+                try:
+                    count_screens = 2
+                    data = defines.GET('http://{0}/v3/translation_screen.php?session={1}&channel_id={2}&typeresult=json&count={3}'.format(defines.API_MIRROR, self.session, cdn, count_screens), cookie=['PHPSESSID=%s' % self.session], trys=10)
+                    jdata = json.loads(data)
+                     
+                    if defines.tryStringToInt(jdata.get('success')) != 0:
+                        if self.rotate_screen_thr:  
+                            self.rotate_screen_thr.stop()
+                            self.rotate_screen_thr.join(0.2)
+                            self.rotate_screen_thr = None
+    
+                        self.rotate_screen_thr = RotateScreen(self.getControl(WMainForm.IMG_SCREEN), jdata['screens'])
+                        self.rotate_screen_thr.start()
+                        
+                except Exception as e:                
+                    log.w('showScreen error: {0}'.format(e)) 
+            self.show_screen_timer = None               
             
         if self.show_screen_timer:
             self.show_screen_timer.cancel()
@@ -596,18 +596,23 @@ class WMainForm(xbmcgui.WindowXML):
         
                 
     def select_channel(self, sch='', timeout=0):
-        self.channel_number_str = str(sch) if sch != '' else str(self.selitem_id) 
+        def clear():
+            self.channel_number_str = ''
+            self.select_timer = None
+            
+        if self.channel_number_str == '':
+            self.channel_number_str = str(sch) if sch != '' else str(self.selitem_id) 
         chnum = defines.tryStringToInt(self.channel_number_str)                       
         log('CHANNEL NUMBER IS: %i' % chnum)              
         if 0 < chnum < self.list.size():            
             self.selitem_id = chnum
             self.setFocus(self.list)
-            self.list.selectItem(self.selitem_id)
+            self.list.selectItem(self.selitem_id)          
                 
         if self.select_timer:
             self.select_timer.cancel()
             self.select_timer = None      
-        self.select_timer = threading.Timer(timeout, lambda: setattr(self, 'channel_number_str', ''))
+        self.select_timer = threading.Timer(timeout, clear)
         self.select_timer.name = 'select_channel'
         self.select_timer.daemon = False
         self.select_timer.start()
@@ -624,6 +629,7 @@ class WMainForm(xbmcgui.WindowXML):
             if isPlaying():
                 log.d('hide main window')
                 self.player.Show()
+            self.hide_window_timer = None
         
         if self.hide_window_timer:
             self.hide_window_timer.cancel()
