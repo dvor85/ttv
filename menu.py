@@ -44,12 +44,14 @@ class MenuForm(xbmcgui.WindowXMLDialog):
                 elif c == MenuForm.CMD_DOWN_FAVOURITE:
                     title = 'Опустить'
                 lst.addItem(xbmcgui.ListItem(title, c))
-            lst.setHeight(len(cmds) * 38)
+                
+            self.getControl(999).setHeight(len(cmds) * 40 + 55)
             lst.selectItem(0)
             self.setFocusId(MenuForm.CONTROL_CMD_LIST)
-            log.d('Focus Controld %s' % self.getFocusId())
+            log.d('Focus ControlId %s' % self.getFocusId())
         except Exception, e: 
             log.e("В списке нет комманд %s" % e)
+            self.close()
         
     def onClick(self, controlId):
         log.d('OnClick')
@@ -65,7 +67,7 @@ class MenuForm(xbmcgui.WindowXMLDialog):
 
     def exec_cmd(self, cmd):
         try:
-            if self.parent.user["vip"]:
+            if defines.tryStringToInt(defines.FAVOURITE) == 0 and self.parent.user["vip"]:
                 fdb = favdb.RemoteFDB(self.parent.session)
             else:
                 fdb = favdb.LocalFDB()
@@ -83,6 +85,7 @@ class MenuForm(xbmcgui.WindowXMLDialog):
                 return fdb.up(self.li)
         except Exception as e:
             log.e('Error: {0} in exec_cmd "{1}"'.format(e, cmd))
+            self.close()
                     
 
     def GetResult(self):

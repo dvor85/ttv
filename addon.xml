@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="script.torrent-tv.ru.pp"
        name="Torrent-TV [COLOR FFFFFF00]PLUS PLUS[/COLOR]"
-       version="2.0.1"
+       version="2.0.2"
        provider-name="dvor85">
     <requires>
 		<import addon="xbmc.python" version="2.1.0" />
@@ -15,5 +15,6 @@
         <summary>Torrent-TV [COLOR FFFFFF00]PLUS PLUS[/COLOR]</summary>
         <description>Доработанная версия официального плагина Торрент ТВ.</description>
         <platform>all</platform>
+        <forum>http://xbmc.ru/forum/showthread.php?p=76182</forum>
     </extension>
 </addon>
