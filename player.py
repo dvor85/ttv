@@ -17,7 +17,6 @@ from ts import TSengine as tsengine
 log = defines.Logger('MyPlayer')
 
 
-
 class MyPlayer(xbmcgui.WindowXML):
     CANCEL_DIALOG = (9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448,)
     CONTROL_FIRST_EPG_ID = 109
@@ -51,6 +50,7 @@ class MyPlayer(xbmcgui.WindowXML):
         self.chinfo = None
         self.swinfo = None
         self.control_window = None
+        self._re_source = re.compile('(loadPlayer|loadTorrent)\("(?P<src>[\w/_:.]+)"')
         
 
     def onInit(self):
@@ -183,10 +183,10 @@ class MyPlayer(xbmcgui.WindowXML):
                 try:
                     if url.find('acestream://') > -1:
                         return url.replace('acestream://', '')
-                    if url.rfind('.acelive') > -1:
+                    if url.endswith('.acelive'):
                         return url
                     http = defines.GET(url, trys=2)
-                    m = re.search('(loadPlayer|loadTorrent)\("(?P<src>[\w/_:.]+)"', http)
+                    m = self._re_source.search(http)
                     return m.group('src')            
                 except Exception as e:
                     log.w('Start->get_from_ext->get_src error: {0}'.format(e))  
@@ -199,7 +199,7 @@ class MyPlayer(xbmcgui.WindowXML):
                     src = get_src(chli.get('url'))
                     if src:                             
                         jdata["success"] = 1
-                        if src.rfind('.acelive') > -1:
+                        if src.endswith('.acelive'):
                             jdata["type"] = 'TORRENT'
                         else:                                
                             jdata["type"] = 'PID'
@@ -271,8 +271,8 @@ class MyPlayer(xbmcgui.WindowXML):
                 self.swinfo.setVisible(False)     
             self.channel_number = self.parent.selitem_id  
             self.chinfo.setLabel(self.parent.list.getListItem(self.parent.selitem_id).getLabel()) 
-            self.channel_number_str = ''
-            self.select_timer = None
+            self.channel_number_str = ''            
+            self.select_timer = None    
         
         if self.select_timer: 
             self.select_timer.cancel() 
@@ -296,12 +296,19 @@ class MyPlayer(xbmcgui.WindowXML):
             
             
     def onAction(self, action):
+        def viewEPG(swinfo_visible=True):
+            li = self.parent.list.getListItem(self.channel_number)                            
+            self.chinfo.setLabel(li.getLabel())
+            self.swinfo.setVisible(swinfo_visible)
+            self.UpdateEpg(li)
+        
         # log.d('Action {0} | ButtonCode {1}'.format(action.getId(), action.getButtonCode()))
         if action in MyPlayer.CANCEL_DIALOG or action.getId() == MyPlayer.ACTION_RBC:
             log.d('Close player %s %s' % (action.getId(), action.getButtonCode()))
             if self.select_timer:
                 self.channel_number_str = str(self.parent.selitem_id)
                 self.run_selected_channel()
+                self.UpdateEpg(self.li)
             else:                
                 self.close()
         elif action.getId() in (3, 4, 5, 6): 
@@ -312,10 +319,7 @@ class MyPlayer(xbmcgui.WindowXML):
                 self.dec_channel_number()
                 
             self.channel_number_str = str(self.channel_number)
-            self.swinfo.setVisible(True) 
-            li = self.parent.list.getListItem(self.channel_number)                            
-            self.chinfo.setLabel(li.getLabel())
-            self.UpdateEpg(li)
+            viewEPG()
             
             self.run_selected_channel(timeout=5)
             
@@ -328,12 +332,9 @@ class MyPlayer(xbmcgui.WindowXML):
                 self.channel_number = defines.tryStringToInt(self.channel_number_str) 
                 if not 0 < self.channel_number < self.parent.list.size():   
                     self.channel_number_str = str(digit_pressed) 
-                    self.channel_number = defines.tryStringToInt(self.channel_number_str)                   
+                    self.channel_number = defines.tryStringToInt(self.channel_number_str)                 
                 
-                li = self.parent.list.getListItem(self.channel_number)                            
-                self.chinfo.setLabel(li.getLabel())
-                self.swinfo.setVisible(True)
-                self.UpdateEpg(li)
+                viewEPG()
                 
                 self.run_selected_channel(timeout=5) 
         elif action.getId() == 0 and action.getButtonCode() == 61530:

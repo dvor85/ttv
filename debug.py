@@ -4,8 +4,8 @@ import sys, os
 # append pydev remote debugger
 # Make pydev debugger works for auto reload.
 try:        
-    sys.path.append(os.path.expanduser('~/liclipse/plugins/org.python.pydev_5.1.2.201606231040/pysrc'))
-    sys.path.append('d:/python/LiClipse 3.2.0/plugins/org.python.pydev_5.3.0.201610130747/pysrc')
+    sys.path.append(os.path.expanduser('~/eclipse/plugins/org.python.pydev_5.3.1.201610311318/pysrc'))
+    sys.path.append('d:/python/eclipse/plugins/org.python.pydev_5.3.1.201610311318/pysrc')
     
     import pydevd  # with the addon script.module.pydevd, only use `import pydevd`
           

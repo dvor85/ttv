@@ -390,31 +390,39 @@ class TSengine(xbmc.Player):
 
     
     def showState(self, state):
-        if state.getType() == TSMessage.STATUS and self.parent:
-            _params = state.getParams()
-            if _params.get('main'):
-                try:
-                    _descr = _params['main'].split(';')
-                    if _descr[0] == 'prebuf':
-                        log.d('showState: Пытаюсь показать состояние')
-                        self.parent.showStatus('Пребуферизация %s' % _descr[1])
-                    elif _descr[0] == 'check':
-                        log.d('showState: Проверка %s' % _descr[1])
-                        self.parent.showStatus('Проверка %s' % _descr[1])
-                    elif _descr[0] == 'dl':
-                        self.parent.showInfoStatus('Total:%s DL:%s UL:%s' % (_descr[1], _descr[3], _descr[5]))
-                    elif _descr[0] == 'buf':
-                        self.parent.showInfoStatus('Buf:%s DL:%s UL:%s' % (_descr[1], _descr[5], _descr[7]))
-                    else:
-                        self.parent.showInfoStatus('%s' % _params)
-                except Exception as e:
-                    log.e('showState error: "{0}"'.format(e))
+        try:
+            if state.getType() == TSMessage.STATUS and self.parent:
+                _params = state.getParams()
+                if _params.get('main'):
                     
-        elif state.getType() == TSMessage.EVENT:
-            if state.getParams() == 'getuserdata':
-                self.sendCommand('USERDATA [{"gender": %s}, {"age": %s}]' % (defines.tryStringToInt(defines.GENDER) + 1, defines.tryStringToInt(defines.AGE) + 1))
-        elif state.getType() == TSMessage.ERROR:
-            self.parent.showStatus(state.getParams())
+                        _descr = _params['main'].split(';')
+                        if _descr[0] == 'prebuf':
+                            log.d('showState: Пытаюсь показать состояние')
+                            self.parent.showStatus('Пребуферизация %s' % _descr[1])
+                        elif _descr[0] == 'check':
+                            log.d('showState: Проверка %s' % _descr[1])
+                            self.parent.showStatus('Проверка %s' % _descr[1])
+                        elif _descr[0] == 'dl':
+                            self.parent.showInfoStatus('Total:%s DL:%s UL:%s' % (_descr[1], _descr[3], _descr[5]))
+                        elif _descr[0] == 'buf':
+                            self.parent.showInfoStatus('Buf:%s DL:%s UL:%s' % (_descr[1], _descr[5], _descr[7]))
+                        else:
+                            self.parent.showInfoStatus('%s' % _params)
+                    
+                        
+            elif state.getType() == TSMessage.EVENT:            
+                if state.getParams() == 'getuserdata':
+                    self.sendCommand('USERDATA [{"gender": %s}, {"age": %s}]' % (defines.tryStringToInt(defines.GENDER) + 1, \
+                                                                                 defines.tryStringToInt(defines.AGE) + 1))
+                elif state.getParams().startswith('showdialog'):
+                    _parts = state.getParams().split()
+                    self.parent.showStatus('{0}: {1}'.format(urllib.unquote(_parts[2].split('=')[1]), \
+                                                             urllib.unquote(_parts[1].split('=')[1])))
+            elif state.getType() == TSMessage.ERROR:
+                self.parent.showStatus(state.getParams())
+                
+        except Exception as e:
+            log.e('showState error: "{0}"'.format(e))
             
     
     def play_url_ind(self, index=0, title='', icon=None, thumb=None, torrent=None, mode=None):
