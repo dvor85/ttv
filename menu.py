@@ -9,6 +9,7 @@ import favdb
 
 log = defines.Logger('MenuForm')
 
+
 class MenuForm(xbmcgui.WindowXMLDialog):
     CMD_ADD_FAVOURITE = 'favourite_add'
     CMD_DEL_FAVOURITE = 'favourite_delete'
@@ -16,12 +17,11 @@ class MenuForm(xbmcgui.WindowXMLDialog):
     CMD_UP_FAVOURITE = 'favourite_up'
     CMD_DOWN_FAVOURITE = 'favourite_down'
     CONTROL_CMD_LIST = 301
-    
+
     def __init__(self, *args, **kwargs):
         self.li = None
         self.result = None
         self.parent = None
-        
 
     def onInit(self):
         log.d('OnInit')
@@ -44,15 +44,15 @@ class MenuForm(xbmcgui.WindowXMLDialog):
                 elif c == MenuForm.CMD_DOWN_FAVOURITE:
                     title = 'Опустить'
                 lst.addItem(xbmcgui.ListItem(title, c))
-                
+
             self.getControl(999).setHeight(len(cmds) * 40 + 55)
             lst.selectItem(0)
             self.setFocusId(MenuForm.CONTROL_CMD_LIST)
             log.d('Focus ControlId %s' % self.getFocusId())
-        except Exception, e: 
+        except Exception, e:
             log.e("В списке нет комманд %s" % e)
             self.close()
-        
+
     def onClick(self, controlId):
         log.d('OnClick')
         log.d('ControlID = %s' % controlId)
@@ -61,7 +61,7 @@ class MenuForm(xbmcgui.WindowXMLDialog):
             li = lt.getSelectedItem()
             cmd = li.getLabel2()
             log.d("cmd=%s" % cmd)
-            
+
             self.result = self.exec_cmd(cmd)
             self.close()
 
@@ -71,7 +71,7 @@ class MenuForm(xbmcgui.WindowXMLDialog):
                 fdb = favdb.RemoteFDB(self.parent.session)
             else:
                 fdb = favdb.LocalFDB()
-                
+
             if cmd == MenuForm.CMD_ADD_FAVOURITE:
                 return fdb.add(self.li)
             elif cmd == MenuForm.CMD_DEL_FAVOURITE:
@@ -86,14 +86,8 @@ class MenuForm(xbmcgui.WindowXMLDialog):
         except Exception as e:
             log.e('Error: {0} in exec_cmd "{1}"'.format(e, cmd))
             self.close()
-                    
 
     def GetResult(self):
-        if self.result == True:
-            self.result = 'OK'
-        elif not self.result:
-            self.result = 'FAIL'
-        res = self.result
+        res = 'OK' if self.result else 'FAIL'
         self.result = None
-        return res 
-
+        return res

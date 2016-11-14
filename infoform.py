@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 # Copyright (c) 2010-2011 Torrent-TV.RU
 # Writer (c) 2011, Welicobratov K.A., E-mail: 07pov23@gmail.com
 import xbmcgui
@@ -7,6 +7,7 @@ from BeautifulSoup import BeautifulSoup
 import defines
 
 log = defines.Logger('InfoForm')
+
 
 class InfoForm(xbmcgui.WindowXMLDialog):
     LABEL_USER_LOGIN = 101
@@ -39,12 +40,12 @@ class InfoForm(xbmcgui.WindowXMLDialog):
                 ballanceLabel.setLabel("[COLOR=blue]%sp.[/COLOR]" % self.parent.user["balance"])
             else:
                 ballanceLabel.setLabel("[COLOR=red]%sp.[/COLOR]" % self.parent.user["balance"])
-        
+
         self.portLabel.setLabel("%s (Проверяется)" % self.outport, "Проверка")
 
         thraddr = defines.MyThread(self.getAddr)
         thraddr.start()
-        
+
         thrport = defines.MyThread(self.checkPort, self.outport)
         thrport.start()
 
@@ -58,9 +59,8 @@ class InfoForm(xbmcgui.WindowXMLDialog):
         addr = beautifulSoup.find('big', attrs={'id': 'd_clip_button'})
         addr = addr.string
         self.addrLabel.setLabel(addr)
-        
+
         log("InfoForm адрес получен")
-        
 
     def checkPort(self, *args):
         port = args[0]

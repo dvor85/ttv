@@ -1,11 +1,10 @@
-﻿  # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 # Writer (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 import os
 import defines
 import json
 import xbmc
-
 
 
 log = defines.Logger('FDB')
@@ -16,54 +15,47 @@ class FDB():
     API_ERROR_NOCONNECT = 'noconnect'
     API_ERROR_ALREADY = 'already'
     API_ERROR_NOPARAM = 'noparam'
-    API_ERROR_NOFAVOURITE = 'nofavourite' 
-    
+    API_ERROR_NOFAVOURITE = 'nofavourite'
+
     def __init__(self):
         self.channels = []
-        
-        
+
     def get(self):
         pass
-    
-    
+
     def add(self, li):
         pass
-    
-    
+
     def save(self):
         pass
-    
-    
+
     def get_json(self):
         pass
-    
-    
+
     def delete(self, li):
         chid = defines.tryStringToInt(li.getProperty('id'))
         log.d('delete channel id={0}'.format(chid))
         k = self.find(chid)
-        if not k is None:            
+        if k is not None:
             if not self.channels:
                 self.get()
             if self.channels:
                 del(self.channels[k])
                 return self.save()
         return FDB.API_ERROR_NOFAVOURITE
-            
-    
+
     def moveTo(self, li, to_id):
         to_id -= 1
-        chid = defines.tryStringToInt(li.getProperty('id'))        
+        chid = defines.tryStringToInt(li.getProperty('id'))
         if not self.channels:
             self.get()
         if self.channels and to_id < len(self.channels):
             k = self.find(chid)
             log.d('moveTo channel from {0} to {1}'.format(k, to_id))
             return self.swapTo(k, to_id)
-        
+
         return FDB.API_ERROR_NOPARAM
-        
-    
+
     def find(self, chid):
         log.d('find channel by id={0}'.format(chid))
         if not self.channels:
@@ -72,8 +64,7 @@ class FDB():
             for i, ch in enumerate(self.channels):
                 if ch['id'] == chid:
                     return i
-                
-                
+
     def swap(self, i1, i2):
         log.d('swap channels with indexes={0},{1}'.format(i1, i2))
         try:
@@ -84,27 +75,23 @@ class FDB():
             log.w(e)
             return
         return True
-    
-    
+
     def swapTo(self, from_id, to_id):
         sign = cmp(to_id - from_id, 0)
         for i in range(from_id, to_id, sign):
             if not self.swap(i, i + sign):
                 break
         return self.save()
-    
-    
+
     def down(self, li):
         chid = defines.tryStringToInt(li.getProperty('id'))
-        to_id = self.find(chid) + 1   
+        to_id = self.find(chid) + 1
         return self.moveTo(li, to_id + 1)
-        
-    
+
     def up(self, li):
-        chid = defines.tryStringToInt(li.getProperty('id'))  
-        to_id = self.find(chid) + 1 
+        chid = defines.tryStringToInt(li.getProperty('id'))
+        to_id = self.find(chid) + 1
         return self.moveTo(li, to_id - 1)
-    
 
 
 class LocalFDB(FDB):
@@ -113,19 +100,17 @@ class LocalFDB(FDB):
         FDB.__init__(self)
         log.d('init LocalFDB')
         self.DB = os.path.join(defines.DATA_PATH, 'favdb.json')
-        
-        
+
     def get(self):
         log.d('get channels')
         if os.path.exists(self.DB):
             with open(self.DB, 'r') as fp:
                 try:
-                    self.channels = json.load(fp)                    
+                    self.channels = json.load(fp)
                 except Exception as e:
                     log.w('get error: {0}'.format(e))
         return self.channels
-    
-    
+
     def get_json(self):
         if not self.channels:
             self.get()
@@ -133,8 +118,7 @@ class LocalFDB(FDB):
             return {'channels': self.channels, 'success': 1}
         else:
             return {'channels': [], 'success': 0, 'error': 'Error by loading local channels'}
-            
-                
+
     def save(self, obj=None):
         log.d('save channels')
         try:
@@ -147,8 +131,7 @@ class LocalFDB(FDB):
         except Exception as e:
             log.w('save error: {0}'.format(e))
             return FDB.API_ERROR_NOCONNECT
-            
-    
+
     def add(self, li):
         chid = defines.tryStringToInt(li.getProperty('id'))
         log.d('add channels {0}'.format(chid))
@@ -159,25 +142,23 @@ class LocalFDB(FDB):
                    'access_user': defines.tryStringToInt(li.getProperty('access_user')),
                    'name': li.getProperty('name'),
                    'epg_id': li.getProperty('epg_cdn_id')}
-        
+
         if self.find(chid) is None:
             self.channels.append(channel)
             return self.save()
-                
+
         return FDB.API_ERROR_ALREADY
 
-    
-            
+
 class RemoteFDB(FDB):
-    
+
     def __init__(self, session):
         FDB.__init__(self)
         log.d('init RemoteFDB')
         self.session = session
         self.cookie = []
-        
-        
-    def get(self):        
+
+    def get(self):
         try:
             jdata = self.get_json()
             if defines.tryStringToInt(jdata['success']) != 0:
@@ -189,30 +170,28 @@ class RemoteFDB(FDB):
         except Exception as e:
             log.e('get error: {0}'.format(e))
         return self.channels
-    
-    
+
     def get_json(self):
         try:
-            data = defines.GET('http://{0}/v3/translation_list.php?session={1}&type={2}&typeresult=json'.format(defines.API_MIRROR, self.session, 'favourite'), cookie=['PHPSESSID=%s' % self.session], trys=10)
+            data = defines.GET('http://{0}/v3/translation_list.php?session={1}&type={2}&typeresult=json'.format(
+                defines.API_MIRROR, self.session, 'favourite'), cookie=['PHPSESSID=%s' % self.session], trys=10)
             jdata = json.loads(data)
             return jdata
         except Exception as e:
             log.e('get_json error: {0}'.format(e))
-        
-        
+
     def add(self, li):
         chid = defines.tryStringToInt(li.getProperty('id'))
         log.d('add channels {0}'.format(chid))
-          
+
         if self.find(chid) is None:
             channel = {'id': chid,
-                       'pos': len(self.channels)} 
+                       'pos': len(self.channels)}
             self.channels.append(channel)
             return self.save()
 
         return FDB.API_ERROR_ALREADY
-    
-        
+
     def swap(self, i1, i2):
         log.d('swap channels with indexes={0},{1}'.format(i1, i2))
         try:
@@ -224,12 +203,12 @@ class RemoteFDB(FDB):
             return
         return True
 
-        
     def __exec_cmd(self, li, cmd):
         log.d('exec_cmd')
         try:
             channel_id = li.getProperty('id')
-            data = defines.GET('http://{0}/v3/{1}.php?session={2}&channel_id={3}&typeresult=json'.format(defines.API_MIRROR, self.session, channel_id), cookie=['PHPSESSID=%s' % self.session], trys=10)
+            data = defines.GET('http://{0}/v3/{1}.php?session={2}&channel_id={3}&typeresult=json'.format(
+                defines.API_MIRROR, self.session, channel_id), cookie=['PHPSESSID=%s' % self.session], trys=10)
             jdata = json.loads(data)
             if defines.tryStringToInt(jdata['success']) == 0:
                 return jdata.get('error')
@@ -238,28 +217,26 @@ class RemoteFDB(FDB):
             log.e(msg)
             return FDB.API_ERROR_NOCONNECT
         return True
-    
 
     def down(self, li):
         return self.__exec_cmd(li, 'favourite_down')
-    
-    
+
     def up(self, li):
         return self.__exec_cmd(li, 'favourite_up')
-    
-    
+
     def delete(self, li):
         return self.__exec_cmd(li, 'favourite_delete')
-    
-        
+
     def __post_to_site(self, target, jdata):
         try:
-            import urllib, urllib2
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.99 Safari/537.36',
+            import urllib
+            import urllib2
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) \
+                                      Chrome/45.0.2454.99 Safari/537.36',
                        'Content-type': 'application/x-www-form-urlencoded',
                        'Accept-Encoding': 'gzip, deflate',
-            }
-            
+                       }
+
             if len(self.cookie) == 0:
                 req = urllib2.Request('http://{0}/banhammer/pid'.format(defines.SITE_MIRROR), headers=headers)
                 resp = urllib2.urlopen(req, timeout=6)
@@ -267,14 +244,15 @@ class RemoteFDB(FDB):
                     self.cookie.append('BHC={0}; path=/;'.format(resp.headers['X-BH-Token']))
                 finally:
                     resp.close()
-                
+
                 authdata = {
-                    'email' : defines.ADDON.getSetting('login'),
-                    'password' : defines.ADDON.getSetting('password'),
-                    'remember' : 1,
-                    'enter' : 'enter'
+                    'email': defines.ADDON.getSetting('login'),
+                    'password': defines.ADDON.getSetting('password'),
+                    'remember': 1,
+                    'enter': 'enter'
                 }
-                req = urllib2.Request('http://{0}/auth.php'.format(defines.SITE_MIRROR), data=urllib.urlencode(authdata), headers=headers)
+                req = urllib2.Request(
+                    'http://{0}/auth.php'.format(defines.SITE_MIRROR), data=urllib.urlencode(authdata), headers=headers)
                 for cookie in self.cookie:
                     req.add_header('Cookie', cookie)
                 resp = urllib2.urlopen(req, timeout=6)
@@ -285,8 +263,7 @@ class RemoteFDB(FDB):
                             self.cookie.append(keyval[1].strip())
                 finally:
                     resp.close()
-                # self.cookie.append(resp.headers['Set-Cookie'].split(";")[0])
-            
+
             headers.pop('Accept-Encoding')
             req = urllib2.Request(target, data='ch={0}'.format(urllib2.quote(jdata)), headers=headers)
             for cookie in self.cookie:
@@ -299,8 +276,7 @@ class RemoteFDB(FDB):
         except Exception as e:
             self.cookie = []
             log.e('ERROR: {0} on post query to {1}'.format(e, target))
-            
-    
+
     def save(self):
         if self.channels:
             jdata = json.dumps(self.channels)
@@ -311,7 +287,7 @@ class RemoteFDB(FDB):
                     jdata = json.loads(data)
                     if defines.tryStringToInt(jdata['success']) == 1:
                         return True
-                    
+
                 except Exception as e:
                     log.e('save error: {0}'.format(e))
                     self.cookie = []
@@ -319,8 +295,6 @@ class RemoteFDB(FDB):
                         xbmc.sleep(900)
                     else:
                         break
-            
+
             self.channels = None
             return FDB.API_ERROR_NOCONNECT
- 
-        

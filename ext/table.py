@@ -1,4 +1,4 @@
-﻿  # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 try:
     from collections import OrderedDict
@@ -7,11 +7,9 @@ except ImportError:
 
 import tchannels
 import onettvnet
-import televizorhd
-import aceliveChannels
 
 Channels = OrderedDict((
-            ('1ttv.net', tchannels.TChannels(onettvnet.Channels)),
-#             ('aceliveChannels', tchannels.TChannels(aceliveChannels.Channels)),
-#             ('televizorhd', tchannels.TChannels(televizorhd.Channels)),
-            ))
+    ('1ttv.net', tchannels.TChannels(onettvnet.Channels)),
+    #             ('aceliveChannels', tchannels.TChannels(aceliveChannels.Channels)),
+    #             ('televizorhd', tchannels.TChannels(televizorhd.Channels)),
+))
