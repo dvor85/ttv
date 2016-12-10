@@ -46,6 +46,7 @@ class MyPlayer(xbmcgui.WindowXML):
 
         self.channel_number = 0
         self.channel_number_str = ''
+        self.progress = None
         self.chinfo = None
         self.swinfo = None
         self.control_window = None
@@ -128,7 +129,7 @@ class MyPlayer(xbmcgui.WindowXML):
                         et = datetime.datetime.fromtimestamp(float(ep['etime']))
                         ce.setLabel(u"{0} - {1} {2}".format(bt.strftime("%H:%M"),
                                                             et.strftime("%H:%M"), ep['name'].replace('&quot;', '"')))
-                        if i == 0:
+                        if self.progress and i == 0:
                             self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
                     except:
                         break
@@ -150,7 +151,8 @@ class MyPlayer(xbmcgui.WindowXML):
                     ce.setLabel('')
             except:
                 break
-        self.progress.setPercent(1)
+        if self.progress:
+            self.progress.setPercent(1)
 
     def Stop(self):
         log('AutoStop')

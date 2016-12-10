@@ -143,6 +143,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.archive = []
         self.img_progress = None
         self.txt_progress = None
+        self.progress = None
         self.list = None
         self.player = MyPlayer("player.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
         self.player.parent = self
@@ -465,7 +466,7 @@ class WMainForm(xbmcgui.WindowXML):
                             et = datetime.datetime.fromtimestamp(float(ep['etime']))
                             ce.setLabel(u"{0} - {1} {2}".format(
                                 bt.strftime("%H:%M"), et.strftime("%H:%M"), ep['name'].replace('&quot;', '"')))
-                            if i == 0:
+                            if self.progress and i == 0:
                                 self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
                         except:
                             break
@@ -485,7 +486,8 @@ class WMainForm(xbmcgui.WindowXML):
                     ce.setLabel('')
             except:
                 break
-        self.progress.setPercent(1)
+        if self.progress:
+            self.progress.setPercent(1)
 
     def showScreen(self, cdn, timeout=0):
         def show():
