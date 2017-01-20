@@ -5,6 +5,7 @@
 
 import xbmcgui
 import defines
+import utils
 import favdb
 
 log = defines.Logger('MenuForm')
@@ -67,7 +68,7 @@ class MenuForm(xbmcgui.WindowXMLDialog):
 
     def exec_cmd(self, cmd):
         try:
-            if defines.tryStringToInt(defines.FAVOURITE) == 0 and self.parent.user["vip"]:
+            if utils.str2int(defines.FAVOURITE) == 0 and self.parent.user["vip"]:
                 fdb = favdb.RemoteFDB(self.parent.session)
             else:
                 fdb = favdb.LocalFDB()

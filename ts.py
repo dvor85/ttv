@@ -15,6 +15,7 @@ import random
 import urllib
 import copy
 import defines
+import utils
 import json
 
 
@@ -64,7 +65,7 @@ class TSengine(xbmc.Player):
 
         if self.aceport == 0:
             if defines.ADDON.getSetting('port'):
-                self.aceport = defines.tryStringToInt(defines.ADDON.getSetting('port'))
+                self.aceport = utils.str2int(defines.ADDON.getSetting('port'))
             else:
                 self.aceport = 62062
 
@@ -123,11 +124,11 @@ class TSengine(xbmc.Player):
         t = None
         try:
             t = _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, 'Software\\ACEStream')  # @UndefinedVariable
-            return _winreg.QueryValueEx(t, 'EnginePath')[0]  # @UndefinedVariable
+            return utils.true_enc(_winreg.QueryValueEx(t, 'EnginePath')[0])  # @UndefinedVariable
 
         except Exception as e:
             log.e('getAceEngine_exe error: %s' % e)
-            return ''
+            return u''
         finally:
             if t:
                 _winreg.CloseKey(t)  # @UndefinedVariable
@@ -137,7 +138,7 @@ class TSengine(xbmc.Player):
         for i in range(15):
             if os.path.exists(self.port_file):
                 with open(self.port_file, 'rb') as gf:
-                    return defines.tryStringToInt(gf.read())
+                    return utils.str2int(gf.read())
             else:
                 self.parent.showStatus("Запуск AceEngine ({0})".format(i))
                 if not self.isCancel():
@@ -162,7 +163,7 @@ class TSengine(xbmc.Player):
                     if not os.path.exists(self.port_file):
                         self.parent.showStatus("Запуск AceEngine")
 
-                        p = subprocess.Popen([self.ace_engine] + acestream_params)
+                        p = subprocess.Popen([utils.fs_enc(self.ace_engine)] + acestream_params)
                         log.d('pid = {0}'.format(p.pid))
 
                         self.aceport = self.getWinPort()
@@ -194,7 +195,10 @@ class TSengine(xbmc.Player):
 
     def get_key(self, key):
         try:
-            return defines.GET("http://{0}/xbmc_get_key.php?key={1}".format(defines.API_MIRROR, key), trys=2)
+            r = defines.request("http://{url}/xbmc_get_key.php".format(url=defines.API_MIRROR),
+                                params={'key': key})
+            r.raise_for_status()
+            return r.text
         except:
             import hashlib
             pkey = 'n51LvQoTlJzNGaFxseRK-uvnvX-sD4Vm5Axwmc4UcoD-jruxmKsuJaH0eVgE'
@@ -251,7 +255,7 @@ class TSengine(xbmc.Player):
                     self.Wait(TSMessage.AUTH)
                     msg = self.sock_thr.getTSMessage()
                     if msg.getType() == TSMessage.AUTH:
-                        if defines.tryStringToInt(msg.getParams()) == 0:
+                        if utils.str2int(msg.getParams()) == 0:
                             log.w('Пользователь не зарегистрирован')
                     else:
                         raise IOError('Incorrect msg from AceEngine')
@@ -381,8 +385,8 @@ class TSengine(xbmc.Player):
 
             elif state.getType() == TSMessage.EVENT:
                 if state.getParams() == 'getuserdata':
-                    self.sendCommand('USERDATA [{"gender": %s}, {"age": %s}]' % (defines.tryStringToInt(defines.GENDER) + 1,
-                                                                                 defines.tryStringToInt(defines.AGE) + 1))
+                    self.sendCommand('USERDATA [{"gender": %s}, {"age": %s}]' % (utils.str2int(defines.GENDER) + 1,
+                                                                                 utils.str2int(defines.AGE) + 1))
                 elif state.getParams().startswith('showdialog'):
                     _parts = state.getParams().split()
                     self.parent.showStatus('{0}: {1}'.format(urllib.unquote(_parts[2].split('=')[1]),

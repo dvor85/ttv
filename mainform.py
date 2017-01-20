@@ -22,6 +22,7 @@ import uuid
 import favdb
 import json
 import re
+import utils
 from UserDict import UserDict
 
 
@@ -164,11 +165,12 @@ class WMainForm(xbmcgui.WindowXML):
         self.initTTV()
 
     def initTTV(self):
-        data = defines.GET(
-            'http://{0}/v3/version.php?application=xbmc&version={1}'.format(defines.API_MIRROR, defines.TTV_VERSION))
         try:
-            jdata = json.loads(data)
-            if defines.tryStringToInt(jdata.get('success')) == 0:
+            params = dict(application='xbmc', version=defines.TTV_VERSION)
+            r = defines.request('http://{url}/v3/version.php'.format(url=defines.API_MIRROR),
+                                params=params)
+            jdata = r.json()
+            if utils.str2int(jdata.get('success')) == 0:
                 raise Exception(jdata.get('error'))
 #             raise Exception('Test')
         except Exception as e:
@@ -177,7 +179,7 @@ class WMainForm(xbmcgui.WindowXML):
             defines.showNotification(msg, xbmcgui.NOTIFICATION_ERROR)
             self.close()
             return
-        if defines.tryStringToInt(jdata['support']) == 0:
+        if utils.str2int(jdata['support']) == 0:
             self.showDialog("Текущая версия приложения (%s) не поддерживается. Последняя версия %s " % (
                 defines.TTV_VERSION, jdata['last_version'].encode('utf-8')))
             self.close()
@@ -189,12 +191,20 @@ class WMainForm(xbmcgui.WindowXML):
             guid = str(uuid.uuid1())
             defines.ADDON.setSetting("uuid", guid)
         guid = guid.replace('-', '')
-        data = defines.GET('http://{0}/v3/auth.php?username={1}&password={2}&typeresult=json&application=xbmc&guid={3}'.format(
-            defines.API_MIRROR, defines.ADDON.getSetting('login'), defines.ADDON.getSetting('password'), guid))
+
         try:
-            jdata = json.loads(data)
-            if defines.tryStringToInt(jdata.get('success')) == 0:
-                raise Exception(jdata.get('error'))
+            params = dict(
+                username=defines.ADDON.getSetting('login'),
+                password=defines.ADDON.getSetting('password'),
+                typeresult='json',
+                application='xbmc',
+                guid=guid
+            )
+            r = defines.request('http://{url}/v3/auth.php'.format(url=defines.API_MIRROR),
+                                params=params)
+            jdata = r.json()
+            if utils.str2int(jdata.get('success')) == 0:
+                log.e(Exception("Auth error: ".format(jdata.get('error'))))
         except Exception as e:
             log.e('onInit error: {0}'.format(e))
             msg = 'Ошибка Torrent-TV.RU'
@@ -263,11 +273,11 @@ class WMainForm(xbmcgui.WindowXML):
         if self.selitem_id == '':
             self.selitem_id = -1
         else:
-            self.selitem_id = defines.tryStringToInt(self.selitem_id)
+            self.selitem_id = utils.str2int(self.selitem_id)
 
     def getFavourites(self):
         try:
-            if defines.tryStringToInt(defines.FAVOURITE) == 0 and self.user["vip"]:
+            if utils.str2int(defines.FAVOURITE) == 0 and self.user["vip"]:
                 jdata = favdb.RemoteFDB(self.session).get_json()
                 if self.first_init and jdata and len(jdata['channels']) > 0:
                     favdb.LocalFDB().save(jdata['channels'])
@@ -290,12 +300,18 @@ class WMainForm(xbmcgui.WindowXML):
             elif param == 'favourite':
                 jdata = self.getFavourites()
             else:
-                data = defines.GET('http://{0}/v3/translation_list.php?session={1}&type={2}&typeresult=json'.format(
-                    defines.API_MIRROR, self.session, param), cookie=['PHPSESSID=%s' % self.session], trys=10)
-                jdata = json.loads(data)
+                params = dict(
+                    session=self.session,
+                    type=param,
+                    typeresult='json')
+                r = defines.request('http://{url}/v3/translation_list.php'.format(url=defines.API_MIRROR),
+                                    params=params, cookies={'PHPSESSID': self.session})
 
-            if defines.tryStringToInt(jdata.get('success')) == 0:
+                jdata = r.json()
+
+            if utils.str2int(jdata.get('success')) == 0:
                 raise Exception(jdata.get('error'))
+
         except Exception as e:
             log.e('getChannels error: {0}'.format(e))
             msg = "Ошибка Torrent-TV.RU"
@@ -346,10 +362,14 @@ class WMainForm(xbmcgui.WindowXML):
     def getArcChannels(self, *args):
         log.d('getArcChannels')
         try:
-            data = defines.GET('http://{0}/v3/arc_list.php?session={1}&typeresult=json'.format(
-                defines.API_MIRROR, self.session), cookie=['PHPSESSID=%s' % self.session], trys=10)
-            jdata = json.loads(data)
-            if defines.tryStringToInt(jdata.get('success')) == 0:
+            params = dict(
+                session=self.session,
+                typeresult='json')
+            r = defines.request('http://{url}/v3/arc_list.php'.format(url=defines.API_MIRROR),
+                                params=params, cookies={'PHPSESSID': self.session})
+
+            jdata = r.json()
+            if utils.str2int(jdata.get('success')) == 0:
                 raise Exception(jdata.get('error'))
         except Exception as e:
             log.e('getArcChannels error: {0}'.format(e))
@@ -399,10 +419,15 @@ class WMainForm(xbmcgui.WindowXML):
 
         def get_from_api():
             try:
-                data = defines.GET('http://{0}/v3/translation_epg.php?session={1}&epg_id={2}&typeresult=json'.format(
-                    defines.API_MIRROR, self.session, epg_id), cookie=['PHPSESSID=%s' % self.session], trys=1)
-                jdata = json.loads(data)
-                if defines.tryStringToInt(jdata.get('success')) != 0:
+                params = dict(
+                    session=self.session,
+                    epg_id=epg_id,
+                    typeresult='json')
+                r = defines.request('http://{url}/v3/translation_epg.php'.format(url=defines.API_MIRROR),
+                                    params=params, cookies={'PHPSESSID': self.session})
+
+                jdata = r.json()
+                if utils.str2int(jdata.get('success')) != 0:
                     return jdata['data']
 
             except Exception as e:
@@ -413,8 +438,8 @@ class WMainForm(xbmcgui.WindowXML):
                 for tch in ExtChannels.itervalues():
                     chli = tch.find_by_id(chid)
                 if chli:
-                    http = defines.GET(chli.get('url'), trys=1)
-                    m = self._re_1ttv_epg_text.search(http)
+                    r = defines.request(chli.get('url'))
+                    m = self._re_1ttv_epg_text.search(r.content)
                     epgtext = self._re_1ttv_epg_json.sub('"\g<k>":\g<v>', m.group('e'))
                     epg = json.loads(epgtext)
                     return epg
@@ -492,16 +517,19 @@ class WMainForm(xbmcgui.WindowXML):
     def showScreen(self, cdn, timeout=0):
         def show():
             log.d('showScreen')
-            if defines.tryStringToInt(cdn) > 0:
+            if utils.str2int(cdn) > 0:
                 try:
-                    count_screens = 2
-                    data = defines.GET(
-                        'http://{0}/v3/translation_screen.php?session={1}&channel_id={2}&typeresult=json&count={3}'.format(
-                            defines.API_MIRROR, self.session, cdn, count_screens),
-                        cookie=['PHPSESSID=%s' % self.session], trys=10)
-                    jdata = json.loads(data)
+                    params = dict(
+                        session=self.session,
+                        channel_id=cdn,
+                        count=2,
+                        typeresult='json')
+                    r = defines.request('http://{0}/v3/translation_screen.php'.format(url=defines.API_MIRROR),
+                                        params=params, cookies={'PHPSESSID': self.session})
 
-                    if defines.tryStringToInt(jdata.get('success')) != 0:
+                    jdata = r.json()
+
+                    if utils.str2int(jdata.get('success')) != 0:
                         if self.rotate_screen_thr:
                             self.rotate_screen_thr.stop()
                             self.rotate_screen_thr.join(0.2)
@@ -605,7 +633,7 @@ class WMainForm(xbmcgui.WindowXML):
         if self.channel_number_str == '':
             self.channel_number_str = str(
                 sch) if sch != '' else str(self.selitem_id)
-        chnum = defines.tryStringToInt(self.channel_number_str)
+        chnum = utils.str2int(self.channel_number_str)
         log('CHANNEL NUMBER IS: %i' % chnum)
         if 0 < chnum < self.list.size():
             self.selitem_id = chnum
@@ -665,7 +693,7 @@ class WMainForm(xbmcgui.WindowXML):
             try:
                 selItem = self.list.getListItem(self.selitem_id)
 
-                if defines.tryStringToInt(selItem.getProperty("access_user")) == 0:
+                if utils.str2int(selItem.getProperty("access_user")) == 0:
                     access = selItem.getProperty("access_translation")
                     if access == "registred":
                         log.d(
@@ -894,7 +922,7 @@ class WMainForm(xbmcgui.WindowXML):
             self.list.addItem(li)
             for i, ch in enumerate(self.channel_groups.getChannels(self.cur_category)):
                 chname = "{0}. {1}".format(i + 1, ch.getProperty('name'))
-                if defines.tryStringToInt(ch.getProperty("access_user")) == 0:
+                if utils.str2int(ch.getProperty("access_user")) == 0:
                     chname = "[COLOR FF646464]%s[/COLOR]" % chname
                 ch.setLabel(chname)
                 self.list.addItem(ch)
@@ -947,11 +975,16 @@ class WMainForm(xbmcgui.WindowXML):
         self.list.addItem(const_li)
 
         try:
-            data = defines.GET("http://{0}/v3/arc_records.php?session={1}&date={2}-{3}-{4}&epg_id={5}&typeresult=json".format(
-                defines.API_MIRROR, self.session, date.day, date.month, date.year, li.getProperty("epg_cdn_id")),
-                cookie=['PHPSESSID=%s' % self.session], trys=10)
-            jdata = json.loads(data)
-            if defines.tryStringToInt(jdata.get('success')) == 0:
+            params = dict(
+                session=self.session,
+                date='{0}-{1}-{2}'.format(date.day, date.month, date.year),
+                epg_id=li.getProperty("epg_cdn_id"),
+                typeresult='json')
+            r = defines.request("http://{url}/v3/arc_records.php".format(url=defines.API_MIRROR),
+                                params=params, cookies={'PHPSESSID': self.session})
+            r.raise_for_status()
+            jdata = r.json()
+            if utils.str2int(jdata.get('success')) == 0:
                 raise Exception(jdata.get("error"))
 
             for rec in jdata["records"]:

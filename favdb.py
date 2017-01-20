@@ -5,6 +5,7 @@ import os
 import defines
 import json
 import xbmc
+import utils
 
 
 log = defines.Logger('FDB')
@@ -33,7 +34,7 @@ class FDB():
         pass
 
     def delete(self, li):
-        chid = defines.tryStringToInt(li.getProperty('id'))
+        chid = utils.str2int(li.getProperty('id'))
         log.d('delete channel id={0}'.format(chid))
         k = self.find(chid)
         if k is not None:
@@ -46,7 +47,7 @@ class FDB():
 
     def moveTo(self, li, to_id):
         to_id -= 1
-        chid = defines.tryStringToInt(li.getProperty('id'))
+        chid = utils.str2int(li.getProperty('id'))
         if not self.channels:
             self.get()
         if self.channels and to_id < len(self.channels):
@@ -84,12 +85,12 @@ class FDB():
         return self.save()
 
     def down(self, li):
-        chid = defines.tryStringToInt(li.getProperty('id'))
+        chid = utils.str2int(li.getProperty('id'))
         to_id = self.find(chid) + 1
         return self.moveTo(li, to_id + 1)
 
     def up(self, li):
-        chid = defines.tryStringToInt(li.getProperty('id'))
+        chid = utils.str2int(li.getProperty('id'))
         to_id = self.find(chid) + 1
         return self.moveTo(li, to_id - 1)
 
@@ -133,13 +134,13 @@ class LocalFDB(FDB):
             return FDB.API_ERROR_NOCONNECT
 
     def add(self, li):
-        chid = defines.tryStringToInt(li.getProperty('id'))
+        chid = utils.str2int(li.getProperty('id'))
         log.d('add channels {0}'.format(chid))
         channel = {'id': chid,
                    'type': li.getProperty('type'),
                    'logo': os.path.basename(li.getProperty('icon')),
                    'access_translation': li.getProperty('access_translation'),
-                   'access_user': defines.tryStringToInt(li.getProperty('access_user')),
+                   'access_user': utils.str2int(li.getProperty('access_user')),
                    'name': li.getProperty('name'),
                    'epg_id': li.getProperty('epg_cdn_id')}
 
@@ -161,7 +162,7 @@ class RemoteFDB(FDB):
     def get(self):
         try:
             jdata = self.get_json()
-            if defines.tryStringToInt(jdata['success']) != 0:
+            if utils.str2int(jdata['success']) != 0:
                 channels = jdata['channels']
                 self.channels = []
                 for i, ch in enumerate(channels):
@@ -173,15 +174,21 @@ class RemoteFDB(FDB):
 
     def get_json(self):
         try:
-            data = defines.GET('http://{0}/v3/translation_list.php?session={1}&type={2}&typeresult=json'.format(
-                defines.API_MIRROR, self.session, 'favourite'), cookie=['PHPSESSID=%s' % self.session], trys=10)
-            jdata = json.loads(data)
+            params = dict(
+                session=self.session,
+                type='favourite',
+                typeresult='json')
+            r = defines.request('http://{url}/v3/translation_list.php'.format(url=defines.API_MIRROR),
+                                params=params, cookies={'PHPSESSID': self.session})
+            r.raise_for_status()
+
+            jdata = r.json()
             return jdata
         except Exception as e:
             log.e('get_json error: {0}'.format(e))
 
     def add(self, li):
-        chid = defines.tryStringToInt(li.getProperty('id'))
+        chid = utils.str2int(li.getProperty('id'))
         log.d('add channels {0}'.format(chid))
 
         if self.find(chid) is None:
@@ -206,11 +213,16 @@ class RemoteFDB(FDB):
     def __exec_cmd(self, li, cmd):
         log.d('exec_cmd')
         try:
-            channel_id = li.getProperty('id')
-            data = defines.GET('http://{0}/v3/{1}.php?session={2}&channel_id={3}&typeresult=json'.format(
-                defines.API_MIRROR, self.session, channel_id), cookie=['PHPSESSID=%s' % self.session], trys=10)
-            jdata = json.loads(data)
-            if defines.tryStringToInt(jdata['success']) == 0:
+            params = dict(
+                session=self.session,
+                channel_id=li.getProperty('id'),
+                typeresult='json')
+            r = defines.request('http://{url}/v3/{1}.php'.format(url=defines.API_MIRROR),
+                                params=params, cookies={'PHPSESSID': self.session})
+            r.raise_for_status()
+            jdata = r.json()
+
+            if utils.str2int(jdata['success']) == 0:
                 return jdata.get('error')
         except Exception as e:
             msg = 'exec_cmd error: {0}'.format(e)
@@ -285,7 +297,7 @@ class RemoteFDB(FDB):
                 data = self.__post_to_site('http://{0}/store_sorted.php'.format(defines.SITE_MIRROR), jdata)
                 try:
                     jdata = json.loads(data)
-                    if defines.tryStringToInt(jdata['success']) == 1:
+                    if utils.str2int(jdata['success']) == 1:
                         return True
 
                 except Exception as e:

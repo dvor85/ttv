@@ -54,13 +54,16 @@ class InfoForm(xbmcgui.WindowXMLDialog):
             self.ASLabel.setLabel(text)
 
     def getAddr(self, *args):
-        data = defines.GET("http://2ip.ru/")
-        beautifulSoup = BeautifulSoup(data)
-        addr = beautifulSoup.find('big', attrs={'id': 'd_clip_button'})
-        addr = addr.string
-        self.addrLabel.setLabel(addr)
+        try:
+            r = defines.request("https://2ip.ru")
+            beautifulSoup = BeautifulSoup(r.content)
+            addr = beautifulSoup.find('big', attrs={'id': 'd_clip_button'})
+            addr = addr.string
+            self.addrLabel.setLabel(addr)
 
-        log("InfoForm адрес получен")
+            log("InfoForm адрес получен")
+        except Exception as e:
+            log.e('getAddr Error: {0}'.format(e))
 
     def checkPort(self, *args):
         port = args[0]

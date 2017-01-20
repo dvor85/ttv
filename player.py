@@ -8,8 +8,8 @@ import threading
 import xbmc
 import datetime
 import defines
-import json
 import re
+import utils
 from ext.table import Channels as ExtChannels
 from ts import TSengine as tsengine
 
@@ -178,8 +178,8 @@ class MyPlayer(xbmcgui.WindowXML):
                         return url.replace('acestream://', '')
                     if url.endswith('.acelive'):
                         return url
-                    http = defines.GET(url, trys=2)
-                    m = self._re_source.search(http)
+                    r = defines.request(url)
+                    m = self._re_source.search(r.text)
                     return m.group('src')
                 except Exception as e:
                     log.w('Start->get_from_ext->get_src error: {0}'.format(e))
@@ -201,19 +201,26 @@ class MyPlayer(xbmcgui.WindowXML):
                         return jdata
 
         def get_channel_from_api():
-            data = defines.GET("http://{0}/v3/translation_stream.php?session={1}&channel_id={2}&typeresult=json".format(
-                defines.API_MIRROR, self.parent.session, li.getProperty("id")))
             try:
-                jdata = json.loads(data)
+                params = dict(
+                    session=self.parent.session,
+                    channel_id=li.getProperty("id"),
+                    typeresult='json')
+                r = defines.request("http://{url}/v3/translation_stream.php".format(url=defines.API_MIRROR),
+                                    params=params)
+                jdata = r.json()
                 return jdata
             except Exception as e:
                 log.w('Start->get_from_api error: {0}'.format(e))
 
         def get_record_from_api():
-            data = defines.GET("http://{0}/v3/arc_stream.php?session={1}&record_id={2}&typeresult=json".format(
-                defines.API_MIRROR, self.parent.session, li.getProperty("id")))
             try:
-                jdata = json.loads(data)
+                params = dict(
+                    session=self.parsent.session,
+                    record_id=li.getProperty("id"),
+                    typeresult='json')
+                r = defines.request("http://{url}/v3/arc_stream.php".format(url=defines.API_MIRROR), params=params)
+                jdata = r.json()
                 return jdata
             except Exception as e:
                 log.w('Start->get_record_from_api error: {0}'.format(e))
@@ -228,7 +235,7 @@ class MyPlayer(xbmcgui.WindowXML):
         if (li.getProperty("type") == "channel"):
             jdata = get_channel_from_api()
 
-            if not jdata or defines.tryStringToInt(jdata.get("success")) == 0 or not jdata.get("source"):
+            if not jdata or utils.str2int(jdata.get("success")) == 0 or not jdata.get("source"):
                 jdata = get_channel_from_ext()
 
         elif (li.getProperty("type") == "record"):
@@ -238,7 +245,7 @@ class MyPlayer(xbmcgui.WindowXML):
             self.parent.showStatus(msg)
             raise Exception(msg)
 
-        if not jdata or defines.tryStringToInt(jdata.get("success")) == 0 or not jdata.get("source"):
+        if not jdata or utils.str2int(jdata.get("success")) == 0 or not jdata.get("source"):
             msg = "Канал временно не доступен"
             self.parent.showStatus(msg)
             raise Exception(msg)
@@ -256,7 +263,7 @@ class MyPlayer(xbmcgui.WindowXML):
 
     def run_selected_channel(self, timeout=0):
         def run():
-            self.channel_number = defines.tryStringToInt(
+            self.channel_number = utils.str2int(
                 self.channel_number_str)
             log.d('CHANNEL NUMBER IS: %i' % self.channel_number)
             if 0 < self.channel_number < self.parent.list.size() and self.parent.selitem_id != self.channel_number:
@@ -304,7 +311,7 @@ class MyPlayer(xbmcgui.WindowXML):
             else:
                 self.close()
         elif action.getId() in (3, 4, 5, 6):
-            ############### IF ARROW UP AND DOWN PRESSED - SWITCH CHANNEL ##### @IgnorePep8
+            # IF ARROW UP AND DOWN PRESSED - SWITCH CHANNEL ##### @IgnorePep8
             if action.getId() in (3, 5):
                 self.inc_channel_number()
             else:
@@ -316,16 +323,15 @@ class MyPlayer(xbmcgui.WindowXML):
             self.run_selected_channel(timeout=5)
 
         elif action.getId() in MyPlayer.DIGIT_BUTTONS:
-            ############# IF PRESSED DIGIT KEYS - SWITCH CHANNEL ############## @IgnorePep8
+            # IF PRESSED DIGIT KEYS - SWITCH CHANNEL ############## @IgnorePep8
             digit_pressed = action.getId() - 58
             if digit_pressed < self.parent.list.size():
 
                 self.channel_number_str += str(digit_pressed)
-                self.channel_number = defines.tryStringToInt(self.channel_number_str)
+                self.channel_number = utils.str2int(self.channel_number_str)
                 if not 0 < self.channel_number < self.parent.list.size():
                     self.channel_number_str = str(digit_pressed)
-                    self.channel_number = defines.tryStringToInt(
-                        self.channel_number_str)
+                    self.channel_number = utils.str2int(self.channel_number_str)
 
                 viewEPG()
 

@@ -5,11 +5,12 @@ import xbmcaddon
 import xbmc
 import xbmcgui
 import sys
-import urllib2
 import threading
 import os
 import time
 from BeautifulSoup import BeautifulSoup
+import requests
+import utils
 
 ADDON = xbmcaddon.Addon()
 ADDON_ID = ADDON.getAddonInfo('id')
@@ -136,34 +137,26 @@ def isCancel():
     return xbmc.abortRequested or closeRequested.isSet()
 
 
-def GET(target, post=None, cookie=None, headers=None, trys=1):
-    log.d('try to get: {0}'.format(target))
-    if not target:
+def request(url, method='get', params=None, trys=1, **kwargs):
+    log.d('try to get: {0}'.format(url))
+    if not url:
         return
     t = 0
-    if not headers:
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) \
-            Chrome/45.0.2454.99 Safari/537.36'}
-    req = urllib2.Request(url=target, data=post, headers=headers)
+    kwargs.setdefault('allow_redirects', True)
+    kwargs.setdefault('headers', {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) \
+            Chrome/45.0.2454.99 Safari/537.36'})
+    kwargs.setdefault('timeout', 3.05)
 
-    if post:
-        req.add_header("Content-type", "application/x-www-form-urlencoded")
-    if cookie:
-        for coo in cookie:
-            req.add_header('Cookie', coo)
     while not isCancel():
         t += 1
         if 0 < trys < t:
             raise Exception('Attempts are over')
         try:
-            resp = urllib2.urlopen(req, timeout=6)
-            try:
-                http = resp.read()
-                return http
-            finally:
-                resp.close()
+            r = requests.request(method, url, params=params, **kwargs)
+            r.raise_for_status()
+            return r
 
-        except Exception, e:
+        except Exception as e:
             if t % 10 == 0:
                 log.e('GET EXCEPT [{0}]'.format(e))
                 if not isCancel():
@@ -173,19 +166,13 @@ def GET(target, post=None, cookie=None, headers=None, trys=1):
 def checkPort(*args):
     try:
         port = args[0]
-        data = GET("http://2ip.ru/check-port/?port=%s" % port, trys=2)
-        beautifulSoup = BeautifulSoup(data)
-        bsdata = beautifulSoup.find('div', attrs={'class': 'ip-entry'}).text
-        if bsdata.encode('utf-8').find("закрыт") > -1:
+        r = request("https://2ip.ru/check-port", params=dict(port=port))
+        r.raise_for_status()
+        beautifulSoup = BeautifulSoup(r.content)
+        bsdata = beautifulSoup.find('div', attrs={'class': 'ip-entry'})
+        if utils.utf(bsdata.text).find("закрыт") > -1:
             return False
         else:
             return True
     except Exception as e:
         log.w('checkPort Error: {0}'.format(e))
-
-
-def tryStringToInt(str_val, default=0):
-    try:
-        return int(str_val)
-    except:
-        return default
