@@ -7,8 +7,9 @@ import xbmcgui
 import defines
 import utils
 import favdb
+import logger
 
-log = defines.Logger('MenuForm')
+log = logger.Logger('MenuForm')
 
 
 class MenuForm(xbmcgui.WindowXMLDialog):

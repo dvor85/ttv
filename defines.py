@@ -7,21 +7,21 @@ import xbmcgui
 import sys
 import threading
 import os
-import time
 from BeautifulSoup import BeautifulSoup
 import requests
 import utils
+import logger
 
 ADDON = xbmcaddon.Addon()
 ADDON_ID = ADDON.getAddonInfo('id')
 ADDON_ICON = ADDON.getAddonInfo('icon')
-ADDON_PATH = ADDON.getAddonInfo('path')
+ADDON_PATH = utils.uni(ADDON.getAddonInfo('path'), 'utf8')
+DATA_PATH = utils.uni(xbmc.translatePath(os.path.join("special://profile/addon_data", ADDON_ID)), 'utf8')
 ADDON_ICON = ADDON.getAddonInfo('icon')
 PTR_FILE = ADDON.getSetting('port_path')
 API_MIRROR = ADDON.getSetting('api_mirror')
 SITE_MIRROR = '1ttv.org' if API_MIRROR == '1ttvxbmc.top' else 'torrent-tv.ru'
-DATA_PATH = xbmc.translatePath(
-    os.path.join("special://profile/addon_data", ADDON_ID))
+
 TTV_VERSION = '1.5.3'
 AUTOSTART = ADDON.getSetting('autostart') == 'true'
 GENDER = ADDON.getSetting('gender')
@@ -29,58 +29,16 @@ AGE = ADDON.getSetting('age')
 FAVOURITE = ADDON.getSetting('favourite')
 DEBUG = ADDON.getSetting('debug') == 'true'
 
-if sys.platform.startswith('win'):
-    ADDON_PATH = ADDON_PATH.decode('utf-8')
-    DATA_PATH = DATA_PATH.decode('utf-8')
-
-SKIN_PATH = ADDON_PATH
 skin = ADDON.getSetting('skin')
 if (skin is not None) and (skin != "") and (skin != 'st.anger'):
     SKIN_PATH = DATA_PATH
+else:
+    SKIN_PATH = ADDON_PATH
 
 closeRequested = threading.Event()
 
 
-class Logger():
-
-    def __init__(self, tag, minlevel=xbmc.LOGDEBUG):
-        self.tag = tag
-        self.minlevel = minlevel
-
-    def __call__(self, msg, level=xbmc.LOGNOTICE):
-        self.log(msg, level)
-
-    def log(self, msg, level):
-        if level >= self.minlevel:
-            try:
-                if isinstance(msg, unicode):
-                    msg = msg.encode('utf-8', 'ignore')
-                m = "[{id}::{tag}] {msg}".format(**{'id': ADDON_ID, 'tag': self.tag, 'msg': msg}).replace(
-                    ADDON.getSetting('password'), '********')
-                xbmc.log(m, level)
-                if DEBUG:
-                    m = '{0} {1}'.format(time.strftime('%X'), m)
-                    print m
-            except Exception as e:
-                xbmc.log('ERROR LOG OUT: {0}'.format(e), xbmc.LOGERROR)
-
-    def f(self, msg):
-        self.log(msg, xbmc.LOGFATAL)
-
-    def e(self, msg):
-        self.log(msg, xbmc.LOGERROR)
-
-    def w(self, msg):
-        self.log(msg, xbmc.LOGWARNING)
-
-    def i(self, msg):
-        self.log(msg, xbmc.LOGINFO)
-
-    def d(self, msg):
-        self.log(msg, xbmc.LOGDEBUG)
-
-
-log = Logger('DEFINES')
+log = logger.Logger('DEFINES')
 
 
 def AutostartViaAutoexec(state):
@@ -137,30 +95,19 @@ def isCancel():
     return xbmc.abortRequested or closeRequested.isSet()
 
 
-def request(url, method='get', params=None, trys=1, **kwargs):
-    log.d('try to get: {0}'.format(url))
+def request(url, method='get', params=None, **kwargs):
+    params_str = "?" + "&".join(("{0}={1}".format(*i) for i in params.iteritems())) if params is not None else ""
+    log.d('try to get: {url}{params}'.format(url=url, params=params_str))
     if not url:
         return
-    t = 0
     kwargs.setdefault('allow_redirects', True)
     kwargs.setdefault('headers', {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) \
             Chrome/45.0.2454.99 Safari/537.36'})
     kwargs.setdefault('timeout', 3.05)
 
-    while not isCancel():
-        t += 1
-        if 0 < trys < t:
-            raise Exception('Attempts are over')
-        try:
-            r = requests.request(method, url, params=params, **kwargs)
-            r.raise_for_status()
-            return r
-
-        except Exception as e:
-            if t % 10 == 0:
-                log.e('GET EXCEPT [{0}]'.format(e))
-                if not isCancel():
-                    xbmc.sleep(3000)
+    r = requests.request(method, url, params=params, **kwargs)
+    r.raise_for_status()
+    return r
 
 
 def checkPort(*args):

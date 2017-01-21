@@ -3,12 +3,13 @@
 
 import os
 import defines
+import logger
 import json
 import xbmc
 import utils
 
 
-log = defines.Logger('FDB')
+log = logger.Logger('FDB')
 
 
 class FDB():
@@ -179,7 +180,7 @@ class RemoteFDB(FDB):
                 type='favourite',
                 typeresult='json')
             r = defines.request('http://{url}/v3/translation_list.php'.format(url=defines.API_MIRROR),
-                                params=params, cookies={'PHPSESSID': self.session})
+                                params=params)
             r.raise_for_status()
 
             jdata = r.json()
@@ -217,8 +218,8 @@ class RemoteFDB(FDB):
                 session=self.session,
                 channel_id=li.getProperty('id'),
                 typeresult='json')
-            r = defines.request('http://{url}/v3/{1}.php'.format(url=defines.API_MIRROR),
-                                params=params, cookies={'PHPSESSID': self.session})
+            r = defines.request('http://{url}/v3/{cmd}.php'.format(url=defines.API_MIRROR, cmd=cmd),
+                                params=params)
             r.raise_for_status()
             jdata = r.json()
 

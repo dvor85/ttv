@@ -10,6 +10,7 @@ encoding/default.py=utf-8
 encoding/defines.py=utf-8
 encoding/favdb.py=utf-8
 encoding/infoform.py=utf-8
+encoding/logger.py=utf-8
 encoding/mainform.py=utf-8
 encoding/menu.py=utf-8
 encoding/okdialog.py=utf-8

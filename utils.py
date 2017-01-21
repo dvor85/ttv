@@ -52,12 +52,14 @@ def rListFiles(path):
     return files
 
 
-def uni(path):
+def uni(path, encoding=None):
     """
     Декодирует строку из кодировки файловой системы
     """
+    if encoding is None:
+        encoding = sys.getfilesystemencoding()
     if isinstance(path, str):
-        path = path.decode(sys.getfilesystemencoding(), errors='ignore')
+        path = path.decode(encoding, errors='ignore')
     return path
 
 

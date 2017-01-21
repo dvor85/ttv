@@ -10,11 +10,12 @@ import datetime
 import defines
 import re
 import utils
+import logger
 from ext.table import Channels as ExtChannels
 from ts import TSengine as tsengine
 
 
-log = defines.Logger('MyPlayer')
+log = logger.Logger('MyPlayer')
 
 
 class MyPlayer(xbmcgui.WindowXML):

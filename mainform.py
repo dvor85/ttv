@@ -24,9 +24,10 @@ import json
 import re
 import utils
 from UserDict import UserDict
+import logger
 
 
-log = defines.Logger('MainForm')
+log = logger.Logger('MainForm')
 
 
 class ChannelGroups(UserDict):
@@ -305,7 +306,7 @@ class WMainForm(xbmcgui.WindowXML):
                     type=param,
                     typeresult='json')
                 r = defines.request('http://{url}/v3/translation_list.php'.format(url=defines.API_MIRROR),
-                                    params=params, cookies={'PHPSESSID': self.session})
+                                    params=params)
 
                 jdata = r.json()
 
@@ -366,7 +367,7 @@ class WMainForm(xbmcgui.WindowXML):
                 session=self.session,
                 typeresult='json')
             r = defines.request('http://{url}/v3/arc_list.php'.format(url=defines.API_MIRROR),
-                                params=params, cookies={'PHPSESSID': self.session})
+                                params=params)
 
             jdata = r.json()
             if utils.str2int(jdata.get('success')) == 0:
@@ -424,7 +425,7 @@ class WMainForm(xbmcgui.WindowXML):
                     epg_id=epg_id,
                     typeresult='json')
                 r = defines.request('http://{url}/v3/translation_epg.php'.format(url=defines.API_MIRROR),
-                                    params=params, cookies={'PHPSESSID': self.session})
+                                    params=params)
 
                 jdata = r.json()
                 if utils.str2int(jdata.get('success')) != 0:
@@ -524,8 +525,8 @@ class WMainForm(xbmcgui.WindowXML):
                         channel_id=cdn,
                         count=2,
                         typeresult='json')
-                    r = defines.request('http://{0}/v3/translation_screen.php'.format(url=defines.API_MIRROR),
-                                        params=params, cookies={'PHPSESSID': self.session})
+                    r = defines.request('http://{url}/v3/translation_screen.php'.format(url=defines.API_MIRROR),
+                                        params=params)
 
                     jdata = r.json()
 
@@ -981,7 +982,7 @@ class WMainForm(xbmcgui.WindowXML):
                 epg_id=li.getProperty("epg_cdn_id"),
                 typeresult='json')
             r = defines.request("http://{url}/v3/arc_records.php".format(url=defines.API_MIRROR),
-                                params=params, cookies={'PHPSESSID': self.session})
+                                params=params)
             r.raise_for_status()
             jdata = r.json()
             if utils.str2int(jdata.get('success')) == 0:

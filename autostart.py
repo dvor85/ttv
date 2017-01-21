@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 import defines
+import logger
 import os
 from xml.etree.ElementTree import ElementTree
 
-log = defines.Logger('STARTUP')
+log = logger.Logger('STARTUP')
 log("{0} v.{1}".format(defines.ADDON_ID, defines.ADDON.getAddonInfo('version')))
 
 dom = ElementTree()

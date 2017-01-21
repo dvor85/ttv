@@ -15,11 +15,12 @@ import random
 import urllib
 import copy
 import defines
+import logger
 import utils
 import json
 
 
-log = defines.Logger('TSEngine')
+log = logger.Logger('TSEngine')
 
 
 class TSengine(xbmc.Player):

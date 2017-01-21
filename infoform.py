@@ -3,10 +3,10 @@
 # Writer (c) 2011, Welicobratov K.A., E-mail: 07pov23@gmail.com
 import xbmcgui
 from BeautifulSoup import BeautifulSoup
-
 import defines
+import logger
 
-log = defines.Logger('InfoForm')
+log = logger.Logger('InfoForm')
 
 
 class InfoForm(xbmcgui.WindowXMLDialog):
