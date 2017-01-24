@@ -33,15 +33,13 @@ class DateForm(xbmcgui.WindowXMLDialog):
         maxdays = calendar.monthrange(value.year, value.month)[1]
         i = 1
         while i <= maxdays:
-
             if i == self.date.day and value.month == self.date.month and value.year == self.date.year:
                 item = xbmcgui.ListItem("[COLOR FF0080FF]%s[/COLOR]" % i)
             else:
                 item = xbmcgui.ListItem("%s" % i)
             item.setProperty("value", "%s" % i)
             item.setProperty("type", "day")
-            item.setProperty(
-                "date", datetime.date(value.year, value.month, i).isoformat())
+            item.setProperty("date", datetime.date(value.year, value.month, i).isoformat())
             self.list.addItem(item)
             i = i + 1
         if value.month == self.date.month and value.year == self.date.year:
@@ -63,8 +61,7 @@ class DateForm(xbmcgui.WindowXMLDialog):
                 item = xbmcgui.ListItem("%s" % i)
             item.setProperty("value", "%s" % i)
             item.setProperty("type", "month")
-            item.setProperty(
-                "date", datetime.date(value.year, i, 1).isoformat())
+            item.setProperty("date", datetime.date(value.year, i, 1).isoformat())
             self.list.addItem(item)
             i = i + 1
 

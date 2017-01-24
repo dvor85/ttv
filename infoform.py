@@ -5,8 +5,10 @@ import xbmcgui
 from BeautifulSoup import BeautifulSoup
 import defines
 import logger
+import utils
 
 log = logger.Logger('InfoForm')
+fmt = utils.fmt
 
 
 class InfoForm(xbmcgui.WindowXMLDialog):
@@ -63,7 +65,7 @@ class InfoForm(xbmcgui.WindowXMLDialog):
 
             log("InfoForm адрес получен")
         except Exception as e:
-            log.e('getAddr Error: {0}'.format(e))
+            log.e(fmt('getAddr Error: {0}', e))
 
     def checkPort(self, *args):
         port = args[0]

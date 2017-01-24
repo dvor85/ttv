@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
+# Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 import os
 import sys
+import string
+
+fmt = string.Formatter().format
 
 
 def parse_str(s):
@@ -54,7 +58,10 @@ def rListFiles(path):
 
 def uni(path, encoding=None):
     """
-    Декодирует строку из кодировки файловой системы
+    Декодирует строку из кодировки encoding
+    :path: строка для декодирования
+    :encoding: Кодировка из которой декодировать. Если не задана, то sys.getfilesystemencoding()
+    :return: unicode path
     """
     if encoding is None:
         encoding = sys.getfilesystemencoding()
@@ -72,13 +79,13 @@ def utf(path):
     return path
 
 
-def true_enc(path):
+def true_enc(path, encoding=None):
     """
     Для файловых операций в windows нужен unicode.
     Для остальных - utf8
     """
     if sys.platform.startswith('win'):
-        return uni(path)
+        return uni(path, encoding)
     return utf(path)
 
 

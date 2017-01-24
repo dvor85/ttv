@@ -10,6 +10,7 @@ import favdb
 import logger
 
 log = logger.Logger('MenuForm')
+fmt = utils.fmt
 
 
 class MenuForm(xbmcgui.WindowXMLDialog):
@@ -86,7 +87,7 @@ class MenuForm(xbmcgui.WindowXMLDialog):
             elif cmd == MenuForm.CMD_UP_FAVOURITE:
                 return fdb.up(self.li)
         except Exception as e:
-            log.e('Error: {0} in exec_cmd "{1}"'.format(e, cmd))
+            log.e(fmt('Error: {0} in exec_cmd "{1}"', e, cmd))
             self.close()
 
     def GetResult(self):

@@ -16,6 +16,7 @@ from ts import TSengine as tsengine
 
 
 log = logger.Logger('MyPlayer')
+fmt = utils.fmt
 
 
 class MyPlayer(xbmcgui.WindowXML):
@@ -115,7 +116,7 @@ class MyPlayer(xbmcgui.WindowXML):
                 self.parent.getEpg(epg_id, callback=self.showEpg)
 
         except Exception as e:
-            log.w('UpdateEpg error: {0}'.format(e))
+            log.w(fmt('UpdateEpg error: {0}', e))
 
     def showEpg(self, epg_id):
         try:
@@ -128,8 +129,8 @@ class MyPlayer(xbmcgui.WindowXML):
                         ce = self.getControl(MyPlayer.CONTROL_FIRST_EPG_ID + i)
                         bt = datetime.datetime.fromtimestamp(float(ep['btime']))
                         et = datetime.datetime.fromtimestamp(float(ep['etime']))
-                        ce.setLabel(u"{0} - {1} {2}".format(bt.strftime("%H:%M"),
-                                                            et.strftime("%H:%M"), ep['name'].replace('&quot;', '"')))
+                        ce.setLabel(fmt("{0} - {1} {2}", bt.strftime("%H:%M"),
+                                        et.strftime("%H:%M"), ep['name'].replace('&quot;', '"')))
                         if self.progress and i == 0:
                             self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
                     except:
@@ -138,7 +139,7 @@ class MyPlayer(xbmcgui.WindowXML):
                 return True
 
         except Exception as e:
-            log.e('showEpg error {0}'.format(e))
+            log.e(fmt('showEpg error {0}', e))
 
         self.showNoEpg()
 
@@ -183,7 +184,7 @@ class MyPlayer(xbmcgui.WindowXML):
                     m = self._re_source.search(r.text)
                     return m.group('src')
                 except Exception as e:
-                    log.w('Start->get_from_ext->get_src error: {0}'.format(e))
+                    log.w(fmt('Start->get_from_ext->get_src error: {0}', e))
 
             for tch in ExtChannels.itervalues():
                 chli = tch.find_by_id(li.getProperty("id"))
@@ -207,12 +208,12 @@ class MyPlayer(xbmcgui.WindowXML):
                     session=self.parent.session,
                     channel_id=li.getProperty("id"),
                     typeresult='json')
-                r = defines.request("http://{url}/v3/translation_stream.php".format(url=defines.API_MIRROR),
+                r = defines.request(fmt("http://{url}/v3/translation_stream.php", url=defines.API_MIRROR),
                                     params=params)
                 jdata = r.json()
                 return jdata
             except Exception as e:
-                log.w('Start->get_from_api error: {0}'.format(e))
+                log.w(fmt('Start->get_from_api error: {0}', e))
 
         def get_record_from_api():
             try:
@@ -220,11 +221,11 @@ class MyPlayer(xbmcgui.WindowXML):
                     session=self.parsent.session,
                     record_id=li.getProperty("id"),
                     typeresult='json')
-                r = defines.request("http://{url}/v3/arc_stream.php".format(url=defines.API_MIRROR), params=params)
+                r = defines.request(fmt("http://{url}/v3/arc_stream.php", url=defines.API_MIRROR), params=params)
                 jdata = r.json()
                 return jdata
             except Exception as e:
-                log.w('Start->get_record_from_api error: {0}'.format(e))
+                log.w(fmt('Start->get_record_from_api error: {0}', e))
 
         log("Start play")
 
@@ -302,7 +303,7 @@ class MyPlayer(xbmcgui.WindowXML):
             self.swinfo.setVisible(swinfo_visible)
             self.UpdateEpg(li)
 
-        # log.d('Action {0} | ButtonCode {1}'.format(action.getId(), action.getButtonCode()))
+        # log.d(fmt('Action {0} | ButtonCode {1}', action.getId(), action.getButtonCode()))
         if action in MyPlayer.CANCEL_DIALOG or action.getId() == MyPlayer.ACTION_RBC:
             log.d('Close player %s %s' % (action.getId(), action.getButtonCode()))
             if self.select_timer:

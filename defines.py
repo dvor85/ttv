@@ -12,12 +12,14 @@ import requests
 import utils
 import logger
 
+log = logger.Logger('DEFINES')
+fmt = utils.fmt
+
 ADDON = xbmcaddon.Addon()
 ADDON_ID = ADDON.getAddonInfo('id')
 ADDON_ICON = ADDON.getAddonInfo('icon')
-ADDON_PATH = utils.uni(ADDON.getAddonInfo('path'), 'utf8')
-DATA_PATH = utils.uni(xbmc.translatePath(os.path.join("special://profile/addon_data", ADDON_ID)), 'utf8')
-ADDON_ICON = ADDON.getAddonInfo('icon')
+ADDON_PATH = utils.true_enc(ADDON.getAddonInfo('path'), 'utf8')
+DATA_PATH = utils.true_enc(xbmc.translatePath(os.path.join("special://profile/addon_data", ADDON_ID)), 'utf8')
 PTR_FILE = ADDON.getSetting('port_path')
 API_MIRROR = ADDON.getSetting('api_mirror')
 SITE_MIRROR = '1ttv.org' if API_MIRROR == '1ttvxbmc.top' else 'torrent-tv.ru'
@@ -36,9 +38,6 @@ else:
     SKIN_PATH = ADDON_PATH
 
 closeRequested = threading.Event()
-
-
-log = logger.Logger('DEFINES')
 
 
 def AutostartViaAutoexec(state):
@@ -70,7 +69,7 @@ def AutostartViaAutoexec(state):
             os.unlink(autoexec)
     except:
         t, v, tb = sys.exc_info()
-        log.w("Error while write autoexec.py: {0}:{1}.".format(t, v))
+        log.w(fmt("Error while write autoexec.py: {0}:{1}.", t, v))
         del tb
 
 
@@ -84,11 +83,10 @@ class MyThread(threading.Thread):
 
 def showNotification(msg, icon=ADDON_ICON):
     try:
-        if isinstance(msg, unicode):
-            msg = msg.encode('utf-8', 'ignore')
+        msg = utils.utf(msg)
         xbmcgui.Dialog().notification(ADDON.getAddonInfo('name'), msg, icon)
     except Exception as e:
-        log.e('showNotification error: "{0}"'.format(e))
+        log.e(fmt('showNotification error: "{0}"', e))
 
 
 def isCancel():
@@ -96,8 +94,9 @@ def isCancel():
 
 
 def request(url, method='get', params=None, **kwargs):
-    params_str = "?" + "&".join(("{0}={1}".format(*i) for i in params.iteritems())) if params is not None else ""
-    log.d('try to get: {url}{params}'.format(url=url, params=params_str))
+    params_str = "?" + "&".join((fmt("{0}={1}", *i)
+                                 for i in params.iteritems())) if params is not None and method == 'get' else ""
+    log.d(fmt('try to get: {url}{params}', url=url, params=params_str))
     if not url:
         return
     kwargs.setdefault('allow_redirects', True)
@@ -114,7 +113,6 @@ def checkPort(*args):
     try:
         port = args[0]
         r = request("https://2ip.ru/check-port", params=dict(port=port))
-        r.raise_for_status()
         beautifulSoup = BeautifulSoup(r.content)
         bsdata = beautifulSoup.find('div', attrs={'class': 'ip-entry'})
         if utils.utf(bsdata.text).find("закрыт") > -1:
@@ -122,4 +120,4 @@ def checkPort(*args):
         else:
             return True
     except Exception as e:
-        log.w('checkPort Error: {0}'.format(e))
+        log.w(fmt('checkPort Error: {0}', e))
