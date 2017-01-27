@@ -697,16 +697,14 @@ class WMainForm(xbmcgui.WindowXML):
                 if utils.str2int(selItem.getProperty("access_user")) == 0:
                     access = selItem.getProperty("access_translation")
                     if access == "registred":
-                        log.d(
-                            "Трансляция доступна для зарегестрированных пользователей")
+                        log.d("Трансляция доступна для зарегестрированных пользователей")
                     elif access == "vip":
                         log.d("Трансляция доступна для VIP пользователей")
                     else:
                         log.d("На данный момент трансляция не доступна")
 
                 buf = xbmcgui.ListItem(selItem.getLabel())
-                buf.setProperty(
-                    'epg_cdn_id', selItem.getProperty('epg_cdn_id'))
+                buf.setProperty('epg_cdn_id', selItem.getProperty('epg_cdn_id'))
                 buf.setProperty('icon', selItem.getProperty('icon'))
                 buf.setProperty("type", selItem.getProperty("type"))
                 buf.setProperty("id", selItem.getProperty("id"))

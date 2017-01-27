@@ -9,8 +9,8 @@ import defines
 try:
     if defines.DEBUG:
         import debug  # @UnusedImport
-except:
-    pass
+except Exception as e:
+    defines.log(e)
 
 
 def checkPort(*args):

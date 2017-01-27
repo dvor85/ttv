@@ -7,8 +7,6 @@ import xbmcgui
 import sys
 import threading
 import os
-from BeautifulSoup import BeautifulSoup
-import requests
 import utils
 import logger
 
@@ -94,6 +92,7 @@ def isCancel():
 
 
 def request(url, method='get', params=None, **kwargs):
+    import requests
     params_str = "?" + "&".join((fmt("{0}={1}", *i)
                                  for i in params.iteritems())) if params is not None and method == 'get' else ""
     log.d(fmt('try to get: {url}{params}', url=url, params=params_str))
@@ -111,6 +110,7 @@ def request(url, method='get', params=None, **kwargs):
 
 def checkPort(*args):
     try:
+        from BeautifulSoup import BeautifulSoup
         port = args[0]
         r = request("https://2ip.ru/check-port", params=dict(port=port))
         beautifulSoup = BeautifulSoup(r.content)

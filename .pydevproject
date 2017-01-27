@@ -8,6 +8,6 @@
 
 <pydev_pathproperty name="org.python.pydev.PROJECT_EXTERNAL_SOURCE_PATH">
 <path>${WORKSPACE_LOC}/Kodistubs</path>
-<path>${ECLIPSE_HOME}/plugins/org.python.pydev_5.4.0.201611281236/pysrc</path>
+<path>${ECLIPSE_HOME}/plugins/org.python.pydev_5.5.0.201701191708/pysrc</path>
 </pydev_pathproperty>
 </pydev_project>
