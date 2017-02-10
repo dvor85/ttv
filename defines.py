@@ -91,7 +91,7 @@ def isCancel():
     return xbmc.abortRequested or closeRequested.isSet()
 
 
-def request(url, method='get', params=None, **kwargs):
+def request(url, method='get', params=None, trys=3, **kwargs):
     import requests
     params_str = "?" + "&".join((fmt("{0}={1}", *i)
                                  for i in params.iteritems())) if params is not None and method == 'get' else ""
@@ -102,10 +102,18 @@ def request(url, method='get', params=None, **kwargs):
     kwargs.setdefault('headers', {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) \
             Chrome/45.0.2454.99 Safari/537.36'})
     kwargs.setdefault('timeout', 3.05)
-
-    r = requests.request(method, url, params=params, **kwargs)
-    r.raise_for_status()
-    return r
+    t = 0
+    while not isCancel():
+        t += 1
+        if 0 < trys < t:
+            raise Exception('Attempts are over')
+        try:
+            r = requests.request(method, url, params=params, **kwargs)
+            r.raise_for_status()
+            return r
+        except Exception as e:
+            log.error(fmt('Request error ({t}): {e}', t=t, e=e))
+            xbmc.sleep(1000)
 
 
 def checkPort(*args):

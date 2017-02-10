@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import re
+import utils
 
 
 class TChannels():
@@ -13,7 +14,7 @@ class TChannels():
     def get(self):
         if not self.tChannels:
             for ch in self.Channels:
-                title = ch["title"].decode('utf-8', 'ignore')
+                title = utils.utf(ch.get("title", ch.get('name', '')))
                 m = self._re_channel.search(ch['url'])
                 chid = m.group('chid') if m else title
                 epg_id = 'channel=%s' % chid if m else 'title=%s' % chid
@@ -21,10 +22,11 @@ class TChannels():
                 channel = {'id': chid,
                            'url': ch['url'],
                            'type': 'channel',
-                           'logo': ch['img'],
+                           'logo': ch.get('img', ''),
                            'access_user': 1,
                            'name': title,
-                           'epg_id': epg_id}
+                           'epg_id': epg_id,
+                           'cat': ch.get('cat')}
                 self.tChannels.append(channel)
         return self.tChannels
 
@@ -39,12 +41,12 @@ class TChannels():
         if not self.tChannels:
             self.get()
         for ch in self.tChannels:
-            if ch['id'] == chid:
+            if utils.utf(ch['id']) == utils.utf(chid):
                 return ch
 
     def find_by_title(self, title):
         if not self.tChannels:
             self.get()
         for ch in self.tChannels:
-            if ch['name'].lower().strip() == title.lower().strip():
+            if utils.utf(ch['name']).lower().strip() == utils.utf(title).lower().strip():
                 return ch

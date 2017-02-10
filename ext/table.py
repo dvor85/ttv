@@ -7,9 +7,11 @@ except ImportError:
 
 import tchannels
 import onettvnet
+import pomoyka
 
 Channels = OrderedDict((
-    ('1ttv.net', tchannels.TChannels(onettvnet.Channels)),
+    #     ('1ttv.net', tchannels.TChannels(onettvnet.Channels)),
+    ('Pomoyka', tchannels.TChannels(pomoyka.Pomoyka().get_channels())),
     #             ('aceliveChannels', tchannels.TChannels(aceliveChannels.Channels)),
     #             ('televizorhd', tchannels.TChannels(televizorhd.Channels)),
 ))

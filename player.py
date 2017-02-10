@@ -53,6 +53,7 @@ class MyPlayer(xbmcgui.WindowXML):
         self.swinfo = None
         self.control_window = None
         self._re_source = re.compile('(loadPlayer|loadTorrent)\("(?P<src>[\w/_:.]+)"')
+        self._re_url_match = re.compile('^(?:https?|ftps?|file)://')
 
     def onInit(self):
         log.d('onInit')
@@ -180,9 +181,12 @@ class MyPlayer(xbmcgui.WindowXML):
                         return url.replace('acestream://', '')
                     if url.endswith('.acelive'):
                         return url
-                    r = defines.request(url)
-                    m = self._re_source.search(r.text)
-                    return m.group('src')
+                    if self._re_url_match.search(url):
+                        r = defines.request(url)
+                        m = self._re_source.search(r.text)
+                        return m.group('src')
+                    else:
+                        return url
                 except Exception as e:
                     log.w(fmt('Start->get_from_ext->get_src error: {0}', e))
 
@@ -206,7 +210,7 @@ class MyPlayer(xbmcgui.WindowXML):
             try:
                 params = dict(
                     session=self.parent.session,
-                    channel_id=li.getProperty("id"),
+                    channel_id=utils.uni(li.getProperty("id")),
                     typeresult='json')
                 r = defines.request(fmt("http://{url}/v3/translation_stream.php", url=defines.API_MIRROR),
                                     params=params)

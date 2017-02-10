@@ -7,10 +7,13 @@ import os
 try:
     sys.path.append(os.path.expanduser('~/eclipse/plugins/org.python.pydev_5.5.0.201701191708/pysrc'))
     sys.path.append('d:/python/eclipse/plugins/org.python.pydev_5.5.0.201701191708/pysrc')
-    sys.path.append('c:/test/org.python.pydev_5.4.0.201611281236.zip')
+    sys.path.append('i:/python/eclipse/plugins/org.python.pydev_5.5.0.201701191708/pysrc')
 
-    import pydevd
+
+#     import web_pdb
+#     web_pdb.set_trace()
     # for remote debug edit pydevd_file_utils.py on client
+    import pydevd
     pydevd.settrace('localhost', stdoutToServer=True, stderrToServer=True)
 except:
     t, v, tb = sys.exc_info()
