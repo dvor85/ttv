@@ -1,8 +1,10 @@
 eclipse.preferences.version=1
-encoding//ext/onettvnet.py=utf-8
-encoding//ext/pomoyka.py=utf-8
-encoding//ext/table.py=utf-8
-encoding//ext/tchannels.py=utf-8
+encoding//sources/interface.py=utf-8
+encoding//sources/onettvnet.py=utf-8
+encoding//sources/pomoyka.py=utf-8
+encoding//sources/table.py=utf-8
+encoding//sources/tchannels.py=utf-8
+encoding//sources/ttv.py=utf-8
 encoding/<project>=UTF-8
 encoding/adswnd.py=utf-8
 encoding/autostart.py=utf-8
