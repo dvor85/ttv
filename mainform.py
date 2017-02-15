@@ -31,6 +31,14 @@ fmt = utils.fmt
 
 
 class ChannelGroups(UserDict):
+    """
+    ChannelGroups = {
+        groupname: {
+            title=str,
+            channels=[[{}...]...]
+        }
+    }
+    """
 
     def __init__(self):
         self.data = {}
@@ -52,45 +60,38 @@ class ChannelGroups(UserDict):
             self.addChannel(ch)
 
     def addChannel(self, ch):
-        groupname = utils.utf(ch.get('cat'))
-        cat = self.data.get(groupname)
-        if not cat:
-            self.setGroup(groupname, groupname)
-        if not (self.find_channel_by_id(groupname, ch.get_id()) or self.find_channel_by_name(groupname, ch.get_name())):
-            self.data[groupname]['channels'].append(ch)
-
-    def del_channel_by_id(self, groupname, chid):
-        groupname = utils.utf(groupname)
-        chli = self.find_channel_by_id(groupname, chid)
-        if chli:
-            self.data[groupname]["channels"].remove(chli)
-
-    def del_channel_by_name(self, groupname, name):
-        groupname = utils.utf(groupname)
-        name = utils.utf(name)
-        chli = self.find_channel_by_name(groupname, name)
-        if chli:
-            self.data[groupname]["channels"].remove(chli)
+        try:
+            groupname = utils.utf(ch.get('cat'))
+            cat = self.data.get(groupname)
+            if not cat:
+                self.setGroup(groupname, groupname)
+            chs = self.find_channel_by_name(groupname, ch.get_name())
+            if chs:
+                chs.append(ch)
+            else:
+                self.getChannels(groupname).append([ch])
+        except Exception as e:
+            log.error(fmt("addChannel error: {0}", e))
 
     def getChannels(self, groupname):
         groupname = utils.utf(groupname)
         if self.data.get(groupname):
             return self.data[groupname].get("channels")
+        else:
+            return []
 
     def find_channel_by_id(self, groupname, chid):
-        groupname = utils.utf(groupname)
-        if self.data.get(groupname):
-            for ch in self.data[groupname].get("channels"):
-                if ch.get_id() == utils.utf(chid):
-                    return ch
+        for chs in self.getChannels(groupname):
+            for c in chs:
+                if c.get_id() == utils.utf(chid):
+                    return chs
 
     def find_channel_by_name(self, groupname, name):
-        groupname = utils.utf(groupname)
         name = utils.utf(name)
-        if self.data.get(groupname):
-            for ch in self.data[groupname].get("channels"):
-                if ch.get_name().lower().strip() == name.lower().strip():
-                    return ch
+        for chs in self.getChannels(groupname):
+            for c in chs:
+                if c.get_name().lower().strip() == name.lower().strip():
+                    return chs
 
 
 class RotateScreen(threading.Thread):
@@ -211,18 +212,26 @@ class WMainForm(xbmcgui.WindowXML):
                 return
             selItem = self.list.getSelectedItem()
             if selItem and not selItem.getLabel() == '..':
-                epg_id = selItem.getProperty('epg_cdn_id')
+                sel_chs = self.channel_groups.find_channel_by_name(self.cur_category, selItem.getProperty("name"))
+                if sel_chs:
+                    for sel_ch in sel_chs:
+                        epg = sel_ch.get_epg()
+                        if epg:
+                            self.showEpg(epg)
+                            break
 
-                if self.epg.get(epg_id):
-                    self.showEpg(epg_id)
-                else:
-                    self.getEpg(epg_id, timeout=0.5, callback=self.showEpg)
+
+#                 epg_id = selItem.getProperty('epg_cdn_id')
+
+#                 if self.epg.get(epg_id):
+#                     self.showEpg(epg_id)
+#                 else:
+#                     self.getEpg(epg_id, timeout=0.5, callback=self.showEpg)
 
                 self.showScreen(selItem.getProperty('id'), timeout=0.5)
 
                 for controlId in (WMainForm.IMG_LOGO, WMainForm.IMG_SCREEN):
-                    self.getControl(controlId).setImage(
-                        selItem.getProperty('icon'))
+                    self.getControl(controlId).setImage(selItem.getProperty('icon'))
 
     def load_selitem_info(self):
         self.cur_category = defines.ADDON.getSetting('cur_category')
@@ -434,30 +443,27 @@ class WMainForm(xbmcgui.WindowXML):
         except Exception as e:
             log.e(fmt('getCurEpg error {0}', e))
 
-    def showEpg(self, epg_id=None):
-        selitem = self.list.getSelectedItem()
-        if selitem and selitem.getProperty('epg_cdn_id') == epg_id:
-            try:
-                ctime = datetime.datetime.now()
-                dt = (ctime - datetime.datetime.utcnow()) - datetime.timedelta(hours=3)  # @UnusedVariable
-                curepg = self.getCurEpg(epg_id)
-                if len(curepg) > 0:
-                    for i, ep in enumerate(curepg):
-                        try:
-                            ce = self.getControl(WMainForm.LBL_FIRST_EPG + i)
-                            bt = datetime.datetime.fromtimestamp(float(ep['btime']))
-                            et = datetime.datetime.fromtimestamp(float(ep['etime']))
-                            ce.setLabel(fmt("{0} - {1} {2}",
-                                            bt.strftime("%H:%M"), et.strftime("%H:%M"), ep['name'].replace('&quot;', '"')))
-                            if self.progress and i == 0:
-                                self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
-                        except:
-                            break
+    def showEpg(self, curepg):
+        try:
+            ctime = datetime.datetime.now()
+            dt = (ctime - datetime.datetime.utcnow()) - datetime.timedelta(hours=3)  # @UnusedVariable
+            if len(curepg) > 0:
+                for i, ep in enumerate(curepg):
+                    try:
+                        ce = self.getControl(WMainForm.LBL_FIRST_EPG + i)
+                        bt = datetime.datetime.fromtimestamp(float(ep['btime']))
+                        et = datetime.datetime.fromtimestamp(float(ep['etime']))
+                        ce.setLabel(fmt("{0} - {1} {2}",
+                                        bt.strftime("%H:%M"), et.strftime("%H:%M"), ep['name'].replace('&quot;', '"')))
+                        if self.progress and i == 0:
+                            self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
+                    except:
+                        break
 
-                    return True
+                return True
 
-            except Exception as e:
-                log.e(fmt('showEpg error {0}', e))
+        except Exception as e:
+            log.e(fmt('showEpg error {0}', e))
 
     def showNoEpg(self):
         for i in range(99):
@@ -644,45 +650,52 @@ class WMainForm(xbmcgui.WindowXML):
             self.checkButton(WMainForm.BTN_ARCHIVE_ID)
 
     def LoopPlay(self, *args):
+        self.source_index = 0
         while not self.IsCanceled():
             try:
                 selItem = self.list.getListItem(self.selitem_id)
-                sel_ch = self.channel_groups.find_channel_by_id(self.cur_category, selItem.getProperty("id"))
 
-                if utils.str2int(selItem.getProperty("access_user")) == 0:
-                    access = selItem.getProperty("access_translation")
-                    if access == "registred":
-                        log.d("Трансляция доступна для зарегестрированных пользователей")
-                    elif access == "vip":
-                        log.d("Трансляция доступна для VIP пользователей")
-                    else:
-                        log.d("На данный момент трансляция не доступна")
-                sel_ch.onStart()
-                buf = xbmcgui.ListItem(selItem.getLabel())
-                buf.setProperty('epg_cdn_id', sel_ch.get('epg_cdn_id'))
-                buf.setProperty('icon', sel_ch.get_logo())
-                buf.setProperty("type", sel_ch.get('type'))
-                buf.setProperty("id", sel_ch.get_id())
-                buf.setProperty("name", sel_ch.get_name())
-                buf.setProperty('url', sel_ch.get_url())
-                buf.setProperty('mode', sel_ch.get_mode())
+                sel_chs = self.channel_groups.find_channel_by_name(self.cur_category, selItem.getProperty("name"))
+                if sel_chs:
+                    if self.source_index >= len(sel_chs):
+                        self.source_index = 0
 
-                if selItem.getProperty("type") == "archive":
-                    self.fillRecords(buf, datetime.datetime.today())
-                    break
-                defines.ADDON.setSetting('cur_category', self.cur_category)
-                defines.ADDON.setSetting('cur_channel', str(self.selitem_id))
+                    sel_ch = sel_chs[self.source_index]
 
-                self.player.Start(buf)
+                    if utils.str2int(selItem.getProperty("access_user")) == 0:
+                        access = selItem.getProperty("access_translation")
+                        if access == "registred":
+                            log.d("Трансляция доступна для зарегестрированных пользователей")
+                        elif access == "vip":
+                            log.d("Трансляция доступна для VIP пользователей")
+                        else:
+                            log.d("На данный момент трансляция не доступна")
+                    sel_ch.onStart()
+                    buf = xbmcgui.ListItem(selItem.getLabel())
+                    buf.setProperty('epg_cdn_id', sel_ch.get('epg_cdn_id'))
+                    buf.setProperty('icon', selItem.getProperty("icon"))
+                    buf.setProperty("id", sel_ch.get_id())
+                    buf.setProperty("name", sel_ch.get_name())
+                    buf.setProperty('url', sel_ch.get_url())
+                    buf.setProperty('mode', sel_ch.get_mode())
 
-                if self.player.TSPlayer.manual_stopped:
-                    break
-                if not self.IsCanceled():
-                    xbmc.sleep(223)
-                    self.select_channel()
+                    if selItem.getProperty("type") == "archive":
+                        self.fillRecords(buf, datetime.datetime.today())
+                        break
+                    defines.ADDON.setSetting('cur_category', self.cur_category)
+                    defines.ADDON.setSetting('cur_channel', str(self.selitem_id))
+
+                    self.player.Start(buf)
+
+                    if self.player.TSPlayer.manual_stopped:
+                        break
+                    if not self.IsCanceled():
+                        xbmc.sleep(223)
+                        self.select_channel()
 
             except Exception as e:
                 log.e(fmt('LoopPlay error: {0}', e))
+                self.source_index += 1
                 xbmc.sleep(1000)
 
         self.player.close()
@@ -876,14 +889,20 @@ class WMainForm(xbmcgui.WindowXML):
         else:
             li = xbmcgui.ListItem('..')
             self.list.addItem(li)
-            for i, ch in enumerate(self.channel_groups.getChannels(self.cur_category)):
-                chname = fmt("{0}. {1}", i + 1, ch.get_name())
-    #             if utils.str2int(ch.getProperty("access_user")) == 0:
-    #                 chname = "[COLOR FF646464]%s[/COLOR]" % chname
-                chli = xbmcgui.ListItem(chname, ch.get_id(), ch.get_logo(), ch.get_logo())
-                chli.setProperty("icon", ch.get_logo())
-                chli.setProperty("id", ch.get_id())
-                self.list.addItem(chli)
+            for i, chs in enumerate(self.channel_groups.getChannels(self.cur_category)):
+                for ch in chs:
+                    chname = fmt("{0}. {1}", i + 1, ch.get_name())
+        #             if utils.str2int(ch.getProperty("access_user")) == 0:
+        #                 chname = "[COLOR FF646464]%s[/COLOR]" % chname
+                    chli = xbmcgui.ListItem(chname, ch.get_id(), ch.get_logo(), ch.get_logo())
+                    chli.setProperty("icon", ch.get_logo())
+                    chli.setProperty("id", ch.get_id())
+                    chli.setProperty("name", ch.get_name())
+                    if ch.get_logo():
+                        self.list.addItem(chli)
+                        break
+                else:
+                    self.list.addItem(chli)
             self.hideStatus()
 
     def fillArchive(self):

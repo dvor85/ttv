@@ -13,7 +13,7 @@ class Channel(UserDict):
         self.data['mode'] = "PID"
         self.data.update(data)
 
-    def onStart(self):
+    def on_start(self):
         pass
 
     def get_url(self):
@@ -32,7 +32,7 @@ class Channel(UserDict):
         return utils.utf(self.data.get('name'))
 
     def update_epglist(self):
-        return self.data.get('epg')
+        pass
 
     def get_epg(self):
-        return self.update_epglist()
+        return self.data.get('epg')

@@ -19,6 +19,9 @@ class TTVChannel(Channel):
         Channel.__init__(self, data)
         self.session = session
 
+    def get_id(self):
+        return fmt("{0}", Channel.get_id(self))
+
     def get_logo(self):
         if self.data.get('logo'):
             if not _re_url_match.search(self.data['logo']):
@@ -64,6 +67,9 @@ class TTVChannel(Channel):
             prev_bt = 0
             prev_et = 0
             curepg = []
+            if not self.data.get('epg'):
+                self.update_epglist()
+
             for x in self.data.get('epg', []):
                 bt = datetime.datetime.fromtimestamp(float(x['btime']))
                 et = datetime.datetime.fromtimestamp(float(x['etime']))
@@ -71,13 +77,10 @@ class TTVChannel(Channel):
                     curepg.append(x)
                     prev_bt = float(x['btime'])
                     prev_et = float(x['etime'])
+            self.data['epg'] = curepg
             return curepg
-
         except Exception as e:
             log.e(fmt('get_epg error {0}', e))
-
-    def get_id(self):
-        return fmt("{0}", Channel.get_id(self))
 
 
 class TTV():
@@ -115,7 +118,7 @@ class TTV():
                                 params=params)
             jdata = r.json()
             if utils.str2int(jdata.get('success')) == 0:
-                log.e(Exception(fmt("Auth error: ", jdata.get('error'))))
+                log.e(Exception(fmt("Auth error: {0}", jdata.get('error'))))
         except Exception as e:
             log.e(fmt('onInit error: {0}', e))
             return
