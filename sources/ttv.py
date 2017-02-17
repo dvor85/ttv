@@ -28,7 +28,7 @@ class TTVChannel(Channel):
                 return fmt('http://{0}/uploads/{1}', defines.SITE_MIRROR, self.data['logo'])
         return Channel.get_logo(self)
 
-    def onStart(self):
+    def get_url(self):
         try:
             params = dict(
                 session=self.session,
@@ -39,11 +39,11 @@ class TTVChannel(Channel):
             jdata = r.json()
             self.data['url'] = jdata['source']
             self.data['mode'] = jdata["type"].upper().replace("CONTENTID", "PID")
-            return jdata
+            return self.data['url']
         except Exception as e:
             log.w(fmt('get_from_api error: {0}', e))
 
-    def update_epglist(self):
+    def __update_epglist(self):
         try:
             params = dict(
                 session=self.session,
@@ -68,7 +68,7 @@ class TTVChannel(Channel):
             prev_et = 0
             curepg = []
             if not self.data.get('epg'):
-                self.update_epglist()
+                self.__update_epglist()
 
             for x in self.data.get('epg', []):
                 bt = datetime.datetime.fromtimestamp(float(x['btime']))

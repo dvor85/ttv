@@ -20,3 +20,4 @@ encoding/okdialog.py=utf-8
 encoding/player.py=utf-8
 encoding/ts.py=utf-8
 encoding/utils.py=utf-8
+encoding/xmltv.py=utf-8

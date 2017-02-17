@@ -670,7 +670,7 @@ class WMainForm(xbmcgui.WindowXML):
                             log.d("Трансляция доступна для VIP пользователей")
                         else:
                             log.d("На данный момент трансляция не доступна")
-                    sel_ch.onStart()
+
                     buf = xbmcgui.ListItem(selItem.getLabel())
                     buf.setProperty('epg_cdn_id', sel_ch.get('epg_cdn_id'))
                     buf.setProperty('icon', selItem.getProperty("icon"))
@@ -890,7 +890,8 @@ class WMainForm(xbmcgui.WindowXML):
             li = xbmcgui.ListItem('..')
             self.list.addItem(li)
             for i, chs in enumerate(self.channel_groups.getChannels(self.cur_category)):
-                for ch in chs:
+                if chs:
+                    ch = chs[0]
                     chname = fmt("{0}. {1}", i + 1, ch.get_name())
         #             if utils.str2int(ch.getProperty("access_user")) == 0:
         #                 chname = "[COLOR FF646464]%s[/COLOR]" % chname
@@ -898,10 +899,6 @@ class WMainForm(xbmcgui.WindowXML):
                     chli.setProperty("icon", ch.get_logo())
                     chli.setProperty("id", ch.get_id())
                     chli.setProperty("name", ch.get_name())
-                    if ch.get_logo():
-                        self.list.addItem(chli)
-                        break
-                else:
                     self.list.addItem(chli)
             self.hideStatus()
 

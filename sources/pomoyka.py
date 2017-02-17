@@ -7,12 +7,17 @@ import logger
 from interface import Channel
 
 log = logger.Logger('POMOYKA')
+fmt = utils.fmt
 
 
 class PomoykaChannel(Channel):
 
     def get_id(self):
         return Channel.get_name(self)
+
+    def get_logo(self):
+        return utils.fs_enc(
+            fmt("{addon_path}/logo/{name}.png", addon_path=defines.ADDON_PATH, name=utils.true_enc(self.get_name())))
 
 
 class Pomoyka():
