@@ -26,7 +26,7 @@ class FDB():
     def get(self):
         pass
 
-    def add(self, li):
+    def add(self, ch):
         pass
 
     def save(self):
@@ -35,10 +35,9 @@ class FDB():
     def get_json(self):
         pass
 
-    def delete(self, li):
-        chid = utils.str2int(li.getProperty('id'))
-        log.d(fmt('delete channel id={0}', chid))
-        k = self.find(chid)
+    def delete(self, name):
+        log.d(fmt('delete channel name={0}', name))
+        k = self.find(name)
         if k is not None:
             if not self.channels:
                 self.get()
@@ -47,25 +46,26 @@ class FDB():
                 return self.save()
         return FDB.API_ERROR_NOFAVOURITE
 
-    def moveTo(self, li, to_id):
+    def moveTo(self, name, to_id):
         to_id -= 1
-        chid = utils.str2int(li.getProperty('id'))
+        name = utils.utf(name).lower()
         if not self.channels:
             self.get()
         if self.channels and to_id < len(self.channels):
-            k = self.find(chid)
+            k = self.find(name)
             log.d(fmt('moveTo channel from {0} to {1}', k, to_id))
             return self.swapTo(k, to_id)
 
         return FDB.API_ERROR_NOPARAM
 
-    def find(self, chid):
-        log.d(fmt('find channel by id={0}', chid))
+    def find(self, name):
+        name = utils.utf(name).lower()
+        log.d(fmt('find channel by name={0}', name))
         if not self.channels:
             self.get()
         if self.channels:
             for i, ch in enumerate(self.channels):
-                if ch['id'] == chid:
+                if utils.utf(ch['name']).lower() == name:
                     return i
 
     def swap(self, i1, i2):
@@ -86,15 +86,13 @@ class FDB():
                 break
         return self.save()
 
-    def down(self, li):
-        chid = utils.str2int(li.getProperty('id'))
-        to_id = self.find(chid) + 1
-        return self.moveTo(li, to_id + 1)
+    def down(self, name):
+        to_id = self.find(name) + 1
+        return self.moveTo(name, to_id + 1)
 
-    def up(self, li):
-        chid = utils.str2int(li.getProperty('id'))
-        to_id = self.find(chid) + 1
-        return self.moveTo(li, to_id - 1)
+    def up(self, name):
+        to_id = self.find(name) + 1
+        return self.moveTo(name, to_id - 1)
 
 
 class LocalFDB(FDB):
@@ -114,13 +112,13 @@ class LocalFDB(FDB):
                     log.w(fmt('get error: {0}', e))
         return self.channels
 
-    def get_json(self):
-        if not self.channels:
-            self.get()
-        if self.channels:
-            return {'channels': self.channels, 'success': 1}
-        else:
-            return {'channels': [], 'success': 0, 'error': 'Error loading local channels'}
+#     def get_json(self):
+#         if not self.channels:
+#             self.get()
+#         if self.channels:
+#             return {'channels': self.channels, 'success': 1}
+#         else:
+#             return {'channels': [], 'success': 0, 'error': 'Error loading local channels'}
 
     def save(self, obj=None):
         log.d('save channels')
@@ -135,18 +133,14 @@ class LocalFDB(FDB):
             log.w(fmt('save error: {0}', e))
             return FDB.API_ERROR_NOCONNECT
 
-    def add(self, li):
-        chid = utils.str2int(li.getProperty('id'))
-        log.d(fmt('add channels {0}', chid))
-        channel = {'id': chid,
-                   'type': li.getProperty('type'),
-                   'logo': os.path.basename(li.getProperty('icon')),
-                   'access_translation': li.getProperty('access_translation'),
-                   'access_user': utils.str2int(li.getProperty('access_user')),
-                   'name': li.getProperty('name'),
-                   'epg_id': li.getProperty('epg_cdn_id')}
+    def add(self, ch):
+        name = ch.get_name()
+        log.d(fmt('add channels {0}', name))
+        channel = {'name': name,
+                   'cat': ch.get('cat'),
+                   }
 
-        if self.find(chid) is None:
+        if self.find(name) is None:
             self.channels.append(channel)
             return self.save()
 

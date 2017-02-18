@@ -39,7 +39,8 @@ class MyPlayer(xbmcgui.WindowXML):
         log.d('__init__')
         self.TSPlayer = None
         self.parent = None
-        self.li = None
+        self.channel = None
+        self.title = ''
         self.visible = False
         self.focusId = MyPlayer.CONTROL_WINDOW_ID
 
@@ -57,14 +58,14 @@ class MyPlayer(xbmcgui.WindowXML):
 
     def onInit(self):
         log.d('onInit')
-        if not (self.li and self.parent):
+        if not (self.channel and self.parent):
             return
         self.progress = self.getControl(MyPlayer.CONTROL_PROGRESS_ID)
         cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
-        cicon.setImage(self.li.getProperty('icon'))
+        cicon.setImage(self.channel.get_logo())
         self.control_window = self.getControl(MyPlayer.CONTROL_WINDOW_ID)
         self.chinfo = self.getControl(MyPlayer.CH_NAME_ID)
-        self.chinfo.setLabel(self.li.getLabel())
+        self.chinfo.setLabel(self.title)
         self.swinfo = self.getControl(MyPlayer.DLG_SWITCH_ID)
         self.swinfo.setVisible(False)
 
@@ -73,7 +74,7 @@ class MyPlayer(xbmcgui.WindowXML):
 
         log.d("channel_number = %i" % self.channel_number)
         log.d("selitem_id = %i" % self.parent.selitem_id)
-        self.UpdateEpg(self.li)
+        self.UpdateEpg(self.channel)
 
         self.control_window.setVisible(True)
         self.hide_control_window(timeout=5)
@@ -99,45 +100,59 @@ class MyPlayer(xbmcgui.WindowXML):
         self.hide_control_timer.daemon = False
         self.hide_control_timer.start()
 
-    def UpdateEpg(self, li):
+    def UpdateEpg(self, channel):
+        #         try:
+        #             log.d('UpdateEpg')
+        #             if not li:
+        #                 raise ValueError('param "li" is not set')
+        #
+        #             cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
+        #             cicon.setImage(li.getProperty('icon'))
+        #             epg_id = li.getProperty('epg_cdn_id')
+        #
+        #             if self.parent.epg.get(epg_id):
+        #                 self.showEpg(epg_id)
+        #             else:
+        #                 if li.getProperty('id') != self.li.getProperty('id'):
+        #                     self.showNoEpg()
+        #                 self.parent.getEpg(epg_id, callback=self.showEpg)
+        #
+        #         except Exception as e:
+        #             log.w(fmt('UpdateEpg error: {0}', e))
+
         try:
             log.d('UpdateEpg')
-            if not li:
-                raise ValueError('param "li" is not set')
+            if not channel:
+                raise ValueError('"channel" is not set')
 
             cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
-            cicon.setImage(li.getProperty('icon'))
-            epg_id = li.getProperty('epg_cdn_id')
-
-            if self.parent.epg.get(epg_id):
-                self.showEpg(epg_id)
+            cicon.setImage(channel.get_logo())
+            epg = channel.get_epg()
+            if epg:
+                self.showEpg(epg)
+                return True
             else:
-                if li.getProperty('id') != self.li.getProperty('id'):
-                    self.showNoEpg()
-                self.parent.getEpg(epg_id, callback=self.showEpg)
+                self.showNoEpg()
 
         except Exception as e:
             log.w(fmt('UpdateEpg error: {0}', e))
 
-    def showEpg(self, epg_id):
+    def showEpg(self, curepg):
         try:
             ctime = datetime.datetime.now()
-            dt = (ctime - datetime.datetime.utcnow()) - datetime.timedelta(hours=3)  # @UnusedVariable
-            curepg = self.parent.getCurEpg(epg_id)
-            if len(curepg) > 0:
-                for i, ep in enumerate(curepg):
-                    try:
-                        ce = self.getControl(MyPlayer.CONTROL_FIRST_EPG_ID + i)
-                        bt = datetime.datetime.fromtimestamp(float(ep['btime']))
-                        et = datetime.datetime.fromtimestamp(float(ep['etime']))
-                        ce.setLabel(fmt("{0} - {1} {2}", bt.strftime("%H:%M"),
-                                        et.strftime("%H:%M"), ep['name'].replace('&quot;', '"')))
-                        if self.progress and i == 0:
-                            self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
-                    except:
-                        break
+            for i, ep in enumerate(curepg):
+                try:
+                    ce = self.getControl(MyPlayer.CONTROL_FIRST_EPG_ID + i)
+                    bt = datetime.datetime.fromtimestamp(float(ep['btime']))
+                    et = datetime.datetime.fromtimestamp(float(ep['etime']))
+                    ce.setLabel(fmt("{0} - {1} {2}", bt.strftime("%H:%M"),
+                                    et.strftime("%H:%M"), ep['name'].replace('&quot;', '"')))
+                    if self.progress and i == 0:
+                        self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
+                except:
+                    break
 
-                return True
+            return True
 
         except Exception as e:
             log.e(fmt('showEpg error {0}', e))
@@ -173,7 +188,7 @@ class MyPlayer(xbmcgui.WindowXML):
                 self.parent.amalkerWnd.show()
                 log.d('END SHOW ADS Window')
 
-    def Start(self, li):
+    def Start(self, title, channel):
         #         def get_channel_from_ext():
         #             def get_src(url):
         #                 try:
@@ -233,10 +248,11 @@ class MyPlayer(xbmcgui.WindowXML):
 
         log("Start play")
 
-        self.li = li
+        self.channel = channel
+        self.title = title
         self.channel_number = self.parent.selitem_id
-        url = li.getProperty('url')
-        mode = li.getProperty('mode')
+        url = channel.get_url()
+        mode = channel.get_mode()
 
 #         self.parent.showStatus("Получение ссылки...")
 #
@@ -266,7 +282,7 @@ class MyPlayer(xbmcgui.WindowXML):
         if not self.TSPlayer:
             log.d('InitTS')
             self.TSPlayer = tsengine(parent=self.parent)
-        self.TSPlayer.play_url_ind(0, li.getLabel(), li.getProperty('icon'), li.getProperty('icon'), torrent=url, mode=mode)
+        self.TSPlayer.play_url_ind(0, title, channel.get_logo(), channel.get_logo(), torrent=url, mode=mode)
         log.d('End playing')
 
     def run_selected_channel(self, timeout=0):
@@ -304,10 +320,14 @@ class MyPlayer(xbmcgui.WindowXML):
 
     def onAction(self, action):
         def viewEPG(swinfo_visible=True):
-            li = self.parent.list.getListItem(self.channel_number)
-            self.chinfo.setLabel(li.getLabel())
+            selItem = self.parent.list.getListItem(self.channel_number)
+            sel_chs = self.parent.channel_groups.find_channel_by_name(self.parent.cur_category, selItem.getProperty("name"))
+
+            self.chinfo.setLabel(selItem.getLabel())
             self.swinfo.setVisible(swinfo_visible)
-            self.UpdateEpg(li)
+            for ch in sel_chs:
+                if self.UpdateEpg(ch):
+                    break
 
         # log.d(fmt('Action {0} | ButtonCode {1}', action.getId(), action.getButtonCode()))
         if action in MyPlayer.CANCEL_DIALOG or action.getId() == MyPlayer.ACTION_RBC:
@@ -315,7 +335,7 @@ class MyPlayer(xbmcgui.WindowXML):
             if self.select_timer:
                 self.channel_number_str = str(self.parent.selitem_id)
                 self.run_selected_channel()
-                self.UpdateEpg(self.li)
+                self.UpdateEpg(self.channel)
             else:
                 self.close()
         elif action.getId() in (3, 4, 5, 6):
@@ -349,7 +369,7 @@ class MyPlayer(xbmcgui.WindowXML):
             xbmc.sleep(4000)
             xbmc.executebuiltin('Action(Back)')
         else:
-            self.UpdateEpg(self.li)
+            self.UpdateEpg(self.channel)
 
         if not self.visible:
             if self.focusId == MyPlayer.CONTROL_WINDOW_ID:

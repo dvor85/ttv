@@ -62,7 +62,6 @@ class TTVChannel(Channel):
     def get_epg(self):
         try:
             ctime = datetime.datetime.now()
-            dt = (ctime - datetime.datetime.utcnow()) - datetime.timedelta(hours=3)  # @UnusedVariable
 
             prev_bt = 0
             prev_et = 0
@@ -81,6 +80,23 @@ class TTVChannel(Channel):
             return curepg
         except Exception as e:
             log.e(fmt('get_epg error {0}', e))
+
+    def get_screenshots(self):
+        try:
+            params = dict(
+                session=self.session,
+                channel_id=self.get_id(),
+                count=2,
+                typeresult='json')
+            r = defines.request(fmt('http://{url}/v3/translation_screen.php', url=defines.API_MIRROR),
+                                params=params)
+
+            jdata = r.json()
+
+            if utils.str2int(jdata.get('success')) != 0:
+                return jdata['screens']
+        except Exception as e:
+            log.w(fmt('get_screenshots error: {0}', e))
 
 
 class TTV():

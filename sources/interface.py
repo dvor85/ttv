@@ -28,6 +28,9 @@ class Channel(UserDict):
     def get_name(self):
         return utils.utf(self.data.get('name'))
 
+    def get_screenshots(self):
+        pass
+
     def update_epglist(self):
         pass
 

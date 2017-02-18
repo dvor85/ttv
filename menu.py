@@ -23,6 +23,7 @@ class MenuForm(xbmcgui.WindowXMLDialog):
 
     def __init__(self, *args, **kwargs):
         self.li = None
+        self.channel = None
         self.result = None
         self.parent = None
 
@@ -30,6 +31,10 @@ class MenuForm(xbmcgui.WindowXMLDialog):
         log.d('OnInit')
         if not self.li or not self.parent:
             return
+        sel_chs = self.parent.channel_groups.find_channel_by_name(self.parent.cur_category, self.li.getProperty("name"))
+        if not sel_chs:
+            return
+        self.channel = sel_chs[0]
         log.d("li = %s" % self.li.getProperty("commands"))
         try:
             cmds = self.li.getProperty('commands').split(',')
@@ -46,7 +51,8 @@ class MenuForm(xbmcgui.WindowXMLDialog):
                     title = 'Поднять'
                 elif c == MenuForm.CMD_DOWN_FAVOURITE:
                     title = 'Опустить'
-                lst.addItem(xbmcgui.ListItem(title, c))
+                if title:
+                    lst.addItem(xbmcgui.ListItem(title, c))
 
             self.getControl(999).setHeight(len(cmds) * 40 + 55)
             lst.selectItem(0)
@@ -70,22 +76,22 @@ class MenuForm(xbmcgui.WindowXMLDialog):
 
     def exec_cmd(self, cmd):
         try:
-            if utils.str2int(defines.FAVOURITE) == 0 and self.parent.user["vip"]:
-                fdb = favdb.RemoteFDB(self.parent.session)
-            else:
-                fdb = favdb.LocalFDB()
+            #             if utils.str2int(defines.FAVOURITE) == 0 and self.parent.user["vip"]:
+            #                 fdb = favdb.RemoteFDB(self.parent.session)
+            #             else:
+            fdb = favdb.LocalFDB()
 
             if cmd == MenuForm.CMD_ADD_FAVOURITE:
-                return fdb.add(self.li)
+                return fdb.add(self.channel)
             elif cmd == MenuForm.CMD_DEL_FAVOURITE:
-                return fdb.delete(self.li)
+                return fdb.delete(self.channel.get_name())
             elif cmd == MenuForm.CMD_MOVE_FAVOURITE:
                 to_num = int(xbmcgui.Dialog().numeric(0, heading='Введите позицию'))
-                return fdb.moveTo(self.li, to_num)
+                return fdb.moveTo(self.channel.get_name(), to_num)
             elif cmd == MenuForm.CMD_DOWN_FAVOURITE:
-                return fdb.down(self.li)
+                return fdb.down(self.channel.get_name())
             elif cmd == MenuForm.CMD_UP_FAVOURITE:
-                return fdb.up(self.li)
+                return fdb.up(self.channel.get_name())
         except Exception as e:
             log.e(fmt('Error: {0} in exec_cmd "{1}"', e, cmd))
             self.close()
