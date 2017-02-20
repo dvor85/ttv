@@ -9,7 +9,7 @@ import xbmc
 import utils
 
 
-log = logger.Logger('FDB')
+log = logger.Logger(__name__)
 fmt = utils.fmt
 
 
@@ -136,9 +136,7 @@ class LocalFDB(FDB):
     def add(self, ch):
         name = ch.get_name()
         log.d(fmt('add channels {0}', name))
-        channel = {'name': name,
-                   'cat': ch.get('cat'),
-                   }
+        channel = {'name': name}
 
         if self.find(name) is None:
             self.channels.append(channel)

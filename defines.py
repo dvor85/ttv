@@ -10,7 +10,7 @@ import os
 import utils
 import logger
 
-log = logger.Logger('DEFINES')
+log = logger.Logger(__name__)
 fmt = utils.fmt
 
 ADDON = xbmcaddon.Addon()

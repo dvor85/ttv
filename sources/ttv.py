@@ -19,15 +19,6 @@ class TTVChannel(Channel):
         Channel.__init__(self, data)
         self.session = session
 
-    def get_id(self):
-        return fmt("{0}", Channel.get_id(self))
-
-    def get_logo(self):
-        if self.data.get('logo'):
-            if not _re_url_match.search(self.data['logo']):
-                return fmt('http://{0}/uploads/{1}', defines.SITE_MIRROR, self.data['logo'])
-        return Channel.get_logo(self)
-
     def get_url(self):
         try:
             params = dict(

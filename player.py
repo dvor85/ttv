@@ -11,11 +11,10 @@ import defines
 import re
 import utils
 import logger
-from sources.table import Channels as ExtChannels
 from ts import TSengine as tsengine
 
 
-log = logger.Logger('MyPlayer')
+log = logger.Logger(__name__)
 fmt = utils.fmt
 
 
@@ -101,25 +100,6 @@ class MyPlayer(xbmcgui.WindowXML):
         self.hide_control_timer.start()
 
     def UpdateEpg(self, channel):
-        #         try:
-        #             log.d('UpdateEpg')
-        #             if not li:
-        #                 raise ValueError('param "li" is not set')
-        #
-        #             cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
-        #             cicon.setImage(li.getProperty('icon'))
-        #             epg_id = li.getProperty('epg_cdn_id')
-        #
-        #             if self.parent.epg.get(epg_id):
-        #                 self.showEpg(epg_id)
-        #             else:
-        #                 if li.getProperty('id') != self.li.getProperty('id'):
-        #                     self.showNoEpg()
-        #                 self.parent.getEpg(epg_id, callback=self.showEpg)
-        #
-        #         except Exception as e:
-        #             log.w(fmt('UpdateEpg error: {0}', e))
-
         try:
             log.d('UpdateEpg')
             if not channel:
@@ -189,63 +169,6 @@ class MyPlayer(xbmcgui.WindowXML):
                 log.d('END SHOW ADS Window')
 
     def Start(self, title, channel):
-        #         def get_channel_from_ext():
-        #             def get_src(url):
-        #                 try:
-        #                     if url.find('acestream://') > -1:
-        #                         return url.replace('acestream://', '')
-        #                     if url.endswith('.acelive'):
-        #                         return url
-        #                     if self._re_url_match.search(url):
-        #                         r = defines.request(url)
-        #                         m = self._re_source.search(r.text)
-        #                         return m.group('src')
-        #                     else:
-        #                         return url
-        #                 except Exception as e:
-        #                     log.w(fmt('Start->get_from_ext->get_src error: {0}', e))
-        #
-        #             for tch in ExtChannels.itervalues():
-        #                 chli = tch.find_by_id(li.getProperty("id"))
-        #                 if not chli:
-        #                     chli = tch.find_by_title(li.getProperty('name'))
-        #                 if chli:
-        #                     src = get_src(chli.get('url'))
-        #                     if src:
-        #                         jdata["success"] = 1
-        #                         if src.endswith('.acelive'):
-        #                             jdata["type"] = 'TORRENT'
-        #                         else:
-        #                             jdata["type"] = 'PID'
-        #
-        #                         jdata["source"] = src
-        #                         return jdata
-        #
-        #         def get_channel_from_api():
-        #             try:
-        #                 params = dict(
-        #                     session=self.parent.session,
-        #                     channel_id=utils.uni(li.getProperty("id")),
-        #                     typeresult='json')
-        #                 r = defines.request(fmt("http://{url}/v3/translation_stream.php", url=defines.API_MIRROR),
-        #                                     params=params)
-        #                 jdata = r.json()
-        #                 return jdata
-        #             except Exception as e:
-        #                 log.w(fmt('Start->get_from_api error: {0}', e))
-
-        #         def get_record_from_api():
-        #             try:
-        #                 params = dict(
-        #                     session=self.parsent.session,
-        #                     record_id=li.getProperty("id"),
-        #                     typeresult='json')
-        #                 r = defines.request(fmt("http://{url}/v3/arc_stream.php", url=defines.API_MIRROR), params=params)
-        #                 jdata = r.json()
-        #                 return jdata
-        #             except Exception as e:
-        #                 log.w(fmt('Start->get_record_from_api error: {0}', e))
-
         log("Start play")
 
         self.channel = channel
@@ -253,30 +176,6 @@ class MyPlayer(xbmcgui.WindowXML):
         self.channel_number = self.parent.selitem_id
         url = channel.get_url()
         mode = channel.get_mode()
-
-#         self.parent.showStatus("Получение ссылки...")
-#
-#         if (li.getProperty("type") == "channel"):
-#             jdata = get_channel_from_api()
-#
-#             if not jdata or utils.str2int(jdata.get("success")) == 0 or not jdata.get("source"):
-#                 jdata = get_channel_from_ext()
-#
-#         elif (li.getProperty("type") == "record"):
-#             jdata = get_record_from_api()
-#         else:
-#             msg = "Неизвестный тип контента"
-#             self.parent.showStatus(msg)
-#             raise Exception(msg)
-
-#         if not jdata or utils.str2int(jdata.get("success")) == 0 or not jdata.get("source"):
-#             msg = "Канал временно не доступен"
-#             self.parent.showStatus(msg)
-#             raise Exception(msg)
-#
-#         url = jdata["source"]
-#         mode = jdata["type"].upper().replace("CONTENTID", "PID")
-#         self.parent.hideStatus()
 
         log.d('Play torrent')
         if not self.TSPlayer:

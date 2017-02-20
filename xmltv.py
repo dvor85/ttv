@@ -12,7 +12,7 @@ import gzip
 
 
 fmt = utils.fmt
-log = logger.Logger('XMLTV')
+log = logger.Logger(__name__)
 
 
 class XMLTV():

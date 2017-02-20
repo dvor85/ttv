@@ -4,7 +4,6 @@
 # Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 import defines
-import xmltv
 
 
 try:
@@ -32,7 +31,6 @@ def main():
     if not defines.ADDON.getSetting("login"):
         defines.ADDON.setSetting("login", "anonymous")
         defines.ADDON.setSetting("password", "anonymous")
-    defines.MyThread(xmltv.XMLTV.get_instance).start()
 
     w = mainform.WMainForm("mainform.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
     w.doModal()

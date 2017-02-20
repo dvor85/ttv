@@ -34,82 +34,30 @@
 			</control>
       <control type="group">
         <description>Window</description>
-        <control type="image">
-          <posx>5</posx>
-          <posy>5</posy>
-          <width>1270</width>
-          <height>520</height>
-          <texture border="40">window.png</texture>
-        </control>
-        <control type="group" id="101">
-          <!-- Главное меню -->
-          <description>Title</description>
-          <control type="label">
-            <desctiption>Time</desctiption>
-            <posx>1210</posx>
-            <posy>10</posy>
-            <visible>true</visible>
-            <label>$INFO[System.Time]</label>
-          </control>
-          <control type="button" id = "102">
-            <description>from</description>
-            <posx>15</posx>
-            <posy>10</posy>
-            <width>130</width>
-            <height>20</height>
-            <font>font10</font>
-            <size>10</size>
-            <texturefocus>tabfocus.png</texturefocus>
-            <!--<texturenofocus>tabnofocus.png</texturenofocus>-->
-            <textcolor>FF99D8FF</textcolor>
-            <colordiffuse>FFFFFFFF</colordiffuse>
-            <pulseonselect>false</pulseonselect>
-            <align>center</align>
-            <aligny>center</aligny>
-            <label>Каналы</label>
-            <onright>104</onright>
-            <onleft>104</onleft>
-            <ondown>50</ondown>
-            <onfocus>SendClick(12345,102)</onfocus>
-          </control>
-          <control type="button" id = "104">
-            <description>from</description>
-            <posx>160</posx>
-            <posy>10</posy>
-            <width>130</width>
-            <height>20</height>
-            <font>font10</font>
-            <size>10</size>
-            <textcolor>FF99D8FF</textcolor>
-            <texturefocus>tabfocus.png</texturefocus>
-            <!--<texturenofocus>tabnofocus.png</texturenofocus>-->
-            <align>center</align>
-            <aligny>center</aligny>
-            <label>Архив</label>
-            <onright>102</onright>
-            <onleft>102</onleft>
-            <ondown>50</ondown>
-            <onfocus>SendClick(12345,104)</onfocus>
-          </control>
+        <control type="label">
+	        <desctiption>Time</desctiption>
+	        <posx>1210</posx>
+	        <posy>10</posy>
+	        <visible>true</visible>
+	        <label>$INFO[System.Time]</label>
         </control>
         
         <control type="group">
           <description>Work area</description>
           <control type="image">
-            <posx>15</posx>
-            <posy>35</posy>
-            <width>1251</width>
-            <height>480</height>
+            <posx>5</posx>
+            <posy>5</posy>
+            <width>1270</width>
+          	<height>520</height>
             <texture border="40">border.png</texture>
           </control>
           <control type="panel" id="50">
             <description>My first list container</description>
             <posx>23</posx>
-            <posy>43</posy>
+            <posy>20</posy>
             <width>1240</width>
-            <height>480</height>
+            <height>510</height>
             <visible>true</visible>
-            <onup>101</onup>
             <ondown>209</ondown>
             <orientation>horizontal</orientation>
             <viewtype>list</viewtype>
