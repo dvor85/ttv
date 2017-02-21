@@ -6,6 +6,7 @@ import time
 import utils
 import defines
 import logger
+from threading import Event
 
 import os
 import gzip
@@ -17,14 +18,21 @@ log = logger.Logger(__name__)
 
 class XMLTV():
     _instance = None
+    _lock = Event()
 
     @staticmethod
     def get_instance():
         if XMLTV._instance is None:
-            XMLTV._instance = XMLTV()
+            if not XMLTV._lock.is_set():
+                XMLTV._lock.set()
+                try:
+                    XMLTV._instance = XMLTV()
+                finally:
+                    XMLTV._lock.clear()
         return XMLTV._instance
 
     def __init__(self):
+        log.d('start initialization')
         self.xmltv_file = os.path.join(defines.DATA_PATH, 'ttv.xmltv.xml.gz')
         if os.path.exists(self.xmltv_file):
             dt = datetime.datetime.now() - datetime.datetime.fromtimestamp(os.path.getmtime(self.xmltv_file))
@@ -33,6 +41,7 @@ class XMLTV():
             self.update_xmltv()
         with gzip.open(self.xmltv_file, 'rb') as fp:
             self.xmltv_root = ET.XML(fp.read())
+        log.d('stop initialization')
 
     def update_xmltv(self):
         url = 'http://api.torrent-tv.ru/ttv.xmltv.xml.gz'

@@ -53,7 +53,6 @@ class MyPlayer(xbmcgui.WindowXML):
         self.swinfo = None
         self.control_window = None
         self._re_source = re.compile('(loadPlayer|loadTorrent)\("(?P<src>[\w/_:.]+)"')
-        self._re_url_match = re.compile('^(?:https?|ftps?|file)://')
 
     def onInit(self):
         log.d('onInit')
@@ -99,20 +98,19 @@ class MyPlayer(xbmcgui.WindowXML):
         self.hide_control_timer.daemon = False
         self.hide_control_timer.start()
 
-    def UpdateEpg(self, channel):
+    def UpdateEpg(self, chs):
         try:
             log.d('UpdateEpg')
-            if not channel:
-                raise ValueError('"channel" is not set')
 
             cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
-            cicon.setImage(channel.get_logo())
-            epg = channel.get_epg()
-            if epg:
-                self.showEpg(epg)
-                return True
-            else:
+            for ch in chs:
+                logo = ch.get_logo()
+                if logo:
+                    cicon.setImage(logo)
+                    break
+            if self.channel.get_name() != chs[0].get_name():
                 self.showNoEpg()
+            self.parent.getEpg(chs, callback=self.showEpg)
 
         except Exception as e:
             log.w(fmt('UpdateEpg error: {0}', e))
@@ -168,12 +166,12 @@ class MyPlayer(xbmcgui.WindowXML):
                 self.parent.amalkerWnd.show()
                 log.d('END SHOW ADS Window')
 
-    def Start(self, title, channel):
+    def Start(self, channel):
         log("Start play")
 
         self.channel = channel
-        self.title = title
         self.channel_number = self.parent.selitem_id
+        self.title = fmt("{0}. {1}", self.channel_number, channel.get_name())
         url = channel.get_url()
         mode = channel.get_mode()
 
@@ -181,7 +179,7 @@ class MyPlayer(xbmcgui.WindowXML):
         if not self.TSPlayer:
             log.d('InitTS')
             self.TSPlayer = tsengine(parent=self.parent)
-        self.TSPlayer.play_url_ind(0, title, channel.get_logo(), channel.get_logo(), torrent=url, mode=mode)
+        self.TSPlayer.play_url_ind(0, self.title, channel.get_logo(), channel.get_logo(), torrent=url, mode=mode)
         log.d('End playing')
 
     def run_selected_channel(self, timeout=0):
@@ -224,9 +222,8 @@ class MyPlayer(xbmcgui.WindowXML):
 
             self.chinfo.setLabel(selItem.getLabel())
             self.swinfo.setVisible(swinfo_visible)
-            for ch in sel_chs:
-                if self.UpdateEpg(ch):
-                    break
+            if sel_chs:
+                self.UpdateEpg(sel_chs)
 
         # log.d(fmt('Action {0} | ButtonCode {1}', action.getId(), action.getButtonCode()))
         if action in MyPlayer.CANCEL_DIALOG or action.getId() == MyPlayer.ACTION_RBC:
@@ -234,7 +231,7 @@ class MyPlayer(xbmcgui.WindowXML):
             if self.select_timer:
                 self.channel_number_str = str(self.parent.selitem_id)
                 self.run_selected_channel()
-                self.UpdateEpg(self.channel)
+                self.UpdateEpg([self.channel])
             else:
                 self.close()
         elif action.getId() in (3, 4, 5, 6):
@@ -268,7 +265,7 @@ class MyPlayer(xbmcgui.WindowXML):
             xbmc.sleep(4000)
             xbmc.executebuiltin('Action(Back)')
         else:
-            self.UpdateEpg(self.channel)
+            self.UpdateEpg([self.channel])
 
         if not self.visible:
             if self.focusId == MyPlayer.CONTROL_WINDOW_ID:

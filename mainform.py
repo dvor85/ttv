@@ -12,13 +12,11 @@ import datetime
 import threading
 
 from player import MyPlayer
-from adswnd import AdsForm
 from menu import MenuForm
 from infoform import InfoForm
 from sources.table import Channels as ChannelSources
 import favdb
 import json
-import re
 import utils
 from UserDict import UserDict
 import logger
@@ -59,7 +57,7 @@ class ChannelGroups(UserDict):
     def getGroups(self):
         return self.data.keys()
 
-    def setChannels(self, channels):
+    def addChannels(self, channels):
         for ch in channels:
             self.addChannel(ch)
 
@@ -162,22 +160,19 @@ class WMainForm(xbmcgui.WindowXML):
     def __init__(self, *args, **kwargs):
         log.d('__init__')
         self.channel_groups = ChannelGroups()
-        self._re_1ttv_epg_text = re.compile('var\s+epg\s*=\s*(?P<e>\[.+?\])\s*;.*?</script>', re.DOTALL)
-        self._re_1ttv_epg_json = re.compile('(?P<k>\w+)\s*:\s*(?P<v>.+?[,}])')
-        self._re_url_match = re.compile('^(?:https?|ftps?|file)://')
-        self.archive = []
+#         self._re_1ttv_epg_text = re.compile('var\s+epg\s*=\s*(?P<e>\[.+?\])\s*;.*?</script>', re.DOTALL)
+#         self._re_1ttv_epg_json = re.compile('(?P<k>\w+)\s*:\s*(?P<v>.+?[,}])')
         self.img_progress = None
         self.txt_progress = None
         self.progress = None
         self.list = None
         self.player = MyPlayer("player.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
         self.player.parent = self
-        self.amalkerWnd = AdsForm("adsdialog.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
         self.load_selitem_info()
+        self.selitem_id = -1
         self.user = None
         self.infoform = None
         self.first_init = True
-        self.session = None
         self.channel_number_str = ''
 
         self.select_timer = None
@@ -198,12 +193,22 @@ class WMainForm(xbmcgui.WindowXML):
             self.updateList()
         else:
             self.loadList()
+
         self.hide_main_window(timeout=10)
+
+    def get_selitem_id(self, name):
+        index = -1
+        name = utils.utf(name).lower()
+        while index < self.list.size():
+            index += 1
+            li = self.list.getListItem(index)
+            if li.getProperty('name').lower() == name:
+                break
+        return index
 
     def showDialog(self, msg):
         from okdialog import OkDialog
-        dialog = OkDialog(
-            "okdialog.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
+        dialog = OkDialog("okdialog.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
         dialog.setText(msg)
         dialog.doModal()
 
@@ -222,7 +227,7 @@ class WMainForm(xbmcgui.WindowXML):
             if selItem and not selItem.getLabel() == '..':
                 sel_chs = self.channel_groups.find_channel_by_name(self.cur_category, selItem.getProperty("name"))
                 if sel_chs:
-                    self.getEpg(sel_chs, timeout=0.3)
+                    self.getEpg(sel_chs, timeout=0.3, callback=self.showEpg)
                     self.showScreen(sel_chs, timeout=0.3)
 
                 for controlId in (WMainForm.IMG_LOGO, WMainForm.IMG_SCREEN):
@@ -230,20 +235,15 @@ class WMainForm(xbmcgui.WindowXML):
 
     def load_selitem_info(self):
         self.cur_category = defines.ADDON.getSetting('cur_category')
-        self.selitem_id = defines.ADDON.getSetting('cur_channel')
+        self.cur_channel = defines.ADDON.getSetting('cur_channel')
         if self.cur_category == '':
             self.cur_category = WMainForm.CHN_TYPE_FAVOURITE
 
-        if self.selitem_id == '':
-            self.selitem_id = -1
-        else:
-            self.selitem_id = utils.str2int(self.selitem_id)
-
     def loadFavourites(self, *args):
-        from interface import Channel
+        from tchannel import TChannel
         for ch in favdb.LocalFDB().get():
             try:
-                self.channel_groups.addChannel(Channel(ch), groupname=WMainForm.CHN_TYPE_FAVOURITE)
+                self.channel_groups.addChannel(TChannel(ch), groupname=WMainForm.CHN_TYPE_FAVOURITE)
             except Exception as e:
                 log.d(fmt('loadFavourites error: {0}', e))
 
@@ -253,11 +253,11 @@ class WMainForm(xbmcgui.WindowXML):
 
         if param in ChannelSources:
             try:
-                self.channel_groups.setChannels(ChannelSources[param].get_channels())
+                self.channel_groups.addChannels(ChannelSources[param].get_channels())
             except Exception as e:
                 log.d(fmt('loadChannels error: {0}', e))
 
-    def getEpg(self, chs, timeout=0):
+    def getEpg(self, chs, timeout=0, callback=None):
         def get():
             try:
                 epg = None
@@ -266,7 +266,8 @@ class WMainForm(xbmcgui.WindowXML):
                 for channel in chs:
                     epg = channel.get_epg()
                     if epg is not None:
-                        self.showEpg(epg)
+                        if callback is not None:
+                            callback(epg)
                         break
 
                 self.hideStatus()
@@ -396,8 +397,7 @@ class WMainForm(xbmcgui.WindowXML):
             self.select_timer = None
 
         if self.channel_number_str == '':
-            self.channel_number_str = str(
-                sch) if sch != '' else str(self.selitem_id)
+            self.channel_number_str = str(sch) if sch != '' else str(self.selitem_id)
         chnum = utils.str2int(self.channel_number_str)
         log('CHANNEL NUMBER IS: %i' % chnum)
         if 0 < chnum < self.list.size():
@@ -455,9 +455,9 @@ class WMainForm(xbmcgui.WindowXML):
                 sel_ch = sel_chs[self.source_index]
 
                 defines.ADDON.setSetting('cur_category', self.cur_category)
-                defines.ADDON.setSetting('cur_channel', str(self.selitem_id))
+                defines.ADDON.setSetting('cur_channel', str(self.cur_channel))
 
-                self.player.Start(selItem.getLabel(), sel_ch)
+                self.player.Start(sel_ch)
 
                 if self.player.TSPlayer.manual_stopped:
                     break
@@ -515,6 +515,8 @@ class WMainForm(xbmcgui.WindowXML):
                 return
 
             self.selitem_id = self.list.getSelectedPosition()
+            if self.selitem_id > 0:
+                self.cur_channel = self.list.getListItem(self.selitem_id).getProperty('name')
             self.LoopPlay()
 
         elif controlID == WMainForm.BTN_FULLSCREEN:
@@ -569,8 +571,8 @@ class WMainForm(xbmcgui.WindowXML):
         if not self.IsCanceled():
             if action.getButtonCode() == 61513:
                 return
-#             elif action.getId() in WMainForm.ARROW_ACTIONS:
-#                 self.onFocus(self.getFocusId())
+            elif action.getId() in WMainForm.ARROW_ACTIONS:
+                self.onFocus(self.getFocusId())
             elif action.getId() in WMainForm.CONTEXT_MENU_IDS and self.getFocusId() == WMainForm.CONTROL_LIST:
                 if action.getId() == 101:
                     return
@@ -644,6 +646,8 @@ class WMainForm(xbmcgui.WindowXML):
                             MenuForm.CMD_UP_FAVOURITE))
                     self.list.addItem(chli)
             self.hideStatus()
+            if self.selitem_id < 1:
+                self.selitem_id = self.get_selitem_id(self.cur_channel)
 
     def fillCategory(self):
         def AddItem(groupname):

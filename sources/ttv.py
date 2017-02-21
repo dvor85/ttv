@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from interface import Channel
+from tchannel import TChannel
 import defines
 import utils
 import logger
@@ -13,10 +13,10 @@ log = logger.Logger(__name__)
 _re_url_match = re.compile('^(?:https?|ftps?|file)://')
 
 
-class TTVChannel(Channel):
+class TTVChannel(TChannel):
 
     def __init__(self, data={}, session=None):
-        Channel.__init__(self, data)
+        TChannel.__init__(self, data)
         self.session = session
 
     def get_url(self):

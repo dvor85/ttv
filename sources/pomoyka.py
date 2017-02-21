@@ -1,19 +1,18 @@
 # -*- coding: utf-8 -*-
 
-import os
 import utils
 import defines
 import logger
-from interface import Channel
+from tchannel import TChannel
 
 log = logger.Logger(__name__)
 fmt = utils.fmt
 
 
-class PomoykaChannel(Channel):
+class PomoykaChannel(TChannel):
 
     def get_id(self):
-        return Channel.get_name(self)
+        return TChannel.get_name(self)
 
 
 class Pomoyka():
