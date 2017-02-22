@@ -38,7 +38,7 @@ class MyPlayer(xbmcgui.WindowXML):
         log.d('__init__')
         self.TSPlayer = None
         self.parent = None
-        self.channel = None
+        self.channels = None
         self.title = ''
         self.visible = False
         self.focusId = MyPlayer.CONTROL_WINDOW_ID
@@ -56,11 +56,15 @@ class MyPlayer(xbmcgui.WindowXML):
 
     def onInit(self):
         log.d('onInit')
-        if not (self.channel and self.parent):
+        if not (self.channels and self.parent):
             return
         self.progress = self.getControl(MyPlayer.CONTROL_PROGRESS_ID)
         cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
-        cicon.setImage(self.channel.get_logo())
+        for ch in self.channels:
+            logo = ch.get_logo()
+            if logo:
+                cicon.setImage(logo)
+                break
         self.control_window = self.getControl(MyPlayer.CONTROL_WINDOW_ID)
         self.chinfo = self.getControl(MyPlayer.CH_NAME_ID)
         self.chinfo.setLabel(self.title)
@@ -72,7 +76,7 @@ class MyPlayer(xbmcgui.WindowXML):
 
         log.d("channel_number = %i" % self.channel_number)
         log.d("selitem_id = %i" % self.parent.selitem_id)
-        self.UpdateEpg(self.channel)
+        self.UpdateEpg(self.channels)
 
         self.control_window.setVisible(True)
         self.hide_control_window(timeout=5)
@@ -108,7 +112,7 @@ class MyPlayer(xbmcgui.WindowXML):
                 if logo:
                     cicon.setImage(logo)
                     break
-            if self.channel.get_name() != chs[0].get_name():
+            if self.channels[0].get_name() != chs[0].get_name():
                 self.showNoEpg()
             self.parent.getEpg(chs, callback=self.showEpg)
 
@@ -166,26 +170,28 @@ class MyPlayer(xbmcgui.WindowXML):
                 self.parent.amalkerWnd.show()
                 log.d('END SHOW ADS Window')
 
-    def Start(self, channel):
+    def Start(self, channels):
         log("Start play")
 
-        self.channel = channel
+        self.channels = channels
         self.channel_number = self.parent.selitem_id
-        self.title = fmt("{0}. {1}", self.channel_number, channel.get_name())
-        url = channel.get_url()
-        mode = channel.get_mode()
+        for channel in self.channels:
+            try:
+                self.title = fmt("{0}. {1}", self.channel_number, channel.get_name())
+                url = channel.get_url()
+                mode = channel.get_mode()
 
-        log.d('Play torrent')
-        if not self.TSPlayer:
-            log.d('InitTS')
-            self.TSPlayer = tsengine(parent=self.parent)
-        self.TSPlayer.play_url_ind(0, self.title, channel.get_logo(), channel.get_logo(), torrent=url, mode=mode)
-        log.d('End playing')
+                log.d('Play torrent')
+                self.TSPlayer = tsengine.get_instance(parent=self.parent)
+                self.TSPlayer.play_url_ind(0, self.title, channel.get_logo(), channel.get_logo(), torrent=url, mode=mode)
+                log.d('End playing')
+                return
+            except Exception as e:
+                log.e(fmt('Start error: {0}', e))
 
     def run_selected_channel(self, timeout=0):
         def run():
-            self.channel_number = utils.str2int(
-                self.channel_number_str)
+            self.channel_number = utils.str2int(self.channel_number_str)
             log.d('CHANNEL NUMBER IS: %i' % self.channel_number)
             if 0 < self.channel_number < self.parent.list.size() and self.parent.selitem_id != self.channel_number:
                 self.parent.selitem_id = self.channel_number
@@ -231,7 +237,7 @@ class MyPlayer(xbmcgui.WindowXML):
             if self.select_timer:
                 self.channel_number_str = str(self.parent.selitem_id)
                 self.run_selected_channel()
-                self.UpdateEpg([self.channel])
+                self.UpdateEpg(self.channels)
             else:
                 self.close()
         elif action.getId() in (3, 4, 5, 6):
@@ -265,7 +271,7 @@ class MyPlayer(xbmcgui.WindowXML):
             xbmc.sleep(4000)
             xbmc.executebuiltin('Action(Back)')
         else:
-            self.UpdateEpg([self.channel])
+            self.UpdateEpg(self.channels)
 
         if not self.visible:
             if self.focusId == MyPlayer.CONTROL_WINDOW_ID:

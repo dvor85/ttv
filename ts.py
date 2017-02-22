@@ -31,6 +31,14 @@ class TSengine(xbmc.Player):
     MODE_PID = 'PID'
     MODE_NONE = None
 
+    _instance = None
+
+    @staticmethod
+    def get_instance(parent=None, ipaddr='127.0.0.1', *args):
+        if TSengine._instance is None:
+            TSengine._instance = TSengine(parent=parent, ipaddr=ipaddr, *args)
+        return TSengine._instance
+
     def __init__(self, parent=None, ipaddr='127.0.0.1', *args):
         log("Init TSEngine")
         self.last_error = None

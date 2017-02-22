@@ -37,7 +37,7 @@ class XMLTV():
         if os.path.exists(self.xmltv_file):
             dt = datetime.datetime.now() - datetime.datetime.fromtimestamp(os.path.getmtime(self.xmltv_file))
 
-        if not os.path.exists(self.xmltv_file) or dt.days > 2:
+        if not os.path.exists(self.xmltv_file) or dt.days >= 1:
             self.update_xmltv()
         with gzip.open(self.xmltv_file, 'rb') as fp:
             self.xmltv_root = ET.XML(fp.read())

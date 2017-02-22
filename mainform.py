@@ -19,6 +19,10 @@ import favdb
 import json
 import utils
 from UserDict import UserDict
+# try:
+#     from collections import OrderedDict
+# except ImportError:
+#     from ordereddict import OrderedDict
 import logger
 import xmltv
 
@@ -65,6 +69,8 @@ class ChannelGroups(UserDict):
         try:
             if groupname is None:
                 groupname = utils.utf(ch.get('cat'))
+            if groupname in ("Эротика") and utils.str2int(defines.AGE) < 2:
+                return
             cat = self.data.get(groupname)
             if not cat:
                 self.setGroup(groupname, groupname)
@@ -178,6 +184,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.select_timer = None
         self.hide_window_timer = None
         self.get_epg_timer = None
+        self.get_epg_lock = threading.Event()
         self.show_screen_timer = None
         self.rotate_screen_thr = None
         defines.MyThread(xmltv.XMLTV.get_instance).start()
@@ -203,8 +210,9 @@ class WMainForm(xbmcgui.WindowXML):
             index += 1
             li = self.list.getListItem(index)
             if li.getProperty('name').lower() == name:
-                break
-        return index
+                return index
+        else:
+            return -1
 
     def showDialog(self, msg):
         from okdialog import OkDialog
@@ -225,7 +233,11 @@ class WMainForm(xbmcgui.WindowXML):
                 return
             selItem = self.list.getSelectedItem()
             if selItem and not selItem.getLabel() == '..':
-                sel_chs = self.channel_groups.find_channel_by_name(self.cur_category, selItem.getProperty("name"))
+                categ = self.cur_category
+                if categ in (WMainForm.CHN_TYPE_FAVOURITE):
+                    categ = self.channel_groups.find_group_by_chname(selItem.getProperty("name"))
+
+                sel_chs = self.channel_groups.find_channel_by_name(categ, selItem.getProperty("name"))
                 if sel_chs:
                     self.getEpg(sel_chs, timeout=0.3, callback=self.showEpg)
                     self.showScreen(sel_chs, timeout=0.3)
@@ -259,20 +271,24 @@ class WMainForm(xbmcgui.WindowXML):
 
     def getEpg(self, chs, timeout=0, callback=None):
         def get():
-            try:
-                epg = None
-                log.d('getEpg->get')
-                self.showStatus('Загрузка программы')
-                for channel in chs:
-                    epg = channel.get_epg()
-                    if epg is not None:
-                        if callback is not None:
-                            callback(epg)
-                        break
+            if not self.get_epg_lock.is_set():
+                self.get_epg_lock.set()
+                try:
+                    epg = None
+                    log.d('getEpg->get')
+                    self.showStatus('Загрузка программы')
+                    for channel in chs:
+                        epg = channel.get_epg()
+                        if epg is not None:
+                            if callback is not None:
+                                callback(epg)
+                            break
 
-                self.hideStatus()
-            except Exception as e:
-                log.d(fmt('getEpg->get error: {0}', e))
+                    self.hideStatus()
+                except Exception as e:
+                    log.d(fmt('getEpg->get error: {0}', e))
+                finally:
+                    self.get_epg_lock.clear()
 
         if self.get_epg_timer:
             self.get_epg_timer.cancel()
@@ -367,7 +383,7 @@ class WMainForm(xbmcgui.WindowXML):
         lo_thr.start()
 
         log.d('Ожидание результата')
-        if self.cur_category in (WMainForm.CHN_TYPE_FAVOURITE):
+        if self.cur_category in [WMainForm.CHN_TYPE_FAVOURITE]:
             thrs['favourite'].join(10)
         else:
             lo_thr.join(20)
@@ -436,28 +452,24 @@ class WMainForm(xbmcgui.WindowXML):
         self.hide_window_timer.start()
 
     def LoopPlay(self, *args):
-        self.source_index = 0
         while not self.IsCanceled():
             try:
                 selItem = self.list.getListItem(self.selitem_id)
+                self.cur_channel = selItem.getProperty('name')
                 categ = self.cur_category
                 if categ in (WMainForm.CHN_TYPE_FAVOURITE):
-                    categ = self.channel_groups.find_group_by_chname(selItem.getProperty("name"))
+                    categ = self.channel_groups.find_group_by_chname(self.cur_channel)
 
-                sel_chs = self.channel_groups.find_channel_by_name(categ, selItem.getProperty("name"))
+                sel_chs = self.channel_groups.find_channel_by_name(categ, self.cur_channel)
                 if not sel_chs:
                     msg = "Канал временно не доступен"
                     self.showStatus(msg)
                     raise Exception(fmt("{msg}. Возможно не все каналы загрузились...", msg=msg))
-                if self.source_index >= len(sel_chs):
-                    self.source_index = 0
-
-                sel_ch = sel_chs[self.source_index]
 
                 defines.ADDON.setSetting('cur_category', self.cur_category)
-                defines.ADDON.setSetting('cur_channel', str(self.cur_channel))
+                defines.ADDON.setSetting('cur_channel', self.cur_channel)
 
-                self.player.Start(sel_ch)
+                self.player.Start(sel_chs)
 
                 if self.player.TSPlayer.manual_stopped:
                     break
@@ -467,7 +479,6 @@ class WMainForm(xbmcgui.WindowXML):
 
             except Exception as e:
                 log.e(fmt('LoopPlay error: {0}', e))
-                self.source_index += 1
                 xbmc.sleep(1000)
 
         self.player.close()
@@ -515,8 +526,6 @@ class WMainForm(xbmcgui.WindowXML):
                 return
 
             self.selitem_id = self.list.getSelectedPosition()
-            if self.selitem_id > 0:
-                self.cur_channel = self.list.getListItem(self.selitem_id).getProperty('name')
             self.LoopPlay()
 
         elif controlID == WMainForm.BTN_FULLSCREEN:
