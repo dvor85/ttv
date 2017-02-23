@@ -5,7 +5,6 @@ import defines
 import utils
 import logger
 import re
-import datetime
 import uuid
 
 fmt = utils.fmt
@@ -26,7 +25,7 @@ class TTVChannel(TChannel):
                 channel_id=self.get_id(),
                 typeresult='json')
             r = defines.request(fmt("http://{url}/v3/translation_stream.php", url=defines.API_MIRROR),
-                                params=params)
+                                params=params, trys=1)
             jdata = r.json()
             self.data['url'] = jdata['source']
             self.data['mode'] = jdata["type"].upper().replace("CONTENTID", "PID")
@@ -34,43 +33,22 @@ class TTVChannel(TChannel):
         except Exception as e:
             log.w(fmt('get_from_api error: {0}', e))
 
-    def __update_epglist(self):
-        try:
-            params = dict(
-                session=self.session,
-                epg_id=self.data['epg_id'],
-                typeresult='json')
-            r = defines.request(fmt('http://{url}/v3/translation_epg.php', url=defines.API_MIRROR),
-                                params=params)
+    def update_epglist(self):
+        if not self.data.get('epg'):
+            try:
+                params = dict(
+                    session=self.session,
+                    epg_id=self.data['epg_id'],
+                    typeresult='json')
+                r = defines.request(fmt('http://{url}/v3/translation_epg.php', url=defines.API_MIRROR),
+                                    params=params, trys=1)
 
-            jdata = r.json()
-            if utils.str2int(jdata.get('success')) != 0:
-                self.data['epg'] = jdata['data']
+                jdata = r.json()
+                if utils.str2int(jdata.get('success')) != 0:
+                    self.data['epg'] = jdata['data']
 
-        except Exception as e:
-            log.d(fmt('update_epglist error: {0}', e))
-
-    def get_epg(self):
-        try:
-            ctime = datetime.datetime.now()
-
-            prev_bt = 0
-            prev_et = 0
-            curepg = []
-            if not self.data.get('epg'):
-                self.__update_epglist()
-
-            for x in self.data.get('epg', []):
-                bt = datetime.datetime.fromtimestamp(float(x['btime']))
-                et = datetime.datetime.fromtimestamp(float(x['etime']))
-                if et > ctime and abs((bt.date() - ctime.date()).days) <= 1 and prev_et <= float(x['btime']) > prev_bt:
-                    curepg.append(x)
-                    prev_bt = float(x['btime'])
-                    prev_et = float(x['etime'])
-            self.data['epg'] = curepg
-            return curepg
-        except Exception as e:
-            log.e(fmt('get_epg error {0}', e))
+            except Exception as e:
+                log.d(fmt('update_epglist error: {0}', e))
 
     def get_screenshots(self):
         try:
@@ -80,7 +58,7 @@ class TTVChannel(TChannel):
                 count=2,
                 typeresult='json')
             r = defines.request(fmt('http://{url}/v3/translation_screen.php', url=defines.API_MIRROR),
-                                params=params)
+                                params=params, trys=1)
 
             jdata = r.json()
 
@@ -94,10 +72,14 @@ class TTV():
 
     def __init__(self):
         self.channels = []
+        self.user = {}
+        self.session = None
+
+    def initTTV(self):
         try:
             params = dict(application='xbmc', version=defines.TTV_VERSION)
             r = defines.request(fmt('http://{url}/v3/version.php', url=defines.API_MIRROR),
-                                params=params)
+                                params=params, trys=1)
             jdata = r.json()
             if utils.str2int(jdata.get('success')) == 0:
                 raise Exception(jdata.get('error'))
@@ -122,7 +104,7 @@ class TTV():
                 guid=guid
             )
             r = defines.request(fmt('http://{url}/v3/auth.php', url=defines.API_MIRROR),
-                                params=params)
+                                params=params, trys=1)
             jdata = r.json()
             if utils.str2int(jdata.get('success')) == 0:
                 log.e(Exception(fmt("Auth error: {0}", jdata.get('error'))))
@@ -137,12 +119,13 @@ class TTV():
         self.session = jdata['session']
 
     def get_channels(self):
+        self.initTTV()
         params = dict(
             session=self.session,
             type='channel',
             typeresult='json')
         r = defines.request(fmt('http://{url}/v3/translation_list.php', url=defines.API_MIRROR),
-                            params=params)
+                            params=params, trys=1)
 
         jdata = r.json()
 

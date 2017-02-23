@@ -9,7 +9,7 @@ import utils
 import favdb
 import logger
 
-log = logger.Logger('MenuForm')
+log = logger.Logger(__name__)
 fmt = utils.fmt
 
 

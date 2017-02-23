@@ -23,12 +23,12 @@ class Pomoyka():
 
     def get_channels(self):
         try:
-            r = defines.request(self.url)
+            r = defines.request(self.url, trys=1)
             jdata = r.json()
 
             chs = jdata.get('channels', [])
             for ch in chs:
                 self.channels.append(PomoykaChannel(ch))
         except Exception as e:
-            log.error(e)
+            log.error(fmt("get_channels error: {0}", e))
         return self.channels

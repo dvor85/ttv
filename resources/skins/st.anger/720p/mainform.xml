@@ -58,7 +58,7 @@
             <width>1240</width>
             <height>510</height>
             <visible>true</visible>
-            <ondown>209</ondown>
+            <ondown>204</ondown>
             <orientation>horizontal</orientation>
             <viewtype>list</viewtype>
             <pagecontrol>70</pagecontrol>
@@ -192,24 +192,11 @@
           <width>26</width>
           <height>26</height>
           <onleft>200</onleft>
-          <onright>209</onright>
+          <onright>204</onright>
           <onup>50</onup>
           <texturefocus>fullscreenfocus.png</texturefocus>
           <texturenofocus>fullscreen.png</texturenofocus>
           <visible>Player.HasVideo</visible>
-        </control>
-        <control type="button" id="209">
-          <description>Show Window Information</description>
-          <posx>110</posx>
-          <posy>540</posy>
-          <width>26</width>
-          <height>26</height>
-          <onleft>208</onleft>
-          <onright>204</onright>
-			    <onup>50</onup>
-          <visible>true</visible>
-          <texturefocus>infofocus.png</texturefocus>
-          <texturenofocus>infonofocus.png</texturenofocus>
         </control>
         <description>Info</description>
         <control type="image" id="210">

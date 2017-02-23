@@ -32,11 +32,14 @@ class TSengine(xbmc.Player):
     MODE_NONE = None
 
     _instance = None
+    _lock = threading.Lock()
 
     @staticmethod
     def get_instance(parent=None, ipaddr='127.0.0.1', *args):
         if TSengine._instance is None:
-            TSengine._instance = TSengine(parent=parent, ipaddr=ipaddr, *args)
+            with TSengine._lock:
+                if TSengine._instance is None:
+                    TSengine._instance = TSengine(parent=parent, ipaddr=ipaddr, *args)
         return TSengine._instance
 
     def __init__(self, parent=None, ipaddr='127.0.0.1', *args):
@@ -204,19 +207,19 @@ class TSengine(xbmc.Player):
         return True
 
     def get_key(self, key):
-        try:
-            r = defines.request(fmt("http://{url}/xbmc_get_key.php", url=defines.API_MIRROR),
-                                params={'key': key})
-            r.raise_for_status()
-            return r.text
-        except:
-            import hashlib
-            pkey = 'n51LvQoTlJzNGaFxseRK-uvnvX-sD4Vm5Axwmc4UcoD-jruxmKsuJaH0eVgE'
-            sha1 = hashlib.sha1()
-            sha1.update(key + pkey)
-            key = sha1.hexdigest()
-            pk = pkey.split('-')[0]
-            return "%s-%s" % (pk, key)
+        #         try:
+        #             r = defines.request(fmt("http://{url}/xbmc_get_key.php", url=defines.API_MIRROR, trys=1),
+        #                                 params={'key': key})
+        #             r.raise_for_status()
+        #             return r.text
+        #         except:
+        import hashlib
+        pkey = 'n51LvQoTlJzNGaFxseRK-uvnvX-sD4Vm5Axwmc4UcoD-jruxmKsuJaH0eVgE'
+        sha1 = hashlib.sha1()
+        sha1.update(key + pkey)
+        key = sha1.hexdigest()
+        pk = pkey.split('-')[0]
+        return "%s-%s" % (pk, key)
 
     def connectToTS(self):
         log.d('Подключение к AceEngine %s %s ' %
@@ -386,12 +389,12 @@ class TSengine(xbmc.Player):
                     elif _descr[0] == 'check':
                         log.d('showState: Проверка %s' % _descr[1])
                         self.parent.showStatus('Проверка %s' % _descr[1])
-                    elif _descr[0] == 'dl':
-                        self.parent.showInfoStatus('Total:%s DL:%s UL:%s' % (_descr[1], _descr[3], _descr[5]))
-                    elif _descr[0] == 'buf':
-                        self.parent.showInfoStatus('Buf:%s DL:%s UL:%s' % (_descr[1], _descr[5], _descr[7]))
-                    else:
-                        self.parent.showInfoStatus('%s' % _params)
+#                     elif _descr[0] == 'dl':
+#                         self.parent.showInfoStatus('Total:%s DL:%s UL:%s' % (_descr[1], _descr[3], _descr[5]))
+#                     elif _descr[0] == 'buf':
+#                         self.parent.showInfoStatus('Buf:%s DL:%s UL:%s' % (_descr[1], _descr[5], _descr[7]))
+#                     else:
+#                         self.parent.showInfoStatus('%s' % _params)
 
             elif state.getType() == TSMessage.EVENT:
                 if state.getParams() == 'getuserdata':

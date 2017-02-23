@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from UserDict import UserDict
+import datetime
 import utils
 import defines
 import xmltv
@@ -9,7 +10,7 @@ import logger
 
 fmt = utils.fmt
 log = logger.Logger(__name__)
-_re_url_match = re.compile('^(?:https?|ftps?|file|[A-z]+)://')
+_re_url_match = re.compile('^(?:https?|ftps?|file|[A-z])://')
 
 
 class TChannel(UserDict):
@@ -45,14 +46,36 @@ class TChannel(UserDict):
     def get_screenshots(self):
         pass
 
-    def get_epg(self):
-        """
-        epg=[{name, btime, etime},]
-        """
+    def update_epglist(self):
         xmltv_epg = xmltv.XMLTV.get_instance()
         if not self.data.get('epg') and xmltv_epg is not None:
             self.data['epg'] = []
             for ep in xmltv_epg.get_epg_by_name(self.get_name()):
                 self.data['epg'].append(ep)
+
+    def get_epg(self):
+        """
+        epg=[{name, btime, etime},]
+        """
+
+        try:
+            self.update_epglist()
+            ctime = datetime.datetime.now()
+            prev_bt = 0
+            prev_et = 0
+            curepg = []
+            for x in self.data.get('epg', []):
+                try:
+                    bt = datetime.datetime.fromtimestamp(float(x['btime']))
+                    et = datetime.datetime.fromtimestamp(float(x['etime']))
+                    if et > ctime and abs((bt - ctime).days) <= 1 and prev_et <= float(x['btime']) > prev_bt:
+                        curepg.append(x)
+                        prev_bt = float(x['btime'])
+                        prev_et = float(x['etime'])
+                except Exception as e:
+                    log.error(e)
+            self.data['epg'] = curepg
+        except Exception as e:
+            log.e(fmt('get_epg error {0}', e))
 
         return self.data.get('epg')

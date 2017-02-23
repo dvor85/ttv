@@ -13,7 +13,6 @@ import threading
 
 from player import MyPlayer
 from menu import MenuForm
-from infoform import InfoForm
 from sources.table import Channels as ChannelSources
 import favdb
 import json
@@ -177,7 +176,6 @@ class WMainForm(xbmcgui.WindowXML):
         self.load_selitem_info()
         self.selitem_id = -1
         self.user = None
-        self.infoform = None
         self.first_init = True
         self.channel_number_str = ''
 
@@ -216,7 +214,7 @@ class WMainForm(xbmcgui.WindowXML):
 
     def showDialog(self, msg):
         from okdialog import OkDialog
-        dialog = OkDialog("okdialog.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
+        dialog = OkDialog("dialog.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
         dialog.setText(msg)
         dialog.doModal()
 
@@ -252,7 +250,7 @@ class WMainForm(xbmcgui.WindowXML):
             self.cur_category = WMainForm.CHN_TYPE_FAVOURITE
 
     def loadFavourites(self, *args):
-        from tchannel import TChannel
+        from sources.tchannel import TChannel
         for ch in favdb.LocalFDB().get():
             try:
                 self.channel_groups.addChannel(TChannel(ch), groupname=WMainForm.CHN_TYPE_FAVOURITE)
@@ -535,12 +533,6 @@ class WMainForm(xbmcgui.WindowXML):
             self.showInfoWindow()
             return
 
-    def showInfoWindow(self):
-        self.infoform = InfoForm("inform.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
-        self.infoform.parent = self
-        self.infoform.doModal()
-        self.infoform = None
-
     def showMenuWindow(self):
         mnu = MenuForm("menu.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
         mnu.li = self.getFocus().getSelectedItem()
@@ -606,14 +598,8 @@ class WMainForm(xbmcgui.WindowXML):
                 self.img_progress.setVisible(True)
             if self.txt_progress:
                 self.txt_progress.setLabel(text)
-            if self.infoform:
-                self.infoform.printASStatus(text)
         except Exception as e:
             log.w(fmt("showStatus error: {0}", e))
-
-    def showInfoStatus(self, text):
-        if self.infoform:
-            self.infoform.printASStatus(text)
 
     def hideStatus(self):
         try:

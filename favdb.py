@@ -112,14 +112,6 @@ class LocalFDB(FDB):
                     log.w(fmt('get error: {0}', e))
         return self.channels
 
-#     def get_json(self):
-#         if not self.channels:
-#             self.get()
-#         if self.channels:
-#             return {'channels': self.channels, 'success': 1}
-#         else:
-#             return {'channels': [], 'success': 0, 'error': 'Error loading local channels'}
-
     def save(self, obj=None):
         log.d('save channels')
         try:
