@@ -31,7 +31,7 @@ class TChannel(UserDict):
     def get_logo(self):
         if 'logo' in self.data:
             if not _re_url_match.search(self.data['logo']):
-                return utils.utf(fmt('http://{0}/uploads/{1}', defines.SITE_MIRROR, self.data['logo']))
+                return utils.utf(fmt('http://{0}/uploads/{1}', 'torrent-tv.ru', self.data['logo']))
             else:
                 return utils.utf(self.data['logo'])
         return fmt("{addon_path}/resources/logo/{name}.png",
@@ -79,3 +79,16 @@ class TChannel(UserDict):
             log.e(fmt('get_epg error {0}', e))
 
         return self.data.get('epg')
+
+
+class TChannels():
+
+    def __init__(self):
+        self.channels = []
+
+    def get_channels(self):
+        """
+        channels=[TChannel(),]
+        """
+
+        return self.channels

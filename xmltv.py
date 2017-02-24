@@ -7,7 +7,6 @@ import utils
 import defines
 import logger
 from threading import Event
-import weakref
 
 import os
 import gzip
@@ -15,6 +14,7 @@ import gzip
 
 fmt = utils.fmt
 log = logger.Logger(__name__)
+_servers = ['api.torrent-tv.ru', '1ttvxbmc.top']
 
 
 class XMLTV():
@@ -36,25 +36,31 @@ class XMLTV():
         try:
             log.d('start initialization')
             self.xmltv_file = os.path.join(defines.DATA_PATH, 'ttv.xmltv.xml.gz')
+            same_date = False
             if os.path.exists(self.xmltv_file):
-                dt = datetime.datetime.now() - datetime.datetime.fromtimestamp(os.path.getmtime(self.xmltv_file))
+                same_date = datetime.date.today() == datetime.date.fromtimestamp(os.path.getmtime(self.xmltv_file))
 
-            if not os.path.exists(self.xmltv_file) or dt.days >= 1:
+            if not os.path.exists(self.xmltv_file) or not same_date:
                 self.update_xmltv()
+
             with gzip.open(self.xmltv_file, 'rb') as fp:
-                self.xmltv_root = weakref.ref(ET.XML(fp.read()))
+                self.xmltv_root = ET.XML(fp.read())
             log.d('stop initialization')
         except Exception as e:
             log.error(fmt("XMLTV not initialazed. {0}", e))
 
     def update_xmltv(self):
-        url = 'http://api.torrent-tv.ru/ttv.xmltv.xml.gz'
-        r = defines.request(url)
-        with open(self.xmltv_file, 'wb') as fp:
-            fp.write(r.content)
+        for server in _servers:
+            try:
+                r = defines.request(fmt('http://{server}/ttv.xmltv.xml.gz', server=server))
+                with open(self.xmltv_file, 'wb') as fp:
+                    fp.write(r.content)
+                return True
+            except Exception as e:
+                log.error(fmt('update_xmltv error: {0}', e))
 
     def get_channels(self):
-        for chid in self.xmltv_root().iter('channel'):
+        for chid in self.xmltv_root.iter('channel'):
             for name in chid.iter('display-name'):
                 yield {'id': chid.get('id'), 'name': name.text}
 
@@ -69,7 +75,7 @@ class XMLTV():
             return
         ctime = datetime.datetime.now()
         offset = int(round((ctime - datetime.datetime.utcnow()).total_seconds()) / 3600)
-        for programme in self.xmltv_root().iter('programme'):
+        for programme in self.xmltv_root.iter('programme'):
             if programme.get('channel') == chid:
                 ep = {}
 

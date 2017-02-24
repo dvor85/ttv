@@ -3,7 +3,7 @@
 import utils
 import defines
 import logger
-from tchannel import TChannel
+from tchannel import TChannel, TChannels
 
 log = logger.Logger(__name__)
 fmt = utils.fmt
@@ -15,15 +15,15 @@ class PomoykaChannel(TChannel):
         return TChannel.get_name(self)
 
 
-class Pomoyka():
+class Pomoyka(TChannels):
 
     def __init__(self):
         self.url = 'http://super-pomoyka.us.to/trash/ttv-list/ttv.json'
-        self.channels = []
+        TChannels.__init__(self)
 
     def get_channels(self):
         try:
-            r = defines.request(self.url, trys=1)
+            r = defines.request(self.url)
             jdata = r.json()
 
             chs = jdata.get('channels', [])

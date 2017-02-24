@@ -5,13 +5,12 @@ import os
 # append pydev remote debugger
 # Make pydev debugger works for auto reload.
 try:
-    sys.path.append(os.path.expanduser('~/eclipse/plugins/org.python.pydev_5.5.0.201701191708/pysrc'))
-    sys.path.append('d:/python/eclipse/plugins/org.python.pydev_5.5.0.201701191708/pysrc')
-    sys.path.append('i:/python/eclipse/plugins/org.python.pydev_5.5.0.201701191708/pysrc')
+    #     sys.path.append(os.path.expanduser('~/eclipse/plugins/org.python.pydev_5.5.0.201701191708/pysrc'))
+    #     sys.path.append('d:/python/eclipse/plugins/org.python.pydev_5.5.0.201701191708/pysrc')
+    #     sys.path.append('i:/python/eclipse/plugins/org.python.pydev_5.5.0.201701191708/pysrc')
 
-
-#     import web_pdb
-#     web_pdb.set_trace()
+    #     import web_pdb
+    #     web_pdb.set_trace()
     # for remote debug edit pydevd_file_utils.py on client
     import pydevd
     pydevd.settrace('localhost', stdoutToServer=True, stderrToServer=True)

@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 
-from tchannel import TChannel
+from tchannel import TChannel, TChannels
 import defines
 import utils
 import logger
-import re
 import uuid
 
 fmt = utils.fmt
 log = logger.Logger(__name__)
-_re_url_match = re.compile('^(?:https?|ftps?|file)://')
+_servers = ['api.torrent-tv.ru', '1ttvxbmc.top']
 
 
 class TTVChannel(TChannel):
@@ -19,132 +18,149 @@ class TTVChannel(TChannel):
         self.session = session
 
     def get_url(self):
-        try:
-            params = dict(
-                session=self.session,
-                channel_id=self.get_id(),
-                typeresult='json')
-            r = defines.request(fmt("http://{url}/v3/translation_stream.php", url=defines.API_MIRROR),
-                                params=params, trys=1)
-            jdata = r.json()
-            self.data['url'] = jdata['source']
-            self.data['mode'] = jdata["type"].upper().replace("CONTENTID", "PID")
-            return self.data['url']
-        except Exception as e:
-            log.w(fmt('get_from_api error: {0}', e))
-
-    def update_epglist(self):
-        if not self.data.get('epg'):
+        for server in _servers:
             try:
                 params = dict(
                     session=self.session,
-                    epg_id=self.data['epg_id'],
+                    channel_id=self.get_id(),
                     typeresult='json')
-                r = defines.request(fmt('http://{url}/v3/translation_epg.php', url=defines.API_MIRROR),
+
+                r = defines.request(fmt("http://{server}/v3/translation_stream.php", server=server),
+                                    params=params, trys=1)
+                jdata = r.json()
+                self.data['url'] = jdata['source']
+                self.data['mode'] = jdata["type"].upper().replace("CONTENTID", "PID")
+                return self.data['url']
+            except Exception as e:
+                log.w(fmt('get_url error: {0}', e))
+
+    def update_epglist(self):
+        if not self.data.get('epg'):
+            for server in _servers:
+                try:
+                    params = dict(
+                        session=self.session,
+                        epg_id=self.data['epg_id'],
+                        typeresult='json')
+                    r = defines.request(fmt('http://{server}/v3/translation_epg.php', server=server),
+                                        params=params, trys=1)
+
+                    jdata = r.json()
+                    if utils.str2int(jdata.get('success')) != 0:
+                        self.data['epg'] = jdata['data']
+                        break
+                except Exception as e:
+                    log.d(fmt('update_epglist error: {0}', e))
+
+    def get_screenshots(self):
+        for server in _servers:
+            try:
+                params = dict(
+                    session=self.session,
+                    channel_id=self.get_id(),
+                    count=2,
+                    typeresult='json')
+                r = defines.request(fmt('http://{server}/v3/translation_screen.php', server=server),
                                     params=params, trys=1)
 
                 jdata = r.json()
+
                 if utils.str2int(jdata.get('success')) != 0:
-                    self.data['epg'] = jdata['data']
-
+                    return jdata['screens']
             except Exception as e:
-                log.d(fmt('update_epglist error: {0}', e))
-
-    def get_screenshots(self):
-        try:
-            params = dict(
-                session=self.session,
-                channel_id=self.get_id(),
-                count=2,
-                typeresult='json')
-            r = defines.request(fmt('http://{url}/v3/translation_screen.php', url=defines.API_MIRROR),
-                                params=params, trys=1)
-
-            jdata = r.json()
-
-            if utils.str2int(jdata.get('success')) != 0:
-                return jdata['screens']
-        except Exception as e:
-            log.w(fmt('get_screenshots error: {0}', e))
+                log.w(fmt('get_screenshots error: {0}', e))
 
 
-class TTV():
+class TTV(TChannels):
 
     def __init__(self):
-        self.channels = []
         self.user = {}
         self.session = None
+        TChannels.__init__(self)
 
     def initTTV(self):
         try:
-            params = dict(application='xbmc', version=defines.TTV_VERSION)
-            r = defines.request(fmt('http://{url}/v3/version.php', url=defines.API_MIRROR),
-                                params=params, trys=1)
-            jdata = r.json()
-            if utils.str2int(jdata.get('success')) == 0:
-                raise Exception(jdata.get('error'))
+            log.info("init TTV")
+            guid = defines.ADDON.getSetting("uuid")
+            if guid == '':
+                guid = str(uuid.uuid1())
+                defines.ADDON.setSetting("uuid", guid)
+            guid = guid.replace('-', '')
+
+            for server in _servers:
+                try:
+                    params = dict(application='xbmc', version=defines.TTV_VERSION)
+                    r = defines.request(fmt('http://{server}/v3/version.php', server=server),
+                                        params=params, trys=1)
+                    jdata = r.json()
+                    if utils.str2int(jdata.get('success')) == 0:
+                        raise Exception(fmt("Check version error: {0}", jdata.get('error')))
+                    break
+                except Exception as e:
+                    log.e(e)
+
+            for server in _servers:
+                try:
+                    params = dict(
+                        username=defines.ADDON.getSetting('login'),
+                        password=defines.ADDON.getSetting('password'),
+                        typeresult='json',
+                        application='xbmc',
+                        guid=guid
+                    )
+                    r = defines.request(fmt('http://{server}/v3/auth.php', server=server),
+                                        params=params, trys=1)
+                    jdata = r.json()
+                    if utils.str2int(jdata.get('success')) == 0:
+                        raise Exception(fmt("Auth error: {0}", jdata.get('error')))
+                    break
+                except Exception as e:
+                    log.e(e)
+
+            self.user = {"login": defines.ADDON.getSetting('login'),
+                         "balance": jdata.get("balance"),
+                         "vip": jdata["balance"] > 1}
+
+            self.session = jdata.get('session')
         except Exception as e:
-            log.e(fmt('onInit error: {0}', e))
-            return
-        if utils.str2int(jdata['support']) == 0:
-            return
+            log.error(fmt("initTTV error: {0}", e))
 
-        guid = defines.ADDON.getSetting("uuid")
-        if guid == '':
-            guid = str(uuid.uuid1())
-            defines.ADDON.setSetting("uuid", guid)
-        guid = guid.replace('-', '')
-
-        try:
-            params = dict(
-                username=defines.ADDON.getSetting('login'),
-                password=defines.ADDON.getSetting('password'),
-                typeresult='json',
-                application='xbmc',
-                guid=guid
-            )
-            r = defines.request(fmt('http://{url}/v3/auth.php', url=defines.API_MIRROR),
-                                params=params, trys=1)
-            jdata = r.json()
-            if utils.str2int(jdata.get('success')) == 0:
-                log.e(Exception(fmt("Auth error: {0}", jdata.get('error'))))
-        except Exception as e:
-            log.e(fmt('onInit error: {0}', e))
-            return
-
-        self.user = {"login": defines.ADDON.getSetting('login'),
-                     "balance": jdata["balance"],
-                     "vip": jdata["balance"] > 1}
-
-        self.session = jdata['session']
+    def get_groupname_by_id(self, categories, chid):
+        if categories:
+            for g in categories:
+                if g.get('id') == chid:
+                    return g.get("name")
 
     def get_channels(self):
         self.initTTV()
-        params = dict(
-            session=self.session,
-            type='channel',
-            typeresult='json')
-        r = defines.request(fmt('http://{url}/v3/translation_list.php', url=defines.API_MIRROR),
-                            params=params, trys=1)
+        if self.session:
+            for server in _servers:
+                try:
+                    params = dict(
+                        session=self.session,
+                        type='channel',
+                        typeresult='json')
+                    r = defines.request(fmt('http://{server}/v3/translation_list.php', server=server),
+                                        params=params, trys=1)
 
-        jdata = r.json()
+                    jdata = r.json()
 
-        if utils.str2int(jdata.get('success')) == 0:
-            raise Exception(jdata.get('error'))
+                    if utils.str2int(jdata.get('success')) == 0:
+                        raise Exception(jdata.get('error'))
+                    break
+                except Exception as e:
+                    log.e(fmt('get_channels error: {0}', e))
+            else:
+                return self.channels
 
-        if jdata.get('channels'):
-            for ch in jdata['channels']:
-
-                if not (ch.get("name") or ch.get("id")):
-                    continue
-
-                channel = {}
-                groups = jdata.get("categories")
-                if groups:
-                    for g in groups:
-                        if g['id'] == ch['group']:
-                            channel['cat'] = g["name"]
-                            break
-                channel.update(ch)
-                self.channels.append(TTVChannel(channel, self.session))
+            if jdata.get('channels'):
+                for ch in jdata['channels']:
+                    try:
+                        if not (ch.get("name") or ch.get("id")):
+                            continue
+                        channel = ch
+                        channel['cat'] = self.get_groupname_by_id(jdata.get("categories"), ch['group'])
+                        self.channels.append(TTVChannel(channel, self.session))
+                    except Exception as e:
+                        log.e(fmt('Add channel error: {0}', e))
         return self.channels

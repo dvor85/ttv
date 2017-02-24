@@ -6,7 +6,6 @@
 		<setting default="false" id="autostart" label="Автозапуск аддона" type="bool" />
 		<setting default="0" id="favourite" label="База избранных" type="enum" values="Auto|Локальная" />
 		<setting default="false" id="debug" label="Debug" type="bool" visible="false" />
-		<setting default="api.torrent-tv.ru" id="api_mirror" label="Зеркало API" type="labelenum" values="api.torrent-tv.ru|1ttvxbmc.top" visible="true" />
 		
 	</category>
 	<category label="AceStream">
