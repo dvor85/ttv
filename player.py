@@ -60,7 +60,7 @@ class MyPlayer(xbmcgui.WindowXML):
             return
         self.progress = self.getControl(MyPlayer.CONTROL_PROGRESS_ID)
         cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
-        for ch in self.channels:
+        for ch in self.channels.itervalues():
             logo = ch.get_logo()
             if logo:
                 cicon.setImage(logo)
@@ -107,13 +107,19 @@ class MyPlayer(xbmcgui.WindowXML):
             log.d('UpdateEpg')
 
             cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
-            for ch in chs:
+            for ch in chs.itervalues():
                 logo = ch.get_logo()
                 if logo:
                     cicon.setImage(logo)
                     break
-            if self.channels[0].get_name() != chs[0].get_name():
-                self.showNoEpg()
+            for src_name in chs.iterkeys():
+                try:
+                    if self.channels[src_name].get_name() != chs[src_name].get_name():
+                        self.showNoEpg()
+                    break
+                except Exception as e:
+                    log.d(fmt("UpdateEpg error: {0}", e))
+
             self.parent.getEpg(chs, callback=self.showEpg)
 
         except Exception as e:
@@ -175,7 +181,7 @@ class MyPlayer(xbmcgui.WindowXML):
 
         self.channels = channels
         self.channel_number = self.parent.selitem_id
-        for channel in self.channels:
+        for channel in self.channels.itervalues():
             try:
                 self.title = fmt("{0}. {1}", self.channel_number, channel.get_name())
                 url = channel.get_url()

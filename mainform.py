@@ -35,7 +35,7 @@ class ChannelGroups(UserDict):
     ChannelGroups = {
         groupname: {
             title=str,
-            channels=[[{}...]...]
+            channels=[{src_name = {}...}...]
         }
     }
     """
@@ -60,11 +60,11 @@ class ChannelGroups(UserDict):
     def getGroups(self):
         return self.data.keys()
 
-    def addChannels(self, channels):
+    def addChannels(self, channels, src_name):
         for ch in channels:
-            self.addChannel(ch)
+            self.addChannel(ch, src_name)
 
-    def addChannel(self, ch, groupname=None):
+    def addChannel(self, ch, src_name, groupname=None):
         try:
             if groupname is None:
                 groupname = utils.utf(ch.get('cat'))
@@ -75,9 +75,9 @@ class ChannelGroups(UserDict):
                 self.setGroup(groupname, groupname)
             chs = self.find_channel_by_name(groupname, ch.get_name())
             if chs:
-                chs.append(ch)
+                chs[src_name] = ch
             else:
-                self.getChannels(groupname).append([ch])
+                self.getChannels(groupname).append({src_name: ch})
         except Exception as e:
             log.error(fmt("addChannel error: {0}", e))
 
@@ -90,8 +90,8 @@ class ChannelGroups(UserDict):
 
     def find_channel_by_id(self, groupname, chid):
         for chs in self.getChannels(groupname):
-            for c in chs:
-                if c.get_id() == utils.utf(chid):
+            for ch in chs.itervalues():
+                if ch.get_id() == utils.utf(chid):
                     return chs
 
     def find_group_by_chname(self, chname):
@@ -101,10 +101,10 @@ class ChannelGroups(UserDict):
                 return groupname
 
     def find_channel_by_name(self, groupname, name):
-        name = utils.utf(name)
+        name = utils.utf(name).lower()
         for chs in self.getChannels(groupname):
-            for c in chs:
-                if c.get_name().lower().strip() == name.lower().strip():
+            for ch in chs.itervalues():
+                if ch.get_name().lower() == name:
                     return chs
 
 
@@ -253,7 +253,7 @@ class WMainForm(xbmcgui.WindowXML):
         from sources.tchannel import TChannel
         for ch in favdb.LocalFDB().get():
             try:
-                self.channel_groups.addChannel(TChannel(ch), groupname=WMainForm.CHN_TYPE_FAVOURITE)
+                self.channel_groups.addChannel(TChannel(ch), src_name='fav', groupname=WMainForm.CHN_TYPE_FAVOURITE)
             except Exception as e:
                 log.d(fmt('loadFavourites error: {0}', e))
 
@@ -263,7 +263,7 @@ class WMainForm(xbmcgui.WindowXML):
 
         if param in ChannelSources:
             try:
-                self.channel_groups.addChannels(ChannelSources[param].get_channels())
+                self.channel_groups.addChannels(ChannelSources[param].get_channels(), src_name=param)
             except Exception as e:
                 log.d(fmt('loadChannels error: {0}', e))
 
@@ -275,8 +275,8 @@ class WMainForm(xbmcgui.WindowXML):
                     epg = None
                     log.d('getEpg->get')
                     self.showStatus('Загрузка программы')
-                    for channel in chs:
-                        epg = channel.get_epg()
+                    for ch in chs.itervalues():
+                        epg = ch.get_epg()
                         if epg is not None:
                             if callback is not None:
                                 callback(epg)
@@ -334,8 +334,8 @@ class WMainForm(xbmcgui.WindowXML):
         def show():
             log.d('showScreen')
             screens = None
-            for channel in chs:
-                screens = channel.get_screenshots()
+            for ch in chs.itervalues():
+                screens = ch.get_screenshots()
                 if screens is not None:
                     break
 
@@ -625,21 +625,25 @@ class WMainForm(xbmcgui.WindowXML):
             self.list.addItem(li)
             for i, chs in enumerate(self.channel_groups.getChannels(self.cur_category)):
                 if chs:
-                    ch = chs[0]
-                    chname = fmt("{0}. {1}", i + 1, ch.get_name())
-                    chli = xbmcgui.ListItem(chname, ch.get_id(), ch.get_logo(), ch.get_logo())
-                    chli.setProperty("icon", ch.get_logo())
-                    chli.setProperty("id", ch.get_id())
-                    chli.setProperty("name", ch.get_name())
-                    if self.cur_category not in (WMainForm.CHN_TYPE_FAVOURITE):
-                        chli.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
-                    else:
-                        chli.setProperty('commands', "%s,%s,%s,%s" % (
-                            MenuForm.CMD_MOVE_FAVOURITE,
-                            MenuForm.CMD_DEL_FAVOURITE,
-                            MenuForm.CMD_DOWN_FAVOURITE,
-                            MenuForm.CMD_UP_FAVOURITE))
-                    self.list.addItem(chli)
+                    for ch in chs.itervalues():
+                        try:
+                            chname = fmt("{0}. {1}", i + 1, ch.get_name())
+                            chli = xbmcgui.ListItem(chname, ch.get_id(), ch.get_logo(), ch.get_logo())
+                            chli.setProperty("icon", ch.get_logo())
+                            chli.setProperty("id", ch.get_id())
+                            chli.setProperty("name", ch.get_name())
+                            if self.cur_category not in (WMainForm.CHN_TYPE_FAVOURITE):
+                                chli.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
+                            else:
+                                chli.setProperty('commands', "%s,%s,%s,%s" % (
+                                    MenuForm.CMD_MOVE_FAVOURITE,
+                                    MenuForm.CMD_DEL_FAVOURITE,
+                                    MenuForm.CMD_DOWN_FAVOURITE,
+                                    MenuForm.CMD_UP_FAVOURITE))
+                            self.list.addItem(chli)
+                            break
+                        except Exception as e:
+                            log.e(fmt("fillChannels error: {0}", e))
             self.hideStatus()
             if self.selitem_id < 1:
                 self.selitem_id = self.get_selitem_id(self.cur_channel)
