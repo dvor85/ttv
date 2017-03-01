@@ -131,7 +131,8 @@ class TTV(TChannels):
                 if g.get('id') == chid:
                     return g.get("name")
 
-    def get_channels(self):
+    def update_channels(self):
+        TChannels.update_channels(self)
         self.initTTV()
         if self.session:
             for server in _servers:
@@ -150,8 +151,6 @@ class TTV(TChannels):
                     break
                 except Exception as e:
                     log.e(fmt('get_channels error: {0}', e))
-            else:
-                return self.channels
 
             if jdata.get('channels'):
                 for ch in jdata['channels']:
@@ -163,4 +162,3 @@ class TTV(TChannels):
                         self.channels.append(TTVChannel(channel, self.session))
                     except Exception as e:
                         log.e(fmt('Add channel error: {0}', e))
-        return self.channels

@@ -6,6 +6,7 @@ import time
 import utils
 import defines
 import logger
+import weakref
 from threading import Event
 
 import os
@@ -33,9 +34,10 @@ class XMLTV():
         return XMLTV._instance
 
     def __init__(self):
+        self.channels = []
         try:
             log.d('start initialization')
-            self.xmltv_file = os.path.join(defines.DATA_PATH, 'ttv.xmltv.xml.gz')
+            self.xmltv_file = os.path.join(defines.DATA_PATH, 'xmltv.xml.gz')
             same_date = False
             if os.path.exists(self.xmltv_file):
                 same_date = datetime.date.today() == datetime.date.fromtimestamp(os.path.getmtime(self.xmltv_file))
@@ -44,7 +46,8 @@ class XMLTV():
                 self.update_xmltv()
 
             with gzip.open(self.xmltv_file, 'rb') as fp:
-                self.xmltv_root = ET.XML(fp.read())
+                self.xmltv_root = weakref.ref(ET.XML(fp.read()))
+
             log.d('stop initialization')
         except Exception as e:
             log.error(fmt("XMLTV not initialazed. {0}", e))
@@ -52,7 +55,9 @@ class XMLTV():
     def update_xmltv(self):
         for server in _servers:
             try:
-                r = defines.request(fmt('http://{server}/ttv.xmltv.xml.gz', server=server))
+                #    url = 'http://www.teleguide.info/download/new3/xmltv.xml.gz'
+                url = fmt('http://{server}/ttv.xmltv.xml.gz', server=server)
+                r = defines.request(url)
                 with open(self.xmltv_file, 'wb') as fp:
                     fp.write(r.content)
                 return True
@@ -60,9 +65,11 @@ class XMLTV():
                 log.error(fmt('update_xmltv error: {0}', e))
 
     def get_channels(self):
-        for chid in self.xmltv_root.iter('channel'):
-            for name in chid.iter('display-name'):
-                yield {'id': chid.get('id'), 'name': name.text}
+        if not self.channels:
+            for chid in self.xmltv_root().iter('channel'):
+                for name in chid.iter('display-name'):
+                    self.channels.append({'id': chid.get('id'), 'name': name.text})
+        return self.channels
 
     def strptime(self, date_string):
         try:
@@ -75,7 +82,7 @@ class XMLTV():
             return
         ctime = datetime.datetime.now()
         offset = int(round((ctime - datetime.datetime.utcnow()).total_seconds()) / 3600)
-        for programme in self.xmltv_root.iter('programme'):
+        for programme in self.xmltv_root().iter('programme'):
             if programme.get('channel') == chid:
                 ep = {}
 
@@ -92,9 +99,9 @@ class XMLTV():
                 yield ep
 
     def get_id_by_name(self, name):
-        name = utils.utf(name).lower()
+        name = utils.lower(name, 'utf8')
         for ch in self.get_channels():
-            if utils.utf(ch['name']).lower() == name:
+            if utils.lower(ch['name'], 'utf8') == name:
                 return ch['id']
 
     def get_epg_by_name(self, name):

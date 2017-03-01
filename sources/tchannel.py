@@ -5,12 +5,12 @@ import datetime
 import utils
 import defines
 import xmltv
-import re
 import logger
+import time
+from name_logo import NAME2LOGO
 
 fmt = utils.fmt
 log = logger.Logger(__name__)
-_re_url_match = re.compile('^(?:https?|ftps?|file|[A-z])://')
 
 
 class TChannel(UserDict):
@@ -29,13 +29,20 @@ class TChannel(UserDict):
         return self.data.get('mode')
 
     def get_logo(self):
-        if 'logo' in self.data:
-            if not _re_url_match.search(self.data['logo']):
-                return utils.utf(fmt('http://{0}/uploads/{1}', 'torrent-tv.ru', self.data['logo']))
+        name = utils.lower(self.get_name(), 'utf8')
+        if not self.data.get('logo'):
+            self.data['logo'] = NAME2LOGO.get(name)
+
+        if self.data.get('logo'):
+            if ':' not in self.data['logo']:
+                self.data['logo'] = utils.utf(fmt('http://{0}/uploads/{1}', 'torrent-tv.ru', self.data['logo']))
             else:
-                return utils.utf(self.data['logo'])
-        return fmt("{addon_path}/resources/logo/{name}.png",
-                   addon_path=utils.utf(defines.ADDON_PATH), name=utils.utf(self.get_name()))
+                self.data['logo'] = utils.utf(self.data['logo'])
+#         else:
+#             self.data['logo'] = fmt("{addon_path}/resources/logo/{name}.png",
+#                                     addon_path=utils.utf(defines.ADDON_PATH), name=utils.utf(self.get_name()))
+
+        return self.data.get('logo')
 
     def get_id(self):
         return utils.utf(fmt("{0}", self.data.get('id')))
@@ -83,12 +90,16 @@ class TChannel(UserDict):
 
 class TChannels():
 
-    def __init__(self):
+    def __init__(self, reload_interval=-1):
+        self.channels = []
+        self.reload_interval = reload_interval
+
+    def update_channels(self):
         self.channels = []
 
     def get_channels(self):
         """
         channels=[TChannel(),]
         """
-
+        self.update_channels()
         return self.channels

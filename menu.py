@@ -34,7 +34,9 @@ class MenuForm(xbmcgui.WindowXMLDialog):
         sel_chs = self.parent.channel_groups.find_channel_by_name(self.parent.cur_category, self.li.getProperty("name"))
         if not sel_chs:
             return
-        self.channel = sel_chs[0]
+        for ch in sel_chs.itervalues():
+            self.channel = ch
+            break
         log.d("li = %s" % self.li.getProperty("commands"))
         try:
             cmds = self.li.getProperty('commands').split(',')

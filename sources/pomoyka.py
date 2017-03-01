@@ -19,9 +19,10 @@ class Pomoyka(TChannels):
 
     def __init__(self):
         self.url = 'http://super-pomoyka.us.to/trash/ttv-list/ttv.json'
-        TChannels.__init__(self)
+        TChannels.__init__(self, reload_interval=3600)
 
-    def get_channels(self):
+    def update_channels(self):
+        TChannels.update_channels(self)
         try:
             r = defines.request(self.url)
             jdata = r.json()
@@ -31,4 +32,3 @@ class Pomoyka(TChannels):
                 self.channels.append(PomoykaChannel(ch))
         except Exception as e:
             log.error(fmt("get_channels error: {0}", e))
-        return self.channels

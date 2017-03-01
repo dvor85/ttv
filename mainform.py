@@ -63,12 +63,13 @@ class ChannelGroups(UserDict):
     def addChannels(self, channels, src_name):
         for ch in channels:
             self.addChannel(ch, src_name)
+        return True if channels else False
 
     def addChannel(self, ch, src_name, groupname=None):
         try:
             if groupname is None:
                 groupname = utils.utf(ch.get('cat'))
-            if groupname in ("Эротика") and utils.str2int(defines.AGE) < 2:
+            if utils.lower(groupname, 'utf8') in ("эротика") and utils.str2int(defines.AGE) < 2:
                 return
             cat = self.data.get(groupname)
             if not cat:
@@ -95,16 +96,15 @@ class ChannelGroups(UserDict):
                     return chs
 
     def find_group_by_chname(self, chname):
-        name = utils.utf(chname)
         for groupname in (x for x in self.getGroups() if x not in (WMainForm.CHN_TYPE_FAVOURITE)):
-            if self.find_channel_by_name(groupname, name):
+            if self.find_channel_by_name(groupname, chname):
                 return groupname
 
     def find_channel_by_name(self, groupname, name):
-        name = utils.utf(name).lower()
+        name = utils.lower(name, 'utf8')
         for chs in self.getChannels(groupname):
             for ch in chs.itervalues():
-                if ch.get_name().lower() == name:
+                if utils.lower(ch.get_name(), 'utf8') == name:
                     return chs
 
 
@@ -162,6 +162,11 @@ class WMainForm(xbmcgui.WindowXML):
     API_ERROR_NOPARAM = 'noparam'
     API_ERROR_NOFAVOURITE = 'nofavourite'
 
+    TIMER_GET_EPG = 'get_epg_timer'
+    TIMER_SHOW_SCREEN = 'show_screen_timer'
+    TIMER_SEL_CHANNEL = 'sel_channel_timer'
+    TIMER_HIDE_WINDOW = 'hide_window_timer'
+
     def __init__(self, *args, **kwargs):
         log.d('__init__')
         self.channel_groups = ChannelGroups()
@@ -179,11 +184,8 @@ class WMainForm(xbmcgui.WindowXML):
         self.first_init = True
         self.channel_number_str = ''
 
-        self.select_timer = None
-        self.hide_window_timer = None
-        self.get_epg_timer = None
+        self.timers = {}
         self.get_epg_lock = threading.Event()
-        self.show_screen_timer = None
         self.rotate_screen_thr = None
         defines.MyThread(xmltv.XMLTV.get_instance).start()
 
@@ -203,11 +205,11 @@ class WMainForm(xbmcgui.WindowXML):
 
     def get_selitem_id(self, name):
         index = -1
-        name = utils.utf(name).lower()
+        name = utils.lower(name, 'utf8')
         while index < self.list.size():
             index += 1
             li = self.list.getListItem(index)
-            if li.getProperty('name').lower() == name:
+            if utils.lower(li.getProperty('name'), 'utf8') == name:
                 return index
         else:
             return -1
@@ -258,14 +260,26 @@ class WMainForm(xbmcgui.WindowXML):
                 log.d(fmt('loadFavourites error: {0}', e))
 
     def loadChannels(self, *args):
-        param = args[0]
-        log.d(fmt('loadChannels {0}', param))
+        src_name = args[0]
+        log.d(fmt('loadChannels {0}', src_name))
 
-        if param in ChannelSources:
+        if src_name in ChannelSources:
             try:
-                self.channel_groups.addChannels(ChannelSources[param].get_channels(), src_name=param)
+                src = ChannelSources[src_name]
+                res = self.channel_groups.addChannels(src.get_channels(), src_name=src_name)
+                timeout = src.reload_interval if res else 60
+                if timeout > 0:
+                    name = fmt('reload_channels_{0}', src_name)
+                    if self.timers.get(name):
+                        self.timers[name].cancel()
+                        self.timers[name] = None
+                    self.timers[name] = threading.Timer(timeout, self.loadChannels, args=args)
+                    self.timers[name].name = name
+                    self.timers[name].daemon = False
+                    self.timers[name].start()
+
             except Exception as e:
-                log.d(fmt('loadChannels error: {0}', e))
+                log.d(fmt('loadChannels {0} error: {1}', src_name, e))
 
     def getEpg(self, chs, timeout=0, callback=None):
         def get():
@@ -288,14 +302,14 @@ class WMainForm(xbmcgui.WindowXML):
                 finally:
                     self.get_epg_lock.clear()
 
-        if self.get_epg_timer:
-            self.get_epg_timer.cancel()
-            self.get_epg_timer = None
+        if self.timers.get(WMainForm.TIMER_GET_EPG):
+            self.timers[WMainForm.TIMER_GET_EPG].cancel()
+            self.timers[WMainForm.TIMER_GET_EPG] = None
 
-        self.get_epg_timer = threading.Timer(timeout, get)
-        self.get_epg_timer.name = 'getEpg'
-        self.get_epg_timer.daemon = False
-        self.get_epg_timer.start()
+        self.timers[WMainForm.TIMER_GET_EPG] = threading.Timer(timeout, get)
+        self.timers[WMainForm.TIMER_GET_EPG].name = WMainForm.TIMER_GET_EPG
+        self.timers[WMainForm.TIMER_GET_EPG].daemon = False
+        self.timers[WMainForm.TIMER_GET_EPG].start()
 
     def showEpg(self, curepg):
         try:
@@ -348,16 +362,16 @@ class WMainForm(xbmcgui.WindowXML):
                 self.rotate_screen_thr = RotateScreen(self.getControl(WMainForm.IMG_SCREEN), screens)
                 self.rotate_screen_thr.start()
 
-            self.show_screen_timer = None
+            self.timers[WMainForm.TIMER_SHOW_SCREEN] = None
 
-        if self.show_screen_timer:
-            self.show_screen_timer.cancel()
-            self.show_screen_timer = None
+        if self.timers.get(WMainForm.TIMER_SHOW_SCREEN):
+            self.timers[WMainForm.TIMER_SHOW_SCREEN].cancel()
+            self.timers[WMainForm.TIMER_SHOW_SCREEN] = None
 
-        self.show_screen_timer = threading.Timer(timeout, show)
-        self.show_screen_timer.name = 'show_screen'
-        self.show_screen_timer.daemon = False
-        self.show_screen_timer.start()
+        self.timers[WMainForm.TIMER_SHOW_SCREEN] = threading.Timer(timeout, show)
+        self.timers[WMainForm.TIMER_SHOW_SCREEN].name = WMainForm.TIMER_SHOW_SCREEN
+        self.timers[WMainForm.TIMER_SHOW_SCREEN].daemon = False
+        self.timers[WMainForm.TIMER_SHOW_SCREEN].start()
 
     def updateList(self):
         def LoadOther():
@@ -371,8 +385,8 @@ class WMainForm(xbmcgui.WindowXML):
 
         thrs = {}
         thrs['favourite'] = defines.MyThread(self.loadFavourites)
-        for extgr in ChannelSources.iterkeys():
-            thrs[extgr] = defines.MyThread(self.loadChannels, extgr)
+        for src_name in ChannelSources.iterkeys():
+            thrs[src_name] = defines.MyThread(self.loadChannels, src_name)
 
         for thr in thrs.itervalues():
             thr.start()
@@ -408,7 +422,7 @@ class WMainForm(xbmcgui.WindowXML):
     def select_channel(self, sch='', timeout=0):
         def clear():
             self.channel_number_str = ''
-            self.select_timer = None
+            self.timers[WMainForm.TIMER_SEL_CHANNEL] = None
 
         if self.channel_number_str == '':
             self.channel_number_str = str(sch) if sch != '' else str(self.selitem_id)
@@ -419,13 +433,13 @@ class WMainForm(xbmcgui.WindowXML):
             self.setFocus(self.list)
             self.list.selectItem(self.selitem_id)
 
-        if self.select_timer:
-            self.select_timer.cancel()
-            self.select_timer = None
-        self.select_timer = threading.Timer(timeout, clear)
-        self.select_timer.name = 'select_channel'
-        self.select_timer.daemon = False
-        self.select_timer.start()
+        if self.timers.get(WMainForm.TIMER_SEL_CHANNEL):
+            self.timers[WMainForm.TIMER_SEL_CHANNEL].cancel()
+            self.timers[WMainForm.TIMER_SEL_CHANNEL] = None
+        self.timers[WMainForm.TIMER_SEL_CHANNEL] = threading.Timer(timeout, clear)
+        self.timers[WMainForm.TIMER_SEL_CHANNEL].name = WMainForm.TIMER_SEL_CHANNEL
+        self.timers[WMainForm.TIMER_SEL_CHANNEL].daemon = False
+        self.timers[WMainForm.TIMER_SEL_CHANNEL].start()
 
     def hide_main_window(self, timeout=0):
         log.d(fmt('hide main window in {0} sec', timeout))
@@ -438,16 +452,16 @@ class WMainForm(xbmcgui.WindowXML):
             if isPlaying():
                 log.d('hide main window')
                 self.player.Show()
-            self.hide_window_timer = None
+            self.timers[WMainForm.TIMER_HIDE_WINDOW] = None
 
-        if self.hide_window_timer:
-            self.hide_window_timer.cancel()
-            self.hide_window_timer = None
+        if self.timers.get(WMainForm.TIMER_HIDE_WINDOW):
+            self.timers[WMainForm.TIMER_HIDE_WINDOW].cancel()
+            self.timers[WMainForm.TIMER_HIDE_WINDOW] = None
 
-        self.hide_window_timer = threading.Timer(timeout, hide)
-        self.hide_window_timer.name = 'hide_main_window'
-        self.hide_window_timer.daemon = False
-        self.hide_window_timer.start()
+        self.timers[WMainForm.TIMER_HIDE_WINDOW] = threading.Timer(timeout, hide)
+        self.timers[WMainForm.TIMER_HIDE_WINDOW].name = WMainForm.TIMER_HIDE_WINDOW
+        self.timers[WMainForm.TIMER_HIDE_WINDOW].daemon = False
+        self.timers[WMainForm.TIMER_HIDE_WINDOW].start()
 
     def LoopPlay(self, *args):
         while not self.IsCanceled():
@@ -671,14 +685,10 @@ class WMainForm(xbmcgui.WindowXML):
         if self.player.TSPlayer:
             self.player.TSPlayer.end()
 
-        if self.select_timer:
-            self.select_timer.cancel()
-        if self.hide_window_timer:
-            self.hide_window_timer.cancel()
-        if self.get_epg_timer:
-            self.get_epg_timer.cancel()
-        if self.show_screen_timer:
-            self.show_screen_timer.cancel()
+        for timer in self.timers.itervalues():
+            if timer:
+                timer.cancel()
+
         if self.rotate_screen_thr:
             self.rotate_screen_thr.stop()
 

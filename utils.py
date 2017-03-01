@@ -95,3 +95,7 @@ def fs_enc(path):
     windows workaround. Используется в Popen.
     """
     return uni(path).encode(sys.getfilesystemencoding(), 'ignore')
+
+
+def lower(s, encoding=None):
+    return utf(uni(s, encoding).lower())

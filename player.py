@@ -34,6 +34,9 @@ class MyPlayer(xbmcgui.WindowXML):
     CH_NAME_ID = 399
     DLG_SWITCH_ID = 299
 
+    TIMER_RUN_SEL_CHANNEL = 'run_selected_channel'
+    TIMER_HIDE_CONTROL = 'hide_control_timer'
+
     def __init__(self, *args, **kwargs):
         log.d('__init__')
         self.TSPlayer = None
@@ -43,8 +46,7 @@ class MyPlayer(xbmcgui.WindowXML):
         self.visible = False
         self.focusId = MyPlayer.CONTROL_WINDOW_ID
 
-        self.select_timer = None
-        self.hide_control_timer = None
+        self.timers = {}
 
         self.channel_number = 0
         self.channel_number_str = ''
@@ -71,7 +73,7 @@ class MyPlayer(xbmcgui.WindowXML):
         self.swinfo = self.getControl(MyPlayer.DLG_SWITCH_ID)
         self.swinfo.setVisible(False)
 
-        if not self.select_timer:
+        if not self.timers.get(MyPlayer.TIMER_RUN_SEL_CHANNEL):
             self.init_channel_number()
 
         log.d("channel_number = %i" % self.channel_number)
@@ -92,15 +94,15 @@ class MyPlayer(xbmcgui.WindowXML):
             self.control_window.setVisible(False)
             self.setFocusId(MyPlayer.CONTROL_WINDOW_ID)
             self.focusId = MyPlayer.CONTROL_WINDOW_ID
-            self.hide_control_timer = None
+            self.timers[MyPlayer.TIMER_HIDE_CONTROL] = None
 
-        if self.hide_control_timer:
-            self.hide_control_timer.cancel()
-            self.hide_control_timer = None
-        self.hide_control_timer = threading.Timer(timeout, hide)
-        self.hide_control_timer.name = 'hide_control_window'
-        self.hide_control_timer.daemon = False
-        self.hide_control_timer.start()
+        if self.timers.get(MyPlayer.TIMER_HIDE_CONTROL):
+            self.timers[MyPlayer.TIMER_HIDE_CONTROL].cancel()
+            self.timers[MyPlayer.TIMER_HIDE_CONTROL] = None
+        self.timers[MyPlayer.TIMER_HIDE_CONTROL] = threading.Timer(timeout, hide)
+        self.timers[MyPlayer.TIMER_HIDE_CONTROL].name = MyPlayer.TIMER_HIDE_CONTROL
+        self.timers[MyPlayer.TIMER_HIDE_CONTROL].daemon = False
+        self.timers[MyPlayer.TIMER_HIDE_CONTROL].start()
 
     def UpdateEpg(self, chs):
         try:
@@ -207,15 +209,15 @@ class MyPlayer(xbmcgui.WindowXML):
             self.channel_number = self.parent.selitem_id
             self.chinfo.setLabel(self.parent.list.getListItem(self.parent.selitem_id).getLabel())
             self.channel_number_str = ''
-            self.select_timer = None
+            self.timers[MyPlayer.TIMER_RUN_SEL_CHANNEL] = None
 
-        if self.select_timer:
-            self.select_timer.cancel()
-            self.select_timer = None
-        self.select_timer = threading.Timer(timeout, run)
-        self.select_timer.name = 'run_selected_channel'
-        self.select_timer.daemon = False
-        self.select_timer.start()
+        if self.timers.get(MyPlayer.TIMER_RUN_SEL_CHANNEL):
+            self.timers[MyPlayer.TIMER_RUN_SEL_CHANNEL].cancel()
+            self.timers[MyPlayer.TIMER_RUN_SEL_CHANNEL] = None
+        self.timers[MyPlayer.TIMER_RUN_SEL_CHANNEL] = threading.Timer(timeout, run)
+        self.timers[MyPlayer.TIMER_RUN_SEL_CHANNEL].name = MyPlayer.TIMER_RUN_SEL_CHANNEL
+        self.timers[MyPlayer.TIMER_RUN_SEL_CHANNEL].daemon = False
+        self.timers[MyPlayer.TIMER_RUN_SEL_CHANNEL].start()
 
     def inc_channel_number(self):
         self.channel_number += 1
@@ -240,7 +242,7 @@ class MyPlayer(xbmcgui.WindowXML):
         # log.d(fmt('Action {0} | ButtonCode {1}', action.getId(), action.getButtonCode()))
         if action in MyPlayer.CANCEL_DIALOG or action.getId() == MyPlayer.ACTION_RBC:
             log.d('Close player %s %s' % (action.getId(), action.getButtonCode()))
-            if self.select_timer:
+            if self.timers.get(MyPlayer.TIMER_RUN_SEL_CHANNEL):
                 self.channel_number_str = str(self.parent.selitem_id)
                 self.run_selected_channel()
                 self.UpdateEpg(self.channels)
@@ -295,8 +297,8 @@ class MyPlayer(xbmcgui.WindowXML):
             self.parent.showInfoWindow()
 
     def close(self):
-        if self.hide_control_timer:
-            self.hide_control_timer.cancel()
-        if self.select_timer:
-            self.select_timer.cancel()
+        for timer in self.timers.itervalues():
+            if timer:
+                timer.cancel()
+
         xbmcgui.WindowXML.close(self)

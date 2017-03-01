@@ -48,7 +48,6 @@ class FDB():
 
     def moveTo(self, name, to_id):
         to_id -= 1
-        name = utils.utf(name).lower()
         if not self.channels:
             self.get()
         if self.channels and to_id < len(self.channels):
@@ -59,13 +58,13 @@ class FDB():
         return FDB.API_ERROR_NOPARAM
 
     def find(self, name):
-        name = utils.utf(name).lower()
+        name = utils.lower(name, 'utf8')
         log.d(fmt('find channel by name={0}', name))
         if not self.channels:
             self.get()
         if self.channels:
             for i, ch in enumerate(self.channels):
-                if utils.utf(ch['name']).lower() == name:
+                if utils.lower(ch['name'], 'utf8') == name:
                     return i
 
     def swap(self, i1, i2):
