@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
+# Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-import xml.etree.ElementTree as ET
+import xml.etree.cElementTree as ET
 import datetime
 import time
 import utils
 import defines
 import logger
-import weakref
 from threading import Event
 
 import os
@@ -34,7 +34,7 @@ class XMLTV():
         return XMLTV._instance
 
     def __init__(self):
-        self.channels = []
+        self.channels = {}
         try:
             log.d('start initialization')
             self.xmltv_file = os.path.join(defines.DATA_PATH, 'xmltv.xml.gz')
@@ -44,9 +44,9 @@ class XMLTV():
 
             if not os.path.exists(self.xmltv_file) or not same_date:
                 self.update_xmltv()
-
+            # при многократном запуске плагина возникает утечка памяти. Решение: weakref, но возникает ошибка создания ссылки
             with gzip.open(self.xmltv_file, 'rb') as fp:
-                self.xmltv_root = weakref.ref(ET.XML(fp.read()))
+                self.xmltv_root = ET.XML(fp.read())
 
             log.d('stop initialization')
         except Exception as e:
@@ -66,9 +66,9 @@ class XMLTV():
 
     def get_channels(self):
         if not self.channels:
-            for chid in self.xmltv_root().iter('channel'):
+            for chid in self.xmltv_root.iter('channel'):
                 for name in chid.iter('display-name'):
-                    self.channels.append({'id': chid.get('id'), 'name': name.text})
+                    self.channels[chid.get('id')] = {'name': name.text}
         return self.channels
 
     def strptime(self, date_string):
@@ -82,7 +82,7 @@ class XMLTV():
             return
         ctime = datetime.datetime.now()
         offset = int(round((ctime - datetime.datetime.utcnow()).total_seconds()) / 3600)
-        for programme in self.xmltv_root().iter('programme'):
+        for programme in self.xmltv_root.iter('programme'):
             if programme.get('channel') == chid:
                 ep = {}
 
@@ -100,9 +100,9 @@ class XMLTV():
 
     def get_id_by_name(self, name):
         name = utils.lower(name, 'utf8')
-        for ch in self.get_channels():
+        for chid, ch in self.get_channels().iteritems():
             if utils.lower(ch['name'], 'utf8') == name:
-                return ch['id']
+                return chid
 
     def get_epg_by_name(self, name):
         return self.get_epg_by_id(self.get_id_by_name(name))

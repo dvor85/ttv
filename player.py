@@ -99,10 +99,12 @@ class MyPlayer(xbmcgui.WindowXML):
         if self.timers.get(MyPlayer.TIMER_HIDE_CONTROL):
             self.timers[MyPlayer.TIMER_HIDE_CONTROL].cancel()
             self.timers[MyPlayer.TIMER_HIDE_CONTROL] = None
-        self.timers[MyPlayer.TIMER_HIDE_CONTROL] = threading.Timer(timeout, hide)
-        self.timers[MyPlayer.TIMER_HIDE_CONTROL].name = MyPlayer.TIMER_HIDE_CONTROL
-        self.timers[MyPlayer.TIMER_HIDE_CONTROL].daemon = False
-        self.timers[MyPlayer.TIMER_HIDE_CONTROL].start()
+
+        if not defines.isCancel():
+            self.timers[MyPlayer.TIMER_HIDE_CONTROL] = threading.Timer(timeout, hide)
+            self.timers[MyPlayer.TIMER_HIDE_CONTROL].name = MyPlayer.TIMER_HIDE_CONTROL
+            self.timers[MyPlayer.TIMER_HIDE_CONTROL].daemon = False
+            self.timers[MyPlayer.TIMER_HIDE_CONTROL].start()
 
     def UpdateEpg(self, chs):
         try:
@@ -214,10 +216,12 @@ class MyPlayer(xbmcgui.WindowXML):
         if self.timers.get(MyPlayer.TIMER_RUN_SEL_CHANNEL):
             self.timers[MyPlayer.TIMER_RUN_SEL_CHANNEL].cancel()
             self.timers[MyPlayer.TIMER_RUN_SEL_CHANNEL] = None
-        self.timers[MyPlayer.TIMER_RUN_SEL_CHANNEL] = threading.Timer(timeout, run)
-        self.timers[MyPlayer.TIMER_RUN_SEL_CHANNEL].name = MyPlayer.TIMER_RUN_SEL_CHANNEL
-        self.timers[MyPlayer.TIMER_RUN_SEL_CHANNEL].daemon = False
-        self.timers[MyPlayer.TIMER_RUN_SEL_CHANNEL].start()
+
+        if not defines.isCancel():
+            self.timers[MyPlayer.TIMER_RUN_SEL_CHANNEL] = threading.Timer(timeout, run)
+            self.timers[MyPlayer.TIMER_RUN_SEL_CHANNEL].name = MyPlayer.TIMER_RUN_SEL_CHANNEL
+            self.timers[MyPlayer.TIMER_RUN_SEL_CHANNEL].daemon = False
+            self.timers[MyPlayer.TIMER_RUN_SEL_CHANNEL].start()
 
     def inc_channel_number(self):
         self.channel_number += 1

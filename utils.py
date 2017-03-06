@@ -57,17 +57,17 @@ def rListFiles(path):
     return files
 
 
-def uni(path, encoding=None):
+def uni(path, from_encoding=None):
     """
     Декодирует строку из кодировки encoding
     :path: строка для декодирования
-    :encoding: Кодировка из которой декодировать. Если не задана, то sys.getfilesystemencoding()
+    :from_encoding: Кодировка из которой декодировать. Если не задана, то sys.getfilesystemencoding()
     :return: unicode path
     """
-    if encoding is None:
-        encoding = sys.getfilesystemencoding()
+    if from_encoding is None:
+        from_encoding = sys.getfilesystemencoding()
     if isinstance(path, str):
-        path = path.decode(encoding, errors='ignore')
+        path = path.decode(from_encoding, errors='ignore')
     return path
 
 
@@ -80,13 +80,13 @@ def utf(path):
     return path
 
 
-def true_enc(path, encoding=None):
+def true_enc(path, from_encoding=None):
     """
     Для файловых операций в windows нужен unicode.
     Для остальных - utf8
     """
     if sys.platform.startswith('win'):
-        return uni(path, encoding)
+        return uni(path, from_encoding)
     return utf(path)
 
 
@@ -97,5 +97,5 @@ def fs_enc(path):
     return uni(path).encode(sys.getfilesystemencoding(), 'ignore')
 
 
-def lower(s, encoding=None):
-    return utf(uni(s, encoding).lower())
+def lower(s, from_encoding=None):
+    return utf(uni(s, from_encoding).lower())

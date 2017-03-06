@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 NAME2LOGO = {
     "mtv live hd": "http://torrent-tv.ru/uploads/WjyYXtYHhG5COxGab7luHb1bmvAioA.png",

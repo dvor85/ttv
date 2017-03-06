@@ -22,7 +22,7 @@ PTR_FILE = ADDON.getSetting('port_path')
 # API_MIRROR = ADDON.getSetting('api_mirror')
 # SITE_MIRROR = '1ttv.org' if API_MIRROR == '1ttvxbmc.top' else 'torrent-tv.ru'
 
-TTV_VERSION = '1.5.3'
+# TTV_VERSION = '1.5.3'
 AUTOSTART = ADDON.getSetting('autostart') == 'true'
 GENDER = ADDON.getSetting('gender')
 AGE = ADDON.getSetting('age')
@@ -74,8 +74,7 @@ def AutostartViaAutoexec(state):
 class MyThread(threading.Thread):
 
     def __init__(self, func, *args, **kwargs):
-        threading.Thread.__init__(
-            self, target=func, name=func.__name__, args=args)
+        threading.Thread.__init__(self, target=func, name=func.__name__, args=args, kwargs=kwargs)
         self.daemon = False
 
 

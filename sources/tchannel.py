@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 from UserDict import UserDict
 import datetime
@@ -6,7 +7,7 @@ import utils
 import defines
 import xmltv
 import logger
-import time
+import os
 from name_logo import NAME2LOGO
 
 fmt = utils.fmt
@@ -38,9 +39,11 @@ class TChannel(UserDict):
                 self.data['logo'] = utils.utf(fmt('http://{0}/uploads/{1}', 'torrent-tv.ru', self.data['logo']))
             else:
                 self.data['logo'] = utils.utf(self.data['logo'])
-#         else:
-#             self.data['logo'] = fmt("{addon_path}/resources/logo/{name}.png",
-#                                     addon_path=utils.utf(defines.ADDON_PATH), name=utils.utf(self.get_name()))
+        else:
+            logo = fmt("{addon_path}/resources/logo/{name}.png",
+                       addon_path=utils.utf(defines.ADDON_PATH), name=utils.utf(self.get_name()))
+            if os.path.exists(logo):
+                self.data['logo'] = logo
 
         return self.data.get('logo')
 
@@ -51,6 +54,9 @@ class TChannel(UserDict):
         return utils.utf(self.data.get('name'))
 
     def get_screenshots(self):
+        """
+        :return [{filename:url},...]
+        """
         pass
 
     def update_epglist(self):
@@ -62,11 +68,13 @@ class TChannel(UserDict):
 
     def get_epg(self):
         """
-        epg=[{name, btime, etime},]
+        :return [{name, btime, etime},]
         """
 
         try:
-            self.update_epglist()
+            thr = defines.MyThread(self.update_epglist)
+            thr.start()
+            thr.join(4)
             ctime = datetime.datetime.now()
             prev_bt = 0
             prev_et = 0
@@ -99,7 +107,7 @@ class TChannels():
 
     def get_channels(self):
         """
-        channels=[TChannel(),]
+        :return [TChannel(),]
         """
         self.update_channels()
         return self.channels

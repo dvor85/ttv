@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 from tchannel import TChannel, TChannels
 import defines
@@ -87,17 +88,17 @@ class TTV(TChannels):
                 defines.ADDON.setSetting("uuid", guid)
             guid = guid.replace('-', '')
 
-            for server in _servers:
-                try:
-                    params = dict(application='xbmc', version=defines.TTV_VERSION)
-                    r = defines.request(fmt('http://{server}/v3/version.php', server=server),
-                                        params=params, trys=1)
-                    jdata = r.json()
-                    if utils.str2int(jdata.get('success')) == 0:
-                        raise Exception(fmt("Check version error: {0}", jdata.get('error')))
-                    break
-                except Exception as e:
-                    log.e(e)
+#             for server in _servers:
+#                 try:
+#                     params = dict(application='xbmc', version=defines.TTV_VERSION)
+#                     r = defines.request(fmt('http://{server}/v3/version.php', server=server),
+#                                         params=params, trys=1)
+#                     jdata = r.json()
+#                     if utils.str2int(jdata.get('success')) == 0:
+#                         raise Exception(fmt("Check version error: {0}", jdata.get('error')))
+#                     break
+#                 except Exception as e:
+#                     log.e(e)
 
             for server in _servers:
                 try:
