@@ -60,11 +60,14 @@ class TChannel(UserDict):
         pass
 
     def update_epglist(self):
-        xmltv_epg = xmltv.XMLTV.get_instance()
-        if not self.data.get('epg') and xmltv_epg is not None:
-            self.data['epg'] = []
-            for ep in xmltv_epg.get_epg_by_name(self.get_name()):
-                self.data['epg'].append(ep)
+        try:
+            xmltv_epg = xmltv.XMLTV.get_instance()
+            if not self.data.get('epg') and xmltv_epg is not None:
+                self.data['epg'] = []
+                for ep in xmltv_epg.get_epg_by_name(self.get_name()):
+                    self.data['epg'].append(ep)
+        except Exception as e:
+            log.e(fmt('update_epglist error {0}', e))
 
     def get_epg(self):
         """

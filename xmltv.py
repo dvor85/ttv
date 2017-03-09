@@ -35,6 +35,7 @@ class XMLTV():
 
     def __init__(self):
         self.channels = {}
+        self.xmltv_root = None
         try:
             log.d('start initialization')
             self.xmltv_file = os.path.join(defines.DATA_PATH, 'xmltv.xml.gz')
@@ -51,6 +52,7 @@ class XMLTV():
             log.d('stop initialization')
         except Exception as e:
             log.error(fmt("XMLTV not initialazed. {0}", e))
+            XMLTV._instance = None
 
     def update_xmltv(self):
         for server in _servers:

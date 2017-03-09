@@ -110,21 +110,24 @@ class MyPlayer(xbmcgui.WindowXML):
         try:
             log.d('UpdateEpg')
 
+            name = None
             cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
             for ch in chs.itervalues():
                 logo = ch.get_logo()
+                name = ch.get_name()
                 if logo:
                     cicon.setImage(logo)
                     break
-            for src_name in chs.iterkeys():
+
+            for ch in self.channels.itervalues():
                 try:
-                    if self.channels[src_name].get_name() != chs[src_name].get_name():
+                    if ch.get_name() != name:
                         self.showNoEpg()
                     break
                 except Exception as e:
                     log.d(fmt("UpdateEpg error: {0}", e))
 
-            self.parent.getEpg(chs, callback=self.showEpg)
+            self.parent.getEpg(chs, callback=self.showEpg, timeout=0.5)
 
         except Exception as e:
             log.w(fmt('UpdateEpg error: {0}', e))
@@ -236,10 +239,10 @@ class MyPlayer(xbmcgui.WindowXML):
     def onAction(self, action):
         def viewEPG(swinfo_visible=True):
             selItem = self.parent.list.getListItem(self.channel_number)
-            sel_chs = self.parent.channel_groups.find_channel_by_name(self.parent.cur_category, selItem.getProperty("name"))
-
             self.chinfo.setLabel(selItem.getLabel())
             self.swinfo.setVisible(swinfo_visible)
+
+            sel_chs = self.parent.get_channel_by_name(selItem.getProperty("name"))
             if sel_chs:
                 self.UpdateEpg(sel_chs)
 

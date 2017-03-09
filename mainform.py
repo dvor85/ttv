@@ -184,7 +184,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.channel_number_str = ''
 
         self.timers = {}
-        self.get_epg_lock = threading.Event()
+#         self.get_epg_lock = threading.Event()
         self.rotate_screen_thr = None
 
     def onInit(self):
@@ -212,6 +212,12 @@ class WMainForm(xbmcgui.WindowXML):
         else:
             return -1
 
+    def get_channel_by_name(self, name):
+        categ = self.cur_category
+        if self.cur_category in (WMainForm.CHN_TYPE_FAVOURITE):
+            categ = self.channel_groups.find_group_by_chname(name)
+        return self.channel_groups.find_channel_by_name(categ, name)
+
     def showDialog(self, msg):
         from okdialog import OkDialog
         dialog = OkDialog("dialog.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
@@ -231,14 +237,11 @@ class WMainForm(xbmcgui.WindowXML):
                 return
             selItem = self.list.getSelectedItem()
             if selItem and not selItem.getLabel() == '..':
-                categ = self.cur_category
-                if categ in (WMainForm.CHN_TYPE_FAVOURITE):
-                    categ = self.channel_groups.find_group_by_chname(selItem.getProperty("name"))
 
-                sel_chs = self.channel_groups.find_channel_by_name(categ, selItem.getProperty("name"))
+                sel_chs = self.get_channel_by_name(selItem.getProperty("name"))
                 if sel_chs:
-                    self.getEpg(sel_chs, timeout=0.3, callback=self.showEpg)
-                    self.showScreen(sel_chs, timeout=0.3)
+                    self.getEpg(sel_chs, timeout=0.5, callback=self.showEpg)
+                    self.showScreen(sel_chs, timeout=0.5)
 
                 for controlId in (WMainForm.IMG_LOGO, WMainForm.IMG_SCREEN):
                     self.getControl(controlId).setImage(selItem.getProperty('icon'))
@@ -281,24 +284,24 @@ class WMainForm(xbmcgui.WindowXML):
 
     def getEpg(self, chs, timeout=0, callback=None):
         def get():
-            if not self.get_epg_lock.is_set():
-                self.get_epg_lock.set()
-                try:
-                    epg = None
-                    log.d('getEpg->get')
-                    self.showStatus('Загрузка программы')
+            #             if not self.get_epg_lock.is_set():
+                #                 self.get_epg_lock.set()
+            chnum = self.player.channel_number
+            try:
+                epg = None
+                log.d('getEpg->get')
+                self.showStatus('Загрузка программы')
+                if chs:
                     for ch in chs.itervalues():
                         epg = ch.get_epg()
-                        if epg:
-                            if callback is not None:
-                                callback(epg)
-                            break
-
-                    self.hideStatus()
-                except Exception as e:
-                    log.d(fmt('getEpg->get error: {0}', e))
-                finally:
-                    self.get_epg_lock.clear()
+                        if epg and callback is not None and chnum == self.player.channel_number:
+                            callback(epg)
+                        break
+            except Exception as e:
+                log.d(fmt('getEpg->get error: {0}', e))
+            finally:
+                #                     self.get_epg_lock.clear()
+                self.hideStatus()
 
         if self.timers.get(WMainForm.TIMER_GET_EPG):
             self.timers[WMainForm.TIMER_GET_EPG].cancel()
@@ -471,11 +474,7 @@ class WMainForm(xbmcgui.WindowXML):
             try:
                 selItem = self.list.getListItem(self.selitem_id)
                 self.cur_channel = selItem.getProperty('name')
-                categ = self.cur_category
-                if categ in (WMainForm.CHN_TYPE_FAVOURITE):
-                    categ = self.channel_groups.find_group_by_chname(self.cur_channel)
-
-                sel_chs = self.channel_groups.find_channel_by_name(categ, self.cur_channel)
+                sel_chs = self.get_channel_by_name(self.cur_channel)
                 if not sel_chs:
                     msg = "Канал временно не доступен"
                     self.showStatus(msg)
