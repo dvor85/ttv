@@ -296,14 +296,16 @@
           <font>font10</font>
         </control>
 
-        <control type="progress" id ="110">
+        <control type="progress" id="110">
           <description>Progress EGP</description>
           <posx>215</posx>
           <posy>565</posy>
           <visible>true</visible>
           <colordiffuse>88FFFFFF</colordiffuse>
+          <texturebg>progressback.png</texturebg>
+	      <midtexture>progressfront.png</midtexture>
           <width>900</width>
-          <height>7</height>
+          <height>9</height>
           <info>ListItem.Progress</info>
         </control>
         <control type="label" id="107">

@@ -150,6 +150,8 @@
               <posy>60</posy>
               <visible>true</visible>
               <colordiffuse>88FFFFFF</colordiffuse>
+              <texturebg>progressback.png</texturebg>
+	      	  <midtexture>progressfront.png</midtexture>
               <width>1100</width>
               <height>9</height>
               <info>ListItem.Progress</info>

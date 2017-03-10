@@ -76,8 +76,8 @@ class MyPlayer(xbmcgui.WindowXML):
         if not self.timers.get(MyPlayer.TIMER_RUN_SEL_CHANNEL):
             self.init_channel_number()
 
-        log.d("channel_number = %i" % self.channel_number)
-        log.d("selitem_id = %i" % self.parent.selitem_id)
+        log.d(fmt("channel_number = {0}", self.channel_number))
+        log.d(fmt("selitem_id = {0}", self.parent.selitem_id))
         self.UpdateEpg(self.channels)
 
         self.control_window.setVisible(True)
@@ -165,23 +165,19 @@ class MyPlayer(xbmcgui.WindowXML):
             except:
                 break
         if self.progress:
-            self.progress.setPercent(1)
+            self.progress.setPercent(0)
 
     def Stop(self):
         log('AutoStop')
         # xbmc.executebuiltin('PlayerControl(Stop)')
         if self.TSPlayer:
-            self.TSPlayer.manual_stopped = False
+            self.TSPlayer.manual_stopped.clear()
             self.TSPlayer.stop()
 
     def Show(self):
         if self.TSPlayer:
             if not self.TSPlayer.amalker:
                 self.show()
-            else:
-                log.d('SHOW ADS Window')
-                self.parent.amalkerWnd.show()
-                log.d('END SHOW ADS Window')
 
     def Start(self, channels):
         log("Start play")
@@ -205,7 +201,7 @@ class MyPlayer(xbmcgui.WindowXML):
     def run_selected_channel(self, timeout=0):
         def run():
             self.channel_number = utils.str2int(self.channel_number_str)
-            log.d('CHANNEL NUMBER IS: %i' % self.channel_number)
+            log.d(fmt('CHANNEL NUMBER IS: {0}', self.channel_number))
             if 0 < self.channel_number < self.parent.list.size() and self.parent.selitem_id != self.channel_number:
                 self.parent.selitem_id = self.channel_number
                 self.Stop()
@@ -248,7 +244,7 @@ class MyPlayer(xbmcgui.WindowXML):
 
         # log.d(fmt('Action {0} | ButtonCode {1}', action.getId(), action.getButtonCode()))
         if action in MyPlayer.CANCEL_DIALOG or action.getId() == MyPlayer.ACTION_RBC:
-            log.d('Close player %s %s' % (action.getId(), action.getButtonCode()))
+            log.d(fmt('Close player {0} {1}', action.getId(), action.getButtonCode()))
             if self.timers.get(MyPlayer.TIMER_RUN_SEL_CHANNEL):
                 self.channel_number_str = str(self.parent.selitem_id)
                 self.run_selected_channel()

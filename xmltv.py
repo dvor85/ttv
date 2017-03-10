@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-import xml.etree.cElementTree as ET
 import datetime
 import time
 import utils
@@ -29,35 +28,47 @@ class XMLTV():
                 XMLTV._lock.set()
                 try:
                     XMLTV._instance = XMLTV()
+                except Exception as e:
+                    log.error(fmt("get_instance error: {0}", e))
+                    XMLTV._instance = None
                 finally:
                     XMLTV._lock.clear()
         return XMLTV._instance
 
     def __init__(self):
+        try:
+            from lxml import etree
+            log.d("running with lxml.etree")
+        except ImportError:
+            try:
+                # Python 2.5
+                import xml.etree.cElementTree as etree
+                log.d("running with cElementTree on Python 2.5+")
+            except ImportError:
+                # Python 2.5
+                import xml.etree.ElementTree as etree
+                log.d("running with ElementTree on Python 2.5+")
+
         self.channels = {}
         self.xmltv_root = None
-        try:
-            log.d('start initialization')
-            self.xmltv_file = os.path.join(defines.DATA_PATH, 'xmltv.xml.gz')
-            same_date = False
-            if os.path.exists(self.xmltv_file):
-                same_date = datetime.date.today() == datetime.date.fromtimestamp(os.path.getmtime(self.xmltv_file))
+        log.d('start initialization')
+        self.xmltv_file = os.path.join(defines.DATA_PATH, 'xmltv.xml.gz')
+        same_date = False
+        if os.path.exists(self.xmltv_file):
+            same_date = datetime.date.today() == datetime.date.fromtimestamp(os.path.getmtime(self.xmltv_file))
 
-            if not os.path.exists(self.xmltv_file) or not same_date:
-                self.update_xmltv()
-            # при многократном запуске плагина возникает утечка памяти. Решение: weakref, но возникает ошибка создания ссылки
-            with gzip.open(self.xmltv_file, 'rb') as fp:
-                self.xmltv_root = ET.XML(fp.read())
+        if not os.path.exists(self.xmltv_file) or not same_date:
+            self.update_xmltv()
+        # при многократном запуске плагина возникает утечка памяти. Решение: weakref, но возникает ошибка создания ссылки
+        with gzip.open(self.xmltv_file, 'rb') as fp:
+            self.xmltv_root = etree.parse(fp)
 
-            log.d('stop initialization')
-        except Exception as e:
-            log.error(fmt("XMLTV not initialazed. {0}", e))
-            XMLTV._instance = None
+        log.d('stop initialization')
 
     def update_xmltv(self):
         for server in _servers:
             try:
-                #    url = 'http://www.teleguide.info/download/new3/xmltv.xml.gz'
+                        #    url = 'http://www.teleguide.info/download/new3/xmltv.xml.gz'
                 url = fmt('http://{server}/ttv.xmltv.xml.gz', server=server)
                 r = defines.request(url)
                 with open(self.xmltv_file, 'wb') as fp:

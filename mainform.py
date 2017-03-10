@@ -42,10 +42,14 @@ class ChannelGroups(UserDict):
     def __init__(self):
         self.data = {}
 
-    def setGroup(self, groupname, grouptitle):
+    def addGroup(self, groupname, title=None):
         groupname = utils.utf(groupname)
-        grouptitle = utils.utf(grouptitle)
-        self.data[groupname] = {"title": grouptitle}
+        self.data[groupname] = {}
+        if title:
+            title = utils.utf(title)
+        else:
+            title = groupname
+        self.data[groupname]['title'] = title
         self.clearGroup(groupname)
 
     def clearGroup(self, groupname):
@@ -70,9 +74,8 @@ class ChannelGroups(UserDict):
                 groupname = utils.utf(ch.get('cat'))
             if utils.lower(groupname, 'utf8') in ("эротика") and utils.str2int(defines.AGE) < 2:
                 return
-            cat = self.data.get(groupname)
-            if not cat:
-                self.setGroup(groupname, groupname)
+            if not self.data.get(groupname):
+                self.addGroup(groupname)
             chs = self.find_channel_by_name(groupname, ch.get_name())
             if chs:
                 chs[src_name] = ch
@@ -95,7 +98,7 @@ class ChannelGroups(UserDict):
                     return chs
 
     def find_group_by_chname(self, chname):
-        for groupname in (x for x in self.getGroups() if x not in (WMainForm.CHN_TYPE_FAVOURITE)):
+        for groupname in (x for x in self.getGroups() if x not in WMainForm.USER_GROUPS):
             if self.find_channel_by_name(groupname, chname):
                 return groupname
 
@@ -152,8 +155,7 @@ class WMainForm(xbmcgui.WindowXML):
     BTN_INFO = 209
     LBL_FIRST_EPG = 300
 
-    CHN_TYPE_FAVOURITE = 'Избранное'
-    CHN_TYPE_MODERATION = 'На модерации'
+    USER_GROUPS = ['Избранное']
 
     API_ERROR_INCORRECT = 'incorrect'
     API_ERROR_NOCONNECT = 'noconnect'
@@ -214,7 +216,7 @@ class WMainForm(xbmcgui.WindowXML):
 
     def get_channel_by_name(self, name):
         categ = self.cur_category
-        if self.cur_category in (WMainForm.CHN_TYPE_FAVOURITE):
+        if self.cur_category in WMainForm.USER_GROUPS:
             categ = self.channel_groups.find_group_by_chname(name)
         return self.channel_groups.find_channel_by_name(categ, name)
 
@@ -250,13 +252,13 @@ class WMainForm(xbmcgui.WindowXML):
         self.cur_category = defines.ADDON.getSetting('cur_category')
         self.cur_channel = defines.ADDON.getSetting('cur_channel')
         if self.cur_category == '':
-            self.cur_category = WMainForm.CHN_TYPE_FAVOURITE
+            self.cur_category = WMainForm.USER_GROUPS[0]
 
     def loadFavourites(self, *args):
         from sources.tchannel import TChannel
         for ch in favdb.LocalFDB().get():
             try:
-                self.channel_groups.addChannel(TChannel(ch), src_name='fav', groupname=WMainForm.CHN_TYPE_FAVOURITE)
+                self.channel_groups.addChannel(TChannel(ch), src_name='fav', groupname=WMainForm.USER_GROUPS[0])
             except Exception as e:
                 log.d(fmt('loadFavourites error: {0}', e))
 
@@ -344,7 +346,7 @@ class WMainForm(xbmcgui.WindowXML):
             except:
                 break
         if self.progress:
-            self.progress.setPercent(1)
+            self.progress.setPercent(0)
 
     def showScreen(self, chs, timeout=0):
         def show():
@@ -383,8 +385,9 @@ class WMainForm(xbmcgui.WindowXML):
 
         self.showStatus("Получение списка каналов")
 
-        for groupname in [WMainForm.CHN_TYPE_FAVOURITE]:
-            self.channel_groups.setGroup(groupname, '[COLOR FFFFFF00][B]' + groupname + '[/B][/COLOR]')
+        for groupname in WMainForm.USER_GROUPS:
+            title = '[COLOR FFFFFF00][B]' + groupname + '[/B][/COLOR]'
+            self.channel_groups.addGroup(groupname, title)
 
         thrs = {}
         thrs['favourite'] = defines.MyThread(self.loadFavourites)
@@ -398,7 +401,7 @@ class WMainForm(xbmcgui.WindowXML):
         lo_thr.start()
 
         log.d('Ожидание результата')
-        if self.cur_category in [WMainForm.CHN_TYPE_FAVOURITE]:
+        if self.cur_category in WMainForm.USER_GROUPS:
             thrs['favourite'].join(20)
         else:
             lo_thr.join(len(thrs) * 20)
@@ -430,7 +433,7 @@ class WMainForm(xbmcgui.WindowXML):
         if self.channel_number_str == '':
             self.channel_number_str = str(sch) if sch != '' else str(self.selitem_id)
         chnum = utils.str2int(self.channel_number_str)
-        log('CHANNEL NUMBER IS: %i' % chnum)
+        log(fmt('CHANNEL NUMBER IS: {0}', chnum))
         if 0 < chnum < self.list.size():
             self.selitem_id = chnum
             self.setFocus(self.list)
@@ -450,7 +453,7 @@ class WMainForm(xbmcgui.WindowXML):
         log.d(fmt('hide main window in {0} sec', timeout))
 
         def isPlaying():
-            return not self.IsCanceled() and self.player.TSPlayer and self.player.TSPlayer.isPlaying()
+            return not defines.isCancel() and self.player.TSPlayer and self.player.TSPlayer.isPlaying()
 
         def hide():
             log.d(fmt('isPlaying={0}', isPlaying()))
@@ -470,7 +473,7 @@ class WMainForm(xbmcgui.WindowXML):
             self.timers[WMainForm.TIMER_HIDE_WINDOW].start()
 
     def LoopPlay(self, *args):
-        while not self.IsCanceled():
+        while not defines.isCancel():
             try:
                 selItem = self.list.getListItem(self.selitem_id)
                 self.cur_channel = selItem.getProperty('name')
@@ -485,9 +488,9 @@ class WMainForm(xbmcgui.WindowXML):
 
                 self.player.Start(sel_chs)
 
-                if self.player.TSPlayer.manual_stopped:
+                if self.player.TSPlayer.manual_stopped.is_set():
                     break
-                if not self.IsCanceled():
+                if not defines.isCancel():
                     xbmc.sleep(223)
                     self.select_channel()
 
@@ -520,7 +523,7 @@ class WMainForm(xbmcgui.WindowXML):
                 self.close()
 
     def onClick(self, controlID):
-        log.d('onClick %s' % controlID)
+        log.d(fmt('onClick {0}', controlID))
         if controlID == 200:
             self.setFocusId(WMainForm.CONTROL_LIST)
         elif controlID == WMainForm.CONTROL_LIST:
@@ -558,13 +561,13 @@ class WMainForm(xbmcgui.WindowXML):
         mnu.doModal()
         log.d('Комманда выполнена')
         res = mnu.GetResult()
-        log.d('Результат команды %s' % res)
+        log.d(fmt('Результат команды {0}', res))
         if res.startswith('OK'):
 
-            self.channel_groups.clearGroup(WMainForm.CHN_TYPE_FAVOURITE)
+            self.channel_groups.clearGroup(WMainForm.USER_GROUPS[0])
             fthr = defines.MyThread(self.loadFavourites)
             fthr.start()
-            if self.cur_category == WMainForm.CHN_TYPE_FAVOURITE:
+            if self.cur_category == WMainForm.USER_GROUPS[0]:
                 fthr.join(10)
                 self.loadList()
 
@@ -585,7 +588,7 @@ class WMainForm(xbmcgui.WindowXML):
             log.d('ACTION CLOSE FORM')
             self.close()
 
-        if not self.IsCanceled():
+        if not defines.isCancel():
             if action.getButtonCode() == 61513:
                 return
             elif action.getId() in WMainForm.ARROW_ACTIONS:
@@ -608,7 +611,7 @@ class WMainForm(xbmcgui.WindowXML):
             self.hide_main_window(timeout=10)
 
     def showStatus(self, text):
-        log.d("showStatus: %s" % text)
+        log.d(fmt("showStatus: {0}", text))
         try:
             if self.img_progress:
                 self.img_progress.setVisible(True)
@@ -648,14 +651,14 @@ class WMainForm(xbmcgui.WindowXML):
                             chli.setProperty("icon", ch.get_logo())
                             chli.setProperty("id", ch.get_id())
                             chli.setProperty("name", ch.get_name())
-                            if self.cur_category not in (WMainForm.CHN_TYPE_FAVOURITE):
-                                chli.setProperty('commands', "%s" % (MenuForm.CMD_ADD_FAVOURITE))
+                            if self.cur_category not in WMainForm.USER_GROUPS:
+                                chli.setProperty('commands', fmt("{0}", MenuForm.CMD_ADD_FAVOURITE))
                             else:
-                                chli.setProperty('commands', "%s,%s,%s,%s" % (
-                                    MenuForm.CMD_MOVE_FAVOURITE,
-                                    MenuForm.CMD_DEL_FAVOURITE,
-                                    MenuForm.CMD_DOWN_FAVOURITE,
-                                    MenuForm.CMD_UP_FAVOURITE))
+                                chli.setProperty('commands', fmt("{0},{1},{2},{3}",
+                                                                 MenuForm.CMD_MOVE_FAVOURITE,
+                                                                 MenuForm.CMD_DEL_FAVOURITE,
+                                                                 MenuForm.CMD_DOWN_FAVOURITE,
+                                                                 MenuForm.CMD_UP_FAVOURITE))
                             self.list.addItem(chli)
                             break
                         except Exception as e:
@@ -666,9 +669,9 @@ class WMainForm(xbmcgui.WindowXML):
 
     def fillCategory(self):
         def AddItem(groupname):
-            li = xbmcgui.ListItem(self.channel_groups[groupname]["title"])
+            li = xbmcgui.ListItem(self.channel_groups[groupname]['title'])
             li.setProperty('type', 'category')
-            li.setProperty('id', '%s' % groupname)
+            li.setProperty('id', fmt('{0}', groupname))
             self.list.addItem(li)
 
         if not self.list:
@@ -676,11 +679,8 @@ class WMainForm(xbmcgui.WindowXML):
             return
         log.d('fillCategory: Clear list')
         self.list.reset()
-        for gr in self.channel_groups.iterkeys():
+        for gr in self.channel_groups.getGroups():
             AddItem(gr)
-
-    def IsCanceled(self):
-        return defines.isCancel()
 
     def close(self):
         defines.closeRequested.set()

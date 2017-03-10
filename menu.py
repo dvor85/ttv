@@ -31,13 +31,13 @@ class MenuForm(xbmcgui.WindowXMLDialog):
         log.d('OnInit')
         if not self.li or not self.parent:
             return
-        sel_chs = self.parent.channel_groups.find_channel_by_name(self.parent.cur_category, self.li.getProperty("name"))
+        sel_chs = self.parent.get_channel_by_name(self.li.getProperty("name"))
         if not sel_chs:
             return
         for ch in sel_chs.itervalues():
             self.channel = ch
             break
-        log.d("li = %s" % self.li.getProperty("commands"))
+        log.d(fmt("li = {0}", self.li.getProperty("commands")))
         try:
             cmds = self.li.getProperty('commands').split(',')
             lst = self.getControl(MenuForm.CONTROL_CMD_LIST)
@@ -59,19 +59,17 @@ class MenuForm(xbmcgui.WindowXMLDialog):
             self.getControl(999).setHeight(len(cmds) * 40 + 55)
             lst.selectItem(0)
             self.setFocusId(MenuForm.CONTROL_CMD_LIST)
-            log.d('Focus ControlId %s' % self.getFocusId())
-        except Exception, e:
-            log.e("В списке нет комманд %s" % e)
+            log.d(fmt('Focus ControlId {0}', self.getFocusId()))
+        except Exception as e:
+            log.e(fmt("В списке нет комманд {0}", e))
             self.close()
 
     def onClick(self, controlId):
-        log.d('OnClick')
-        log.d('ControlID = %s' % controlId)
         if controlId == MenuForm.CONTROL_CMD_LIST:
             lt = self.getControl(MenuForm.CONTROL_CMD_LIST)
             li = lt.getSelectedItem()
             cmd = li.getLabel2()
-            log.d("cmd=%s" % cmd)
+            log.d(fmt("cmd={0}", cmd))
 
             self.result = self.exec_cmd(cmd)
             self.close()

@@ -39,7 +39,11 @@ class TSengine(xbmc.Player):
         if TSengine._instance is None:
             with TSengine._lock:
                 if TSengine._instance is None:
-                    TSengine._instance = TSengine(parent=parent, ipaddr=ipaddr, *args)
+                    try:
+                        TSengine._instance = TSengine(parent=parent, ipaddr=ipaddr, *args)
+                    except Exception as e:
+                        log.e(fmt('get_instance error: {0}', e))
+                        TSengine._instance = None
         return TSengine._instance
 
     def __init__(self, parent=None, ipaddr='127.0.0.1', *args):
@@ -55,7 +59,8 @@ class TSengine(xbmc.Player):
         self.port_file = ''
         self.sock_thr = None
         self.link = None
-        self.manual_stopped = True
+        self.manual_stopped = threading.Event()
+        self.manual_stopped.set()
 
         log.d(defines.ADDON.getSetting('ip_addr'))
         if defines.ADDON.getSetting('ip_addr'):
@@ -100,7 +105,7 @@ class TSengine(xbmc.Player):
 
     def onPlayBackEnded(self):
         log('onPlayBackEnded')
-        self.manual_stopped = False
+        self.manual_stopped.clear()
         self.onPlayBackStopped()
 
     def onPlayBackStarted(self):
@@ -108,9 +113,9 @@ class TSengine(xbmc.Player):
             log(fmt('onPlayBackStarted: {0} {1} {2}',
                     xbmcgui.getCurrentWindowId(), self.amalker, self.getPlayingFile()))
         except Exception as e:
-            log.e(fmt('onPlayBackStarted: {0}', e))
+            log.e(fmt('onPlayBackStarted error: {0}', e))
 
-        self.manual_stopped = True
+        self.manual_stopped.set()
         self.parent.hide_main_window()
 
     def sockConnect(self):
@@ -140,7 +145,7 @@ class TSengine(xbmc.Player):
             return utils.true_enc(_winreg.QueryValueEx(t, 'EnginePath')[0])  # @UndefinedVariable
 
         except Exception as e:
-            log.e('getAceEngine_exe error: %s' % e)
+            log.e(fmt('getAceEngine_exe error: {0}', e))
             return u''
         finally:
             if t:
@@ -219,11 +224,10 @@ class TSengine(xbmc.Player):
         sha1.update(key + pkey)
         key = sha1.hexdigest()
         pk = pkey.split('-')[0]
-        return "%s-%s" % (pk, key)
+        return fmt("{pk}-{key}", pk=pk, key=key)
 
     def connectToTS(self):
-        log.d('Подключение к AceEngine %s %s ' %
-              (self.server_ip, self.aceport))
+        log.d(fmt('Подключение к AceEngine {0} {1}', self.server_ip, self.aceport))
         for t in range(3):
             try:
                 log.d(fmt("Попытка подлючения ({0})", t))
@@ -348,7 +352,7 @@ class TSengine(xbmc.Player):
         if self.sendCommand(comm):
             self.Wait(TSMessage.LOADRESP)
             msg = self.sock_thr.getTSMessage()
-            log.d('load_torrent - %s' % msg.getType())
+            log.d(fmt('load_torrent - {0}', msg.getType()))
             if msg.getType() == TSMessage.LOADRESP:
                 try:
                     log.d('Compile file list')
@@ -356,7 +360,7 @@ class TSengine(xbmc.Player):
                     if 'files' not in jsonfile:
                         self.parent.showStatus(jsonfile['message'])
                         self.last_error = Exception(jsonfile['message'])
-                        log.e('Compile file list %s' % self.last_error)
+                        log.e(fmt('Compile file list {0}', self.last_error))
                         return
                     self.count = len(jsonfile['files'])
                     self.files = {}
@@ -370,7 +374,7 @@ class TSengine(xbmc.Player):
             else:
                 self.last_error = 'Incorrect msg from AceEngine'
                 self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
-                log.f('Incorrect msg from AceEngine %s' % msg.getType())
+                log.f(fmt('Incorrect msg from AceEngine {0}', msg.getType()))
                 self.stop()
                 return
 
@@ -385,10 +389,10 @@ class TSengine(xbmc.Player):
                     _descr = _params['main'].split(';')
                     if _descr[0] == 'prebuf':
                         log.d('showState: Пытаюсь показать состояние')
-                        self.parent.showStatus('Пребуферизация %s' % _descr[1])
+                        self.parent.showStatus(fmt('Пребуферизация {0}', _descr[1]))
                     elif _descr[0] == 'check':
-                        log.d('showState: Проверка %s' % _descr[1])
-                        self.parent.showStatus('Проверка %s' % _descr[1])
+                        log.d(fmt('showState: Проверка {0}', _descr[1]))
+                        self.parent.showStatus(fmt('Проверка {0}', _descr[1]))
 #                     elif _descr[0] == 'dl':
 #                         self.parent.showInfoStatus('Total:%s DL:%s UL:%s' % (_descr[1], _descr[3], _descr[5]))
 #                     elif _descr[0] == 'buf':
@@ -420,10 +424,11 @@ class TSengine(xbmc.Player):
             self.parent.showStatus('Нечего проигрывать')
             return
         spons = '0 0 0' if self.mode != TSengine.MODE_PID else ''
-        comm = fmt('START {mode} {torrent} {index} {spons}', **{'mode': self.mode,
-                                                                'torrent': self.torrent,
-                                                                'index': index,
-                                                                'spons': spons})
+        comm = fmt('START {mode} {torrent} {index} {spons}',
+                   mode=self.mode,
+                   torrent=self.torrent,
+                   index=index,
+                   spons=spons)
         log.d("Запуск торрента")
         self.stop()
         xbmc.sleep(4)
@@ -436,18 +441,18 @@ class TSengine(xbmc.Player):
                     _params = msg.getParams()
                     if not _params.get('url'):
                         self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
-                        raise Exception('Incorrect msg from AceEngine %s' % msg.getType())
+                        raise Exception(fmt('Incorrect msg from AceEngine {0}', msg.getType()))
 
                     self.amalker = 'ad' in _params and 'interruptable' not in _params
                     self.link = _params['url'].replace('127.0.0.1', self.server_ip).replace('6878', self.webport)
-                    log.d('Преобразование ссылки: %s' % self.link)
+                    log.d(fmt('Преобразование ссылки: {0}', self.link))
                     self.title = title
                     self.icon = icon
 
                     self.sock_thr.msg = TSMessage()
                     if self.amalker:
                         self.parent.showStatus('Рекламный ролик')
-                    log.d('Первый запуск. Окно = %s. Реклама = %s' % (xbmcgui.getCurrentWindowId(), self.amalker))
+                    log.d(fmt('Первый запуск. Окно = {0}. Реклама = {1}', xbmcgui.getCurrentWindowId(), self.amalker))
                     self.icon = icon
                     self.thumb = thumb
                     lit = xbmcgui.ListItem(title, iconImage=icon, thumbnailImage=thumb)
@@ -459,7 +464,7 @@ class TSengine(xbmc.Player):
                     self.last_error = e
                     self.parent.showStatus("Ошибка. Операция прервана")
             else:
-                self.last_error = 'Incorrect msg from AceEngine %s' % msg.getType()
+                self.last_error = fmt('Incorrect msg from AceEngine {0}', msg.getType())
                 log.e(self.last_error)
                 self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
             self.stop()
@@ -488,7 +493,7 @@ class TSengine(xbmc.Player):
                 try:
                     _params = msg.getParams()
                     if not _params.get('url'):
-                        raise Exception('Incorrect msg from AceEngine %s' % msg.getType())
+                        raise Exception(fmt('Incorrect msg from AceEngine {0}', msg.getType()))
                     if _params.get('stream') and _params['stream'] == '1':
                         self.stream = True
                     else:
@@ -507,7 +512,7 @@ class TSengine(xbmc.Player):
                     self.last_error = e
                     self.parent.showStatus("Ошибка. Операция прервана")
             else:
-                self.last_error = 'Incorrect msg from AceEngine %s' % msg.getType()
+                self.last_error = fmt('Incorrect msg from AceEngine {0}', msg.getType())
                 self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
                 log.e(self.last_error)
         self.stop()
@@ -605,7 +610,7 @@ class SockThread(threading.Thread):
                 self.isRecv = True
                 self.end()
                 self.error = e
-                log.e('RECV THREADING %s' % e)
+                log.e(fmt('RECV THREADING {0}', e))
                 _msg = TSMessage()
                 _msg.type = TSMessage.ERROR
                 _msg.params = 'Ошибка соединения с AceEngine'
@@ -657,7 +662,7 @@ class SockThread(threading.Thread):
                 self.status.setParams(_params)
                 self.state_method(self.status)
             else:
-                log.w('I DONT KNOW HOW IT PROCESS %s' % strmsg)
+                log.w(fmt('I DONT KNOW HOW IT PROCESS {0}', strmsg))
         elif _msg == TSMessage.STATE:
             if self.state_method:
                 self.state = TSMessage()
@@ -676,7 +681,7 @@ class SockThread(threading.Thread):
             _params = {}
             log.d(strmsg)
             if _strparams.__len__() >= 2:
-                log.d('%s' % _strparams)
+                log.d(_strparams)
                 _params['url'] = _strparams[0].split("=")[1].replace("%3A", ":")
                 prms = _strparams[1:]
                 for prm in prms:
