@@ -86,9 +86,9 @@ class ChannelGroups(UserDict):
 
     def getChannels(self, groupname):
         groupname = utils.utf(groupname)
-        if self.data.get(groupname):
-            return self.data[groupname].get("channels")
-        else:
+        try:
+            return self.data[groupname]["channels"]
+        except KeyError:
             return []
 
     def find_channel_by_id(self, groupname, chid):

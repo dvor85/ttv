@@ -8,6 +8,7 @@ import defines
 import utils
 import favdb
 import logger
+from sources import tchannel
 
 log = logger.Logger(__name__)
 fmt = utils.fmt
@@ -31,12 +32,7 @@ class MenuForm(xbmcgui.WindowXMLDialog):
         log.d('OnInit')
         if not self.li or not self.parent:
             return
-        sel_chs = self.parent.get_channel_by_name(self.li.getProperty("name"))
-        if not sel_chs:
-            return
-        for ch in sel_chs.itervalues():
-            self.channel = ch
-            break
+        self.channel = tchannel.TChannel({"name": self.li.getProperty("name")})
         log.d(fmt("li = {0}", self.li.getProperty("commands")))
         try:
             cmds = self.li.getProperty('commands').split(',')
