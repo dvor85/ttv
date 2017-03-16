@@ -11,7 +11,7 @@ import xbmc
 import datetime
 import threading
 
-from player import MyPlayer
+from playerform import MyPlayer
 from menu import MenuForm
 from sources.table import Channels as ChannelSources
 import favdb
@@ -453,7 +453,7 @@ class WMainForm(xbmcgui.WindowXML):
         log.d(fmt('hide main window in {0} sec', timeout))
 
         def isPlaying():
-            return not defines.isCancel() and self.player.TSPlayer and self.player.TSPlayer.isPlaying()
+            return not defines.isCancel() and self.player._player and self.player._player.isPlaying()
 
         def hide():
             log.d(fmt('isPlaying={0}', isPlaying()))
@@ -488,7 +488,7 @@ class WMainForm(xbmcgui.WindowXML):
 
                 self.player.Start(sel_chs)
 
-                if self.player.TSPlayer.manual_stopped.is_set():
+                if self.player._player.manual_stopped.is_set():
                     break
                 if not defines.isCancel():
                     xbmc.sleep(223)
@@ -684,8 +684,8 @@ class WMainForm(xbmcgui.WindowXML):
 
     def close(self):
         defines.closeRequested.set()
-        if self.player.TSPlayer:
-            self.player.TSPlayer.end()
+        if self.player._player:
+            self.player._player.end()
 
         for timer in self.timers.itervalues():
             if timer:

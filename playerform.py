@@ -11,7 +11,7 @@ import defines
 import re
 import utils
 import logger
-from ts import TSengine as tsengine
+import players
 
 
 log = logger.Logger(__name__)
@@ -39,7 +39,7 @@ class MyPlayer(xbmcgui.WindowXML):
 
     def __init__(self, *args, **kwargs):
         log.d('__init__')
-        self.TSPlayer = None
+        self._player = None
         self.parent = None
         self.channels = None
         self.title = ''
@@ -170,14 +170,13 @@ class MyPlayer(xbmcgui.WindowXML):
     def Stop(self):
         log('AutoStop')
         # xbmc.executebuiltin('PlayerControl(Stop)')
-        if self.TSPlayer:
-            self.TSPlayer.manual_stopped.clear()
-            self.TSPlayer.stop()
+        if self._player:
+            self._player.manual_stopped.clear()
+            self._player.stop()
 
     def Show(self):
-        if self.TSPlayer:
-            if not self.TSPlayer.amalker:
-                self.show()
+        if self._player:
+            self.show()
 
     def Start(self, channels):
         log("Start play")
@@ -191,8 +190,11 @@ class MyPlayer(xbmcgui.WindowXML):
                 mode = channel.get_mode()
 
                 log.d('Play torrent')
-                self.TSPlayer = tsengine.get_instance(parent=self.parent)
-                self.TSPlayer.play_url_ind(0, self.title, channel.get_logo(), channel.get_logo(), torrent=url, mode=mode)
+                self._player = players.AcePlayer.get_instance(parent=self.parent)
+                self._player.play_item(index=0, title=self.title,
+                                       iconImage=channel.get_logo(),
+                                       thumbnailImage=channel.get_logo(),
+                                       torrent=url, mode=mode)
                 log.d('End playing')
                 return
             except Exception as e:
