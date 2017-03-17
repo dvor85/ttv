@@ -71,7 +71,9 @@ class ChannelGroups(UserDict):
     def addChannel(self, ch, src_name, groupname=None):
         try:
             if groupname is None:
-                groupname = utils.utf(ch.get('cat'))
+                groupname = utils.utf(ch.get_group())
+            if groupname is None:
+                groupname = src_name
             if utils.lower(groupname, 'utf8') in ("эротика") and utils.str2int(defines.AGE) < 2:
                 return
             if not self.data.get(groupname):
@@ -98,6 +100,7 @@ class ChannelGroups(UserDict):
                     return chs
 
     def find_group_by_chname(self, chname):
+
         for groupname in (x for x in self.getGroups() if x not in WMainForm.USER_GROUPS):
             if self.find_channel_by_name(groupname, chname):
                 return groupname
@@ -204,10 +207,8 @@ class WMainForm(xbmcgui.WindowXML):
         self.hide_main_window(timeout=10)
 
     def get_selitem_id(self, name):
-        index = -1
         name = utils.lower(name, 'utf8')
-        while index < self.list.size():
-            index += 1
+        for index in xrange(1, self.list.size()):
             li = self.list.getListItem(index)
             if utils.lower(li.getProperty('name'), 'utf8') == name:
                 return index
@@ -379,9 +380,24 @@ class WMainForm(xbmcgui.WindowXML):
             self.timers[WMainForm.TIMER_SHOW_SCREEN].start()
 
     def updateList(self):
+        def dump_channel_groups():
+            namedb = {}
+            for cat, val in self.channel_groups.iteritems():
+                for chs in val['channels']:
+                    for ch in chs.itervalues():
+                        namedb[utils.lower(ch.get_name(), 'utf8')] = {'logo': ch.get_logo(), 'cat': cat}
+                        break
+            import simplejson as json
+            import os
+            s = utils.utf(json.dumps(namedb, indent=4, ensure_ascii=False))
+            with open(os.path.join(defines.DATA_PATH, 'namedb.json'), 'wb') as fp:
+                fp.write(s)
+
         def LoadOther():
             for thr in thrs.itervalues():
                 thr.join(20)
+
+#             dump_channel_groups()
 
         self.showStatus("Получение списка каналов")
 

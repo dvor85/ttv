@@ -183,20 +183,32 @@ class MyPlayer(xbmcgui.WindowXML):
 
         self.channels = channels
         self.channel_number = self.parent.selitem_id
-        for channel in self.channels.itervalues():
+        for src, channel in self.channels.iteritems():
             try:
                 self.title = fmt("{0}. {1}", self.channel_number, channel.get_name())
                 url = channel.get_url()
                 mode = channel.get_mode()
 
-                log.d('Play torrent')
-                self._player = players.AcePlayer.get_instance(parent=self.parent)
-                self._player.play_item(index=0, title=self.title,
-                                       iconImage=channel.get_logo(),
-                                       thumbnailImage=channel.get_logo(),
-                                       torrent=url, mode=mode)
-                log.d('End playing')
-                return
+                for player in channel.get('players'):
+                    try:
+                        log.d(fmt('Try to play with {0} player', player))
+                        if player == 'ace':
+                            self._player = players.AcePlayer.get_instance(parent=self.parent)
+                        else:
+                            self._player = players.TPlayer.get_instance(parent=self.parent)
+
+                        if self._player.play_item(index=0, title=self.title,
+                                                  iconImage=channel.get_logo(),
+                                                  thumbnailImage=channel.get_logo(),
+                                                  torrent=url, mode=mode):
+                            log.d('End playing')
+                            return True
+                    except Exception as e:
+                        log.error(fmt("Error play with {0} player: {1}", player, e))
+                else:
+                    raise Exception(fmt('There are no availible players for "{0}" in source "{1}"', channel.get_name(), src))
+
+                return True
             except Exception as e:
                 log.e(fmt('Start error: {0}', e))
 

@@ -16,6 +16,7 @@ class TTVChannel(TChannel):
 
     def __init__(self, data={}, session=None):
         TChannel.__init__(self, data)
+        self.data['players'] = ['ace']
         self.session = session
 
     def get_url(self):

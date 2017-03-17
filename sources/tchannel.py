@@ -8,7 +8,7 @@ import defines
 import xmltv
 import logger
 import os
-from name_logo import NAME2LOGO
+from channel_info import CHANNEL_INFO
 
 fmt = utils.fmt
 log = logger.Logger(__name__)
@@ -19,8 +19,8 @@ class TChannel(UserDict):
     def __init__(self, data={}):
         self.data = {}
         self.data['type'] = 'channel'
-        self.data['cat'] = __name__
         self.data['mode'] = "PID"
+        self.data['players'] = ['ace']
         self.data.update(data)
 
     def get_url(self):
@@ -29,10 +29,22 @@ class TChannel(UserDict):
     def get_mode(self):
         return self.data.get('mode')
 
+    def get_group(self):
+        name = utils.lower(self.get_name(), 'utf8')
+        if not self.data.get('cat'):
+            try:
+                self.data['cat'] = CHANNEL_INFO[name]['cat']
+            except KeyError:
+                self.data['cat'] = None
+        return self.data['cat']
+
     def get_logo(self):
         name = utils.lower(self.get_name(), 'utf8')
         if not self.data.get('logo'):
-            self.data['logo'] = NAME2LOGO.get(name)
+            try:
+                self.data['logo'] = CHANNEL_INFO[name]['logo']
+            except KeyError:
+                self.data['logo'] = ''
 
         if self.data.get('logo'):
             if ':' not in self.data['logo']:

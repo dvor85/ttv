@@ -59,17 +59,30 @@ class TPlayer(xbmc.Player):
 
     def onPlayBackStarted(self):
         try:
-            log(fmt('onPlayBackStarted: {0} {2}', xbmcgui.getCurrentWindowId(),  self.getPlayingFile()))
+            log(fmt('onPlayBackStarted: {0} {1}', xbmcgui.getCurrentWindowId(),  self.getPlayingFile()))
         except Exception as e:
             log.e(fmt('onPlayBackStarted error: {0}', e))
 
         self.manual_stopped.set()
         self.parent.hide_main_window()
 
+    def loop(self):
+        while self.isPlaying() and not defines.isCancel():
+            try:
+                xbmc.sleep(250)
+            except Exception as e:
+                log.e(fmt('ERROR SLEEPING: {0}', e))
+                self.end()
+                raise
+
+        self.stop()
+
     def play_item(self, title='', icon='', thumb='', *args, **kwargs):
         li = xbmcgui.ListItem(title, iconImage=icon, thumbnailImage=thumb)
         self.play(self.link, li, windowed=True)
         self.parent.player.Show()
+        self.loop()
+        return True
 
     def end(self):
         xbmc.Player.stop(self)
@@ -435,6 +448,7 @@ class AcePlayer(TPlayer):
             log.e(fmt('showState error: "{0}"', e))
 
     def play_item(self, title='', icon='', thumb='', *args, **kwargs):
+        res = None
         if self.last_error:
             return
         torrent = kwargs.get('torrent')
@@ -467,28 +481,18 @@ class AcePlayer(TPlayer):
                     log.d(fmt('Преобразование ссылки: {0}', self.link))
                     self.sock_thr.msg = TSMessage()
 
-                    TPlayer.play_item(self, title, icon, thumb)
-                    self.loop()
+                    res = TPlayer.play_item(self, title, icon, thumb)
                 except Exception as e:
                     log.e(fmt('play_item error: {0}', e))
                     self.last_error = e
                     self.parent.showStatus("Ошибка. Операция прервана")
+
             else:
                 self.last_error = fmt('Incorrect msg from AceEngine {0}', msg.getType())
                 log.e(self.last_error)
                 self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
             self.stop()
-
-    def loop(self):
-        while self.isPlaying() and not defines.isCancel():
-            try:
-                xbmc.sleep(250)
-            except Exception as e:
-                log.e(fmt('ERROR SLEEPING: {0}', e))
-                self.end()
-                raise
-
-        self.stop()
+            return res
 
     def end(self):
         self.link = None
