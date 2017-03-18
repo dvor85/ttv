@@ -197,10 +197,10 @@ class MyPlayer(xbmcgui.WindowXML):
                         else:
                             self._player = players.TPlayer.get_instance(parent=self.parent)
 
-                        if self._player.play_item(index=0, title=self.title,
-                                                  iconImage=channel.get_logo(),
-                                                  thumbnailImage=channel.get_logo(),
-                                                  torrent=url, mode=mode):
+                        if self._player and self._player.play_item(index=0, title=self.title,
+                                                                   iconImage=channel.get_logo(),
+                                                                   thumbnailImage=channel.get_logo(),
+                                                                   torrent=url, mode=mode):
                             log.d('End playing')
                             return True
                     except Exception as e:

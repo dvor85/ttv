@@ -504,7 +504,7 @@ class WMainForm(xbmcgui.WindowXML):
 
                 self.player.Start(sel_chs)
 
-                if self.player._player.manual_stopped.is_set():
+                if self.player._player and self.player._player.manual_stopped.is_set():
                     break
                 if not defines.isCancel():
                     xbmc.sleep(223)

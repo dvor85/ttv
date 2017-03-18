@@ -11,6 +11,8 @@ import sys
 import socket
 import os
 import threading
+import subprocess
+import platform
 import random
 import urllib
 import copy
@@ -110,7 +112,7 @@ class AcePlayer(TPlayer):
                         AcePlayer._instance = AcePlayer(parent=parent, ipaddr=ipaddr, *args)
                     except Exception as e:
                         log.e(fmt('get_instance error: {0}', e))
-                        AcePlayer._instance = None
+                        AcePlayer._instance = False
         return AcePlayer._instance
 
     def __init__(self, parent=None, ipaddr='127.0.0.1', *args):
@@ -135,11 +137,12 @@ class AcePlayer(TPlayer):
         else:
             self.webport = '6878'
 
+        self.ace_engine = self.getAceEngine_path()
+        log.d(fmt('AceEngine path: "{0}"', self.ace_engine))
+
         if sys.platform.startswith('win'):
-            self.ace_engine = self.getAceEngine_exe()
-            log.d(fmt("AceEngine path: {0}", self.ace_engine))
             self.port_file = os.path.join(os.path.dirname(self.ace_engine), 'acestream.port')
-            log.d(fmt("AceEngine port file: {0}", self.port_file))
+            log.d(fmt('AceEngine port file: "{0}"', self.port_file))
             if os.path.exists(self.port_file):
                 self.aceport = self.getWinPort()
 
@@ -175,20 +178,19 @@ class AcePlayer(TPlayer):
                 else:
                     return
 
-    def getAceEngine_exe(self):
+    def getAceEngine_path(self):
         log.d('Считываем путь к ace_engine.exe')
-        import _winreg
-        t = None
-        try:
+        if platform.system() == 'Windows':
+            import _winreg
             t = _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, 'Software\\ACEStream')  # @UndefinedVariable
-            return utils.true_enc(_winreg.QueryValueEx(t, 'EnginePath')[0])  # @UndefinedVariable
-
-        except Exception as e:
-            log.e(fmt('getAceEngine_exe error: {0}', e))
-            return u''
-        finally:
-            if t:
+            try:
+                return utils.true_enc(_winreg.QueryValueEx(t, 'EnginePath')[0])  # @UndefinedVariable
+            finally:
                 _winreg.CloseKey(t)  # @UndefinedVariable
+        elif platform.system() == 'Linux':
+            return utils.true_enc(subprocess.check_output(["which", "acestreamengine"]).strip())
+        else:
+            return ""
 
     def getWinPort(self):
         log.d('Считываем порт')
@@ -206,15 +208,14 @@ class AcePlayer(TPlayer):
         return 0
 
     def startEngine(self):
-        import subprocess
         acestream_params = ["--live-cache-type", "memory"]
         if self.server_ip == '127.0.0.1':
-            if sys.platform.startswith('win'):
+            if platform.system() == 'Windows':
                 try:
                     log('try to start AceEngine for windows')
 
                     if self.port_file != '' and os.path.exists(self.port_file):
-                        log.d(fmt('Remove {0}', self.port_file))
+                        log.d(fmt('Remove "{0}"', self.port_file))
                         os.remove(self.port_file)
 
                     if not os.path.exists(self.port_file):
@@ -232,22 +233,20 @@ class AcePlayer(TPlayer):
                 except Exception as e:
                     log.e(fmt('Cannot start AceEngine {0}', e))
                     return
-            else:
+            elif platform.system() == 'Linux':
                 log('try to start AceEngine for linux')
                 acestream_params += ["--client-console"]
                 try:
                     self.parent.showStatus("Запуск acestreamengine")
-                    try:
-                        p = subprocess.Popen(["acestreamengine"] + acestream_params)
-                        log.d(fmt('pid = {0}', p.pid))
-                    except Exception as e:
-                        log.d(fmt('Error start acestreamengine for linux: {0}', e))
-                        log('try to start AceEngine for Android')
-                        xbmc.executebuiltin('XBMC.StartAndroidActivity("org.acestream.engine")')
-                        xbmc.executebuiltin('XBMC.StartAndroidActivity("org.xbmc.kodi")')
+                    p = subprocess.Popen([self.ace_engine] + acestream_params)
+                    log.d(fmt('pid = {0}', p.pid))
                 except Exception as e:
                     log.e(fmt('Cannot start AceEngine {0}', e))
                     return
+            else:
+                log('try to start AceEngine for Android')
+                xbmc.executebuiltin('XBMC.StartAndroidActivity("org.acestream.engine")')
+                xbmc.executebuiltin('XBMC.StartAndroidActivity("org.xbmc.kodi")')
         return True
 
     def get_key(self, key):
