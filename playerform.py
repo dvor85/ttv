@@ -186,21 +186,23 @@ class MyPlayer(xbmcgui.WindowXML):
         for src, channel in self.channels.iteritems():
             try:
                 self.title = fmt("{0}. {1}", self.channel_number, channel.get_name())
-                url = channel.get_url()
-                mode = channel.get_mode()
 
                 for player in channel.get('players'):
                     try:
+                        url = channel.get_url(player)
+                        mode = channel.get_mode()
                         log.d(fmt('Try to play with {0} player', player))
                         if player == 'ace':
                             self._player = players.AcePlayer.get_instance(parent=self.parent)
+                        elif player == 'nox':
+                            self._player = players.NoxPlayer.get_instance(parent=self.parent)
                         else:
                             self._player = players.TPlayer.get_instance(parent=self.parent)
 
                         if self._player and self._player.play_item(index=0, title=self.title,
                                                                    iconImage=channel.get_logo(),
                                                                    thumbnailImage=channel.get_logo(),
-                                                                   torrent=url, mode=mode):
+                                                                   url=url, mode=mode):
                             log.d('End playing')
                             return True
                     except Exception as e:

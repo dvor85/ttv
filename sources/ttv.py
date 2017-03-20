@@ -16,10 +16,16 @@ class TTVChannel(TChannel):
 
     def __init__(self, data={}, session=None):
         TChannel.__init__(self, data)
-        self.data['players'] = ['ace']
+        self.data['players'] = ['ace', 'nox']
         self.session = session
 
-    def get_url(self):
+    def get_url(self, player=None):
+        if player == 'nox':
+            return self._get_nox_url()
+        else:
+            return self._get_ace_url()
+
+    def _get_ace_url(self):
         for server in _servers:
             try:
                 params = dict(
@@ -34,7 +40,33 @@ class TTVChannel(TChannel):
                 self.data['mode'] = jdata["type"].upper().replace("CONTENTID", "PID")
                 return self.data['url']
             except Exception as e:
-                log.w(fmt('get_url error: {0}', e))
+                log.w(fmt('_get_ace_url error: {0}', e))
+
+    def _get_nox_url(self):
+        nox_ip = defines.ADDON.getSetting('nox_ip')
+        nox_port = utils.str2int(defines.ADDON.getSetting('nox_port'))
+        for server in _servers:
+            try:
+                params = dict(
+                    session=self.session,
+                    channel_id=self.get_id(),
+                    typeresult='json')
+                r = defines.request(fmt("http://{server}/v3/get_noxbit_cid.php", server=server), params=params, trys=1)
+
+                jdata = r.json()
+                if not jdata["success"]:
+                    return
+                if jdata["success"] == 0:
+                    return
+                cid = jdata["cid"]
+                streamtype = defines.ADDON.getSetting('nox_streamtype')
+                self.data['url'] = fmt("http://{nox_ip}:{nox_port}/{streamtype}?cid={cid}",
+                                       nox_ip=nox_ip,
+                                       nox_port=nox_port,
+                                       streamtype=streamtype, cid=cid)
+                return self.data['url']
+            except Exception as e:
+                log.w(fmt('_get_nox_url error: {0}', e))
 
     def update_epglist(self):
         if not self.data.get('epg'):
@@ -80,7 +112,7 @@ class TTV(TChannels):
         self.session = None
         TChannels.__init__(self)
 
-    def initTTV(self):
+    def _initTTV(self):
         try:
             log.info("init TTV")
             guid = defines.ADDON.getSetting("uuid")
@@ -125,9 +157,9 @@ class TTV(TChannels):
 
             self.session = jdata.get('session')
         except Exception as e:
-            log.error(fmt("initTTV error: {0}", e))
+            log.error(fmt("_initTTV error: {0}", e))
 
-    def get_groupname_by_id(self, categories, chid):
+    def _get_groupname_by_id(self, categories, chid):
         if categories:
             for g in categories:
                 if g.get('id') == chid:
@@ -135,7 +167,7 @@ class TTV(TChannels):
 
     def update_channels(self):
         TChannels.update_channels(self)
-        self.initTTV()
+        self._initTTV()
         if self.session:
             for server in _servers:
                 try:
@@ -160,7 +192,7 @@ class TTV(TChannels):
                         if not (ch.get("name") or ch.get("id")):
                             continue
                         channel = ch
-                        channel['cat'] = self.get_groupname_by_id(jdata.get("categories"), ch['group'])
+                        channel['cat'] = self._get_groupname_by_id(jdata.get("categories"), ch['group'])
                         self.channels.append(TTVChannel(channel, self.session))
                     except Exception as e:
                         log.e(fmt('Add channel error: {0}', e))

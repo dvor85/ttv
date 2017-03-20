@@ -128,3 +128,45 @@ def checkPort(*args):
             return True
     except Exception as e:
         log.w(fmt('checkPort Error: {0}', e))
+
+
+def platform():
+    ret = {
+        "arch": sys.maxsize > 2 ** 32 and "x64" or "x86",
+    }
+    if xbmc.getCondVisibility("system.platform.android"):
+        ret["os"] = "android"
+        if "arm" in os.uname()[4] or "aarch64" in os.uname()[4]:  # @UndefinedVariable
+            ret["arch"] = "arm"
+    elif xbmc.getCondVisibility("system.platform.linux"):
+        ret["os"] = "linux"
+        uname = os.uname()[4]  # @UndefinedVariable
+        if "arm" in uname:
+            if "armv7" in uname:
+                ret["arch"] = "armv7"
+            elif "armv6" in uname:
+                ret["arch"] = "armv6"
+            else:
+                ret["arch"] = "arm"
+        elif "mips" in uname:
+            if sys.maxunicode > 65536:
+                ret["arch"] = 'mipsel_ucs4'
+            else:
+                ret["arch"] = 'mipsel_ucs2'
+        elif "aarch64" in uname:
+            if sys.maxint > 2147483647:  # is_64bit_system
+                if sys.maxunicode > 65536:
+                    ret["arch"] = 'aarch64_ucs4'
+                else:
+                    ret["arch"] = 'aarch64_ucs2'
+            else:
+                ret["arch"] = "armv7"  # 32-bit userspace
+    elif xbmc.getCondVisibility("system.platform.windows"):
+        ret["os"] = "windows"
+    elif xbmc.getCondVisibility("system.platform.osx"):
+        ret["os"] = "darwin"
+    elif xbmc.getCondVisibility("system.platform.ios"):
+        ret["os"] = "ios"
+        ret["arch"] = "arm"
+
+    return ret

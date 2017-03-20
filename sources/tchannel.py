@@ -23,7 +23,7 @@ class TChannel(UserDict):
         self.data['players'] = ['ace']
         self.data.update(data)
 
-    def get_url(self):
+    def get_url(self, player=None):
         return self.data.get('url')
 
     def get_mode(self):

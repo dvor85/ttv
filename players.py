@@ -12,7 +12,6 @@ import socket
 import os
 import threading
 import subprocess
-import platform
 import random
 import urllib
 import copy
@@ -24,6 +23,7 @@ import json
 
 log = logger.Logger(__name__)
 fmt = utils.fmt
+sys_platform = defines.platform()['os']
 
 
 class TPlayer(xbmc.Player):
@@ -118,13 +118,14 @@ class AcePlayer(TPlayer):
     def __init__(self, parent=None, ipaddr='127.0.0.1', *args):
         TPlayer.__init__(self, parent=parent, *args)
         log("Init AceEngine")
+        if defines.ADDON.getSetting('use_ace') == "false":
+            raise Exception("Acestream player is disabled")
         self.last_error = None
         self.quid = 0
         self.ace_engine = ''
         self.aceport = 0
         self.port_file = ''
         self.sock_thr = None
-        self.link = None
 
         log.d(defines.ADDON.getSetting('ip_addr'))
         if defines.ADDON.getSetting('ip_addr'):
@@ -137,14 +138,14 @@ class AcePlayer(TPlayer):
         else:
             self.webport = '6878'
 
-        self.ace_engine = self.getAceEngine_path()
+        self.ace_engine = self._getAceEngine_path()
         log.d(fmt('AceEngine path: "{0}"', self.ace_engine))
 
         if sys.platform.startswith('win'):
             self.port_file = os.path.join(os.path.dirname(self.ace_engine), 'acestream.port')
             log.d(fmt('AceEngine port file: "{0}"', self.port_file))
             if os.path.exists(self.port_file):
-                self.aceport = self.getWinPort()
+                self.aceport = self._getWinPort()
 
         if self.aceport == 0:
             if defines.ADDON.getSetting('port'):
@@ -158,18 +159,18 @@ class AcePlayer(TPlayer):
             defines.ADDON.setSetting('gender', '1')
         log.d('Connect to AceEngine')
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.connectToTS()
+        self._connectToTS()
 
-    def sockConnect(self):
+    def _sockConnect(self):
         self.sock.connect((self.server_ip, self.aceport))
         self.sock.setblocking(0)
         self.sock.settimeout(10)
 
-    def checkConnect(self):
+    def _checkConnect(self):
         for i in range(15):
             try:
                 self.parent.showStatus(fmt("Подключение к AceEngine ({0})", i))
-                self.sockConnect()
+                self._sockConnect()
                 return True
             except Exception as e:
                 log.e(fmt("Подключение не удалось {0}", e))
@@ -178,21 +179,21 @@ class AcePlayer(TPlayer):
                 else:
                     return
 
-    def getAceEngine_path(self):
+    def _getAceEngine_path(self):
         log.d('Считываем путь к ace_engine.exe')
-        if platform.system() == 'Windows':
+        if sys_platform == 'windows':
             import _winreg
             t = _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, 'Software\\ACEStream')  # @UndefinedVariable
             try:
                 return utils.true_enc(_winreg.QueryValueEx(t, 'EnginePath')[0])  # @UndefinedVariable
             finally:
                 _winreg.CloseKey(t)  # @UndefinedVariable
-        elif platform.system() == 'Linux':
+        elif sys_platform == 'linux':
             return utils.true_enc(subprocess.check_output(["which", "acestreamengine"]).strip())
         else:
             return ""
 
-    def getWinPort(self):
+    def _getWinPort(self):
         log.d('Считываем порт')
         for i in range(15):
             if os.path.exists(self.port_file):
@@ -207,10 +208,10 @@ class AcePlayer(TPlayer):
 
         return 0
 
-    def startEngine(self):
+    def _startEngine(self):
         acestream_params = ["--live-cache-type", "memory"]
         if self.server_ip == '127.0.0.1':
-            if platform.system() == 'Windows':
+            if sys_platform == 'windows':
                 try:
                     log('try to start AceEngine for windows')
 
@@ -224,7 +225,7 @@ class AcePlayer(TPlayer):
                         p = subprocess.Popen([utils.fs_enc(self.ace_engine)] + acestream_params)
                         log.d(fmt('pid = {0}', p.pid))
 
-                        self.aceport = self.getWinPort()
+                        self.aceport = self._getWinPort()
                         if self.aceport > 0:
                             defines.ADDON.setSetting('port', str(self.aceport))
                         else:
@@ -233,7 +234,7 @@ class AcePlayer(TPlayer):
                 except Exception as e:
                     log.e(fmt('Cannot start AceEngine {0}', e))
                     return
-            elif platform.system() == 'Linux':
+            elif sys_platform == 'linux':
                 log('try to start AceEngine for linux')
                 acestream_params += ["--client-console"]
                 try:
@@ -243,13 +244,15 @@ class AcePlayer(TPlayer):
                 except Exception as e:
                     log.e(fmt('Cannot start AceEngine {0}', e))
                     return
-            else:
+            elif sys_platform == 'android':
                 log('try to start AceEngine for Android')
                 xbmc.executebuiltin('XBMC.StartAndroidActivity("org.acestream.engine")')
                 xbmc.executebuiltin('XBMC.StartAndroidActivity("org.xbmc.kodi")')
+            else:
+                return False
         return True
 
-    def get_key(self, key):
+    def _get_key(self, key):
         #         try:
         #             r = defines.request(fmt("http://{url}/xbmc_get_key.php", url=defines.API_MIRROR, trys=1),
         #                                 params={'key': key})
@@ -264,16 +267,16 @@ class AcePlayer(TPlayer):
         pk = pkey.split('-')[0]
         return fmt("{pk}-{key}", pk=pk, key=key)
 
-    def connectToTS(self):
+    def _connectToTS(self):
         log.d(fmt('Подключение к AceEngine {0} {1}', self.server_ip, self.aceport))
         for t in range(3):
             try:
                 log.d(fmt("Попытка подлючения ({0})", t))
-                self.sockConnect()
+                self._sockConnect()
                 break
             except Exception as e:
-                if self.startEngine():
-                    if not self.checkConnect():
+                if self._startEngine():
+                    if not self._checkConnect():
                         msg = fmt('Ошибка подключения к AceEngine: {0}', e)
                         log.f(msg)
                         self.parent.showStatus('Ошибка подключения к AceEngine!')
@@ -295,8 +298,8 @@ class AcePlayer(TPlayer):
         log.d('Все ок')
         # Общаемся
         try:
-            if self.sendCommand('HELLOBG version=4'):
-                self.Wait(TSMessage.HELLOTS)
+            if self._sendCommand('HELLOBG version=4'):
+                self._Wait(TSMessage.HELLOTS)
                 msg = self.sock_thr.getTSMessage()
                 if msg.getType() == TSMessage.HELLOTS:
                     if not msg.getParams().get('key'):
@@ -306,8 +309,8 @@ class AcePlayer(TPlayer):
                         raise ValueError("It's necessary to update AceStream")
 
                 self.sock_thr.msg = TSMessage()
-                if self.sendCommand('READY key=' + self.get_key(msg.getParams().get('key'))):
-                    self.Wait(TSMessage.AUTH)
+                if self._sendCommand('READY key=' + self._get_key(msg.getParams().get('key'))):
+                    self._Wait(TSMessage.AUTH)
                     msg = self.sock_thr.getTSMessage()
                     if msg.getType() == TSMessage.AUTH:
                         if utils.str2int(msg.getParams()) == 0:
@@ -326,17 +329,17 @@ class AcePlayer(TPlayer):
             self.parent.showStatus("Необходимо обновить AceStream до версии 3")
             return
         except Exception as e:
-            log.e(fmt('connectToTS error: {0}', e))
+            log.e(fmt('_connectToTS error: {0}', e))
 
         log.d('End Init AceEngine')
         self.parent.hideStatus()
 
-    def sendCommand(self, cmd):
+    def _sendCommand(self, cmd):
         for t in range(3):  # @UnusedVariable
             try:
                 if not (self.sock_thr and self.sock_thr.is_active()):
                     if cmd not in ("STOP", "SHUTDOWN"):
-                        self.createThread()
+                        self._createThread()
                     else:
                         return
 
@@ -345,12 +348,12 @@ class AcePlayer(TPlayer):
                 self.sock.send(cmd + '\r\n')
                 return True
             except Exception as e:
-                log.e(fmt('sendCommand error: "{0}" cmd: "{1}"', e, cmd))
+                log.e(fmt('_sendCommand error: "{0}" cmd: "{1}"', e, cmd))
 
         if self.sock_thr and self.sock_thr.is_active():
             self.sock_thr.end()
 
-    def Wait(self, msg):
+    def _Wait(self, msg):
         log.d(fmt('wait message: {0}', msg))
         a = 0
         try:
@@ -362,16 +365,16 @@ class AcePlayer(TPlayer):
                     self.parent.showStatus("Ошибка ожидания. Операция прервана")
                     raise ValueError('AceEngine is freeze')
         except Exception as e:
-            log.e(fmt('Wait error: {0}', e))
+            log.e(fmt('_Wait error: {0}', e))
             self.stop()
 
-    def createThread(self):
+    def _createThread(self):
         self.sock_thr = SockThread(self.sock)
-        self.sock_thr.state_method = self.showState
+        self.sock_thr.state_method = self._showState
         self.sock_thr.owner = self
         self.sock_thr.start()
 
-    def load_torrent(self, torrent, mode):
+    def _load_torrent(self, torrent, mode):
         log(fmt("Load Torrent: {0}, mode: {1}", torrent, mode))
         cmdparam = ''
         if mode != AcePlayer.MODE_PID:
@@ -381,10 +384,10 @@ class AcePlayer(TPlayer):
         self.parent.showStatus("Загрузка торрента")
         self.stop()
 
-        if self.sendCommand(comm):
-            self.Wait(TSMessage.LOADRESP)
+        if self._sendCommand(comm):
+            self._Wait(TSMessage.LOADRESP)
             msg = self.sock_thr.getTSMessage()
-            log.d(fmt('load_torrent - {0}', msg.getType()))
+            log.d(fmt('_load_torrent - {0}', msg.getType()))
             if msg.getType() == TSMessage.LOADRESP:
                 try:
                     log.d('Compile file list')
@@ -400,7 +403,7 @@ class AcePlayer(TPlayer):
                         self.files[f[1]] = urllib.unquote_plus(urllib.quote(f[0]))
                     log.d('End Compile file list')
                 except Exception as e:
-                    log.e(fmt('load_torrent error: {0}', e))
+                    log.e(fmt('_load_torrent error: {0}', e))
                     self.last_error = e
                     self.end()
             else:
@@ -412,7 +415,7 @@ class AcePlayer(TPlayer):
 
             self.parent.hideStatus()
 
-    def showState(self, state):
+    def _showState(self, state):
         try:
             if state.getType() == TSMessage.STATUS and self.parent:
                 _params = state.getParams()
@@ -420,10 +423,10 @@ class AcePlayer(TPlayer):
 
                     _descr = _params['main'].split(';')
                     if _descr[0] == 'prebuf':
-                        log.d('showState: Пытаюсь показать состояние')
+                        log.d('_showState: Пытаюсь показать состояние')
                         self.parent.showStatus(fmt('Пребуферизация {0}', _descr[1]))
                     elif _descr[0] == 'check':
-                        log.d(fmt('showState: Проверка {0}', _descr[1]))
+                        log.d(fmt('_showState: Проверка {0}', _descr[1]))
                         self.parent.showStatus(fmt('Проверка {0}', _descr[1]))
 #                     elif _descr[0] == 'dl':
 #                         self.parent.showInfoStatus('Total:%s DL:%s UL:%s' % (_descr[1], _descr[3], _descr[5]))
@@ -434,8 +437,9 @@ class AcePlayer(TPlayer):
 
             elif state.getType() == TSMessage.EVENT:
                 if state.getParams() == 'getuserdata':
-                    self.sendCommand('USERDATA [{"gender": %s}, {"age": %s}]' % (utils.str2int(defines.GENDER) + 1,
-                                                                                 utils.str2int(defines.AGE) + 1))
+                    self._sendCommand(fmt('USERDATA [{"gender": {0}}, {"age": {1}}]',
+                                          utils.str2int(defines.GENDER) + 1,
+                                          utils.str2int(defines.AGE) + 1))
                 elif state.getParams().startswith('showdialog'):
                     _parts = state.getParams().split()
                     self.parent.showStatus(fmt('{0}: {1}', urllib.unquote(_parts[2].split('=')[1]),
@@ -444,30 +448,30 @@ class AcePlayer(TPlayer):
                 self.parent.showStatus(state.getParams())
 
         except Exception as e:
-            log.e(fmt('showState error: "{0}"', e))
+            log.e(fmt('_showState error: "{0}"', e))
 
     def play_item(self, title='', icon='', thumb='', *args, **kwargs):
         res = None
         if self.last_error:
             return
-        torrent = kwargs.get('torrent')
+        url = kwargs.get('url')
         mode = kwargs.get('mode')
         index = kwargs.get('index')
-        if not torrent:
+        if not url:
             self.parent.showStatus('Нечего проигрывать')
             return
         spons = '0 0 0' if mode != AcePlayer.MODE_PID else ''
         comm = fmt('START {mode} {torrent} {index} {spons}',
                    mode=mode,
-                   torrent=torrent,
+                   torrent=url,
                    index=index,
                    spons=spons)
         log.d("Запуск торрента")
         self.stop()
         xbmc.sleep(4)
-        if self.sendCommand(comm):
+        if self._sendCommand(comm):
             self.parent.showStatus("Запуск торрента")
-            self.Wait(TSMessage.START)
+            self._Wait(TSMessage.START)
             msg = self.sock_thr.getTSMessage()
             if msg.getType() == TSMessage.START:
                 try:
@@ -495,8 +499,8 @@ class AcePlayer(TPlayer):
 
     def end(self):
         self.link = None
-        if self.sendCommand('STOP'):
-            self.sendCommand('SHUTDOWN')
+        if self._sendCommand('STOP'):
+            self._sendCommand('SHUTDOWN')
         self.last_error = None
         if self.sock_thr:
             self.sock_thr.end()
@@ -507,7 +511,7 @@ class AcePlayer(TPlayer):
     def stop(self):
         log('stop player method')
         self.link = None
-        self.sendCommand('STOP')
+        self._sendCommand('STOP')
         if self.sock_thr:
             self.sock_thr.end()
             self.sock_thr.join()
@@ -681,3 +685,44 @@ class SockThread(threading.Thread):
 
     def end(self):
         self.active = False
+
+
+class NoxPlayer(TPlayer):
+
+    _instance = None
+    _lock = threading.Lock()
+
+    def __init__(self, parent=None, *args):
+        TPlayer.__init__(self, parent=parent, *args)
+        log('Init noxbit player')
+        if defines.ADDON.getSetting('use_nox') == "false":
+            raise Exception("Noxbit player is disabled")
+        self.ip = defines.ADDON.getSetting('nox_ip')
+        self.port = utils.str2int(defines.ADDON.getSetting('nox_port'))
+        self._checkNox()
+
+    @staticmethod
+    def get_instance(parent=None, *args):
+        if NoxPlayer._instance is None:
+            with NoxPlayer._lock:
+                if NoxPlayer._instance is None:
+                    try:
+                        NoxPlayer._instance = NoxPlayer(parent=parent, *args)
+                    except Exception as e:
+                        log.e(fmt('get_instance error: {0}', e))
+                        NoxPlayer._instance = False
+        return NoxPlayer._instance
+
+    def _checkNox(self):
+        import socket
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((self.ip, self.port))
+        sock.setblocking(0)
+        sock.settimeout(32)
+
+    def play_item(self, title='', icon='', thumb='', *args, **kwargs):
+        self.link = kwargs.get('url')
+        if not self.link:
+            self.parent.showStatus('Нечего проигрывать')
+            return
+        return TPlayer.play_item(self, title=title, icon=icon, thumb=thumb, *args, **kwargs)

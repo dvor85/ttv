@@ -15,7 +15,10 @@ from playerform import MyPlayer
 from menu import MenuForm
 from sources.table import Channels as ChannelSources
 import favdb
-import json
+try:
+    import simplejson as json
+except ImportError:
+    import json
 import utils
 from UserDict import UserDict
 # try:
@@ -387,7 +390,6 @@ class WMainForm(xbmcgui.WindowXML):
                     for ch in chs.itervalues():
                         namedb[utils.lower(ch.get_name(), 'utf8')] = {'logo': ch.get_logo(), 'cat': cat}
                         break
-            import simplejson as json
             import os
             s = utils.utf(json.dumps(namedb, indent=4, ensure_ascii=False))
             with open(os.path.join(defines.DATA_PATH, 'namedb.json'), 'wb') as fp:
