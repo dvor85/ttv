@@ -183,7 +183,7 @@ class MyPlayer(xbmcgui.WindowXML):
         for src, channel in self.channels.iteritems():
             try:
                 self.title = fmt("{0}. {1}", self.channel_number, channel.get_name())
-
+                log.d(fmt('Channel source is "{0}"', src))
                 for player in channel.get('players'):
                     try:
                         if self._player:

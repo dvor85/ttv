@@ -45,7 +45,7 @@ class TPlayer(xbmc.Player):
         self.parent = parent
         self.manual_stopped = threading.Event()
         self.manual_stopped.set()
-        self.link = None
+        self.link = None  # Для передачи ссылки плееру
 
     def onPlayBackStopped(self):
         log('onPlayBackStopped')
@@ -360,7 +360,7 @@ class AcePlayer(TPlayer):
             while self.sock_thr.getTSMessage().getType() != msg and not self.sock_thr.error and not defines.isCancel():
                 xbmc.sleep(122)
                 a += 1
-                if a >= 120:
+                if a >= 200:
                     log.w('AceEngine is freeze')
                     self.parent.showStatus("Ошибка ожидания. Операция прервана")
                     raise ValueError('AceEngine is freeze')

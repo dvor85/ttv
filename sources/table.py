@@ -4,8 +4,10 @@
 
 import ttv
 import pomoyka
+import allfon
 
 Channels = dict(
     ttv=ttv.TTV(),
     pomoyka=pomoyka.Pomoyka(),
+    allfon=allfon.Allfon(),
 )

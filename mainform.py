@@ -183,7 +183,8 @@ class WMainForm(xbmcgui.WindowXML):
         self.list = None
         self.player = MyPlayer("player.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
         self.player.parent = self
-        self.load_selitem_info()
+        self.cur_category = defines.ADDON.getSetting('cur_category')
+        self.cur_channel = defines.ADDON.getSetting('cur_channel')
         self.selitem_id = -1
         self.user = None
         self.first_init = True
@@ -249,12 +250,6 @@ class WMainForm(xbmcgui.WindowXML):
 
                 for controlId in (WMainForm.IMG_LOGO, WMainForm.IMG_SCREEN):
                     self.getControl(controlId).setImage(selItem.getProperty('icon'))
-
-    def load_selitem_info(self):
-        self.cur_category = defines.ADDON.getSetting('cur_category')
-        self.cur_channel = defines.ADDON.getSetting('cur_channel')
-        if self.cur_category == '':
-            self.cur_category = WMainForm.USER_GROUPS[0]
 
     def loadFavourites(self, *args):
         from sources.tchannel import TChannel

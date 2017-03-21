@@ -64,10 +64,13 @@ def uni(path, from_encoding=None):
     :from_encoding: Кодировка из которой декодировать. Если не задана, то sys.getfilesystemencoding()
     :return: unicode path
     """
-    if from_encoding is None:
-        from_encoding = sys.getfilesystemencoding()
+
     if isinstance(path, str):
-        path = path.decode(from_encoding, errors='ignore')
+        if from_encoding is None:
+            from_encoding = sys.getfilesystemencoding()
+        if from_encoding is None:
+            from_encoding = 'utf8'
+        path = path.decode(from_encoding, 'ignore')
     return path
 
 
@@ -76,7 +79,7 @@ def utf(path):
     Кодирует в utf8
     """
     if isinstance(path, unicode):
-        return path.encode('utf8', errors='ignore')
+        return path.encode('utf8', 'ignore')
     return path
 
 
@@ -94,7 +97,10 @@ def fs_enc(path):
     """
     windows workaround. Используется в Popen.
     """
-    return uni(path).encode(sys.getfilesystemencoding(), 'ignore')
+    enc = sys.getfilesystemencoding()
+    if enc is None:
+        enc = 'utf8'
+    return uni(path).encode(enc, 'ignore')
 
 
 def lower(s, from_encoding=None):
