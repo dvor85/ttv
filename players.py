@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 20131 Torrent-TV.RU
-# Writer (c) 2014, Welicobratov K.A., E-mail: 07pov23@gmail.com
-# Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
+# Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 # imports
 import xbmc
 import xbmcgui
 
-import sys
 import socket
 import os
 import threading
@@ -29,19 +26,20 @@ sys_platform = defines.platform()['os']
 class TPlayer(xbmc.Player):
 
     _instance = None
-    _lock = threading.Lock()
+    _lock = threading.RLock()
 
     @staticmethod
     def get_instance(parent=None, *args):
-        if TPlayer._instance is None:
-            with TPlayer._lock:
-                if TPlayer._instance is None:
-                    try:
+        try:
+            if TPlayer._instance is None:
+                with TPlayer._lock:
+                    if TPlayer._instance is None:
                         TPlayer._instance = TPlayer(parent=parent, *args)
-                    except Exception as e:
-                        log.e(fmt('get_instance error: {0}', e))
-                        TPlayer._instance = None
-        return TPlayer._instance
+        except Exception as e:
+            log.e(fmt('get_instance error: {0}', e))
+            TPlayer._instance = None
+        finally:
+            return TPlayer._instance
 
     def __init__(self, parent=None, *args):
         self.parent = parent
@@ -101,19 +99,20 @@ class AcePlayer(TPlayer):
     MODE_NONE = None
 
     _instance = None
-    _lock = threading.Lock()
+    _lock = threading.RLock()
 
     @staticmethod
     def get_instance(parent=None, ipaddr='127.0.0.1', *args):
-        if AcePlayer._instance is None:
-            with AcePlayer._lock:
-                if AcePlayer._instance is None:
-                    try:
+        try:
+            if AcePlayer._instance is None:
+                with AcePlayer._lock:
+                    if AcePlayer._instance is None:
                         AcePlayer._instance = AcePlayer(parent=parent, ipaddr=ipaddr, *args)
-                    except Exception as e:
-                        log.e(fmt('get_instance error: {0}', e))
-                        AcePlayer._instance = False
-        return AcePlayer._instance
+        except Exception as e:
+            log.e(fmt('get_instance error: {0}', e))
+            AcePlayer._instance = False
+        finally:
+            return AcePlayer._instance
 
     def __init__(self, parent=None, ipaddr='127.0.0.1', *args):
         TPlayer.__init__(self, parent=parent, *args)
@@ -123,7 +122,7 @@ class AcePlayer(TPlayer):
         self.last_error = None
         self.quid = 0
         self.ace_engine = ''
-        self.aceport = 0
+        self.aceport = utils.str2int(defines.ADDON.getSetting('port'), 62062)
         self.port_file = ''
         self.sock_thr = None
 
@@ -141,17 +140,9 @@ class AcePlayer(TPlayer):
         self.ace_engine = self._getAceEngine_path()
         log.d(fmt('AceEngine path: "{0}"', self.ace_engine))
 
-        if sys.platform.startswith('win'):
+        if sys_platform == "windows":
             self.port_file = os.path.join(os.path.dirname(self.ace_engine), 'acestream.port')
             log.d(fmt('AceEngine port file: "{0}"', self.port_file))
-            if os.path.exists(self.port_file):
-                self.aceport = self._getWinPort()
-
-        if self.aceport == 0:
-            if defines.ADDON.getSetting('port'):
-                self.aceport = utils.str2int(defines.ADDON.getSetting('port'))
-            else:
-                self.aceport = 62062
 
         if not defines.ADDON.getSetting('age'):
             defines.ADDON.setSetting('age', '1')
@@ -208,28 +199,37 @@ class AcePlayer(TPlayer):
 
         return 0
 
+    def _killEngine(self):
+        if sys_platform == "windows":
+            try:
+                log.d(fmt('Kill "{0}"', os.path.basename(self.ace_engine)))
+                si = subprocess.STARTUPINFO()
+                si.dwFlags = subprocess.STARTF_USESHOWWINDOW
+                si.wShowWindow = subprocess.SW_HIDE
+
+                subprocess.call(["taskkill", "/F", "/IM", os.path.basename(self.ace_engine)], shell=False, startupinfo=si)
+                log.d(fmt('Remove "{0}"', self.port_file))
+                os.remove(self.port_file)
+            except Exception as e:
+                log.d(fmt("_killEngine error: {0}", e))
+
     def _startEngine(self):
         acestream_params = ["--live-cache-type", "memory"]
         if self.server_ip == '127.0.0.1':
             if sys_platform == 'windows':
                 try:
+                    self._killEngine()
+
                     log('try to start AceEngine for windows')
+                    self.parent.showStatus("Запуск AceEngine")
+                    p = subprocess.Popen([utils.fs_enc(self.ace_engine)] + acestream_params)
+                    log.d(fmt('pid = {0}', p.pid))
 
-                    if self.port_file != '' and os.path.exists(self.port_file):
-                        log.d(fmt('Remove "{0}"', self.port_file))
-                        os.remove(self.port_file)
-
-                    if not os.path.exists(self.port_file):
-                        self.parent.showStatus("Запуск AceEngine")
-
-                        p = subprocess.Popen([utils.fs_enc(self.ace_engine)] + acestream_params)
-                        log.d(fmt('pid = {0}', p.pid))
-
-                        self.aceport = self._getWinPort()
-                        if self.aceport > 0:
-                            defines.ADDON.setSetting('port', str(self.aceport))
-                        else:
-                            return
+                    self.aceport = self._getWinPort()
+                    if self.aceport > 0:
+                        defines.ADDON.setSetting('port', str(self.aceport))
+                    else:
+                        return
 
                 except Exception as e:
                     log.e(fmt('Cannot start AceEngine {0}', e))
@@ -320,12 +320,12 @@ class AcePlayer(TPlayer):
 
         except IOError as io:
             log.e(fmt('Error while auth: {0}', io))
-            self.last_error = str(io)
+            self.last_error = io
             self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
             return
         except ValueError as ve:
             log.e(fmt('AceStream version error: {0}', ve))
-            self.last_error = str(ve)
+            self.last_error = ve
             self.parent.showStatus("Необходимо обновить AceStream до версии 3")
             return
         except Exception as e:
@@ -690,7 +690,7 @@ class SockThread(threading.Thread):
 class NoxPlayer(TPlayer):
 
     _instance = None
-    _lock = threading.Lock()
+    _lock = threading.RLock()
 
     def __init__(self, parent=None, *args):
         TPlayer.__init__(self, parent=parent, *args)
@@ -703,15 +703,16 @@ class NoxPlayer(TPlayer):
 
     @staticmethod
     def get_instance(parent=None, *args):
-        if NoxPlayer._instance is None:
-            with NoxPlayer._lock:
-                if NoxPlayer._instance is None:
-                    try:
+        try:
+            if NoxPlayer._instance is None:
+                with NoxPlayer._lock:
+                    if NoxPlayer._instance is None:
                         NoxPlayer._instance = NoxPlayer(parent=parent, *args)
-                    except Exception as e:
-                        log.e(fmt('get_instance error: {0}', e))
-                        NoxPlayer._instance = False
-        return NoxPlayer._instance
+        except Exception as e:
+            log.e(fmt('get_instance error: {0}', e))
+            NoxPlayer._instance = False
+        finally:
+            return NoxPlayer._instance
 
     def _checkNox(self):
         import socket

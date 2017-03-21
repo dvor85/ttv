@@ -84,7 +84,7 @@ CHANNEL_INFO = {
     },
     "nat geo wild": {
         "logo": "http://torrent-tv.ru/uploads/ciHIDUuHEnkEuPghbcqkDQx4vadle3.png",
-        "cat": "Избранное"
+        "cat": "Познавательные"
     },
     "беларусь 5": {
         "logo": "http://torrent-tv.ru/uploads/2bzJLE9Sbk9BqUBlsVrtqpsz8h0rB6.png",
@@ -100,7 +100,7 @@ CHANNEL_INFO = {
     },
     "наука 2.0": {
         "logo": "http://torrent-tv.ru/uploads/ypWbqYqKApM8cnDK1FibvQgpmgEay9.png",
-        "cat": "Избранное"
+        "cat": "Познавательные"
     },
     "евроновости": {
         "logo": "http://torrent-tv.ru/uploads/2lbWxLvwTPLxkwMdCbEkZREEOTNZhU.png",
@@ -119,7 +119,7 @@ CHANNEL_INFO = {
         "cat": "Общие"
     },
     "стс (+7)": {
-        "logo": "",
+        "logo": "http://torrent-tv.ru/uploads/tPa64bmSSwAqcmgolRpPiJr3MA3XIc.png",
         "cat": "Развлекательные"
     },
     "рыжий": {
@@ -147,7 +147,7 @@ CHANNEL_INFO = {
         "cat": "Музыка"
     },
     "mtv россия hd": {
-        "logo": "",
+        "logo": "http://torrent-tv.ru/uploads/P5ijp2sRQsKVZkOJwjdqIVgYdJzhpZ.png",
         "cat": "Музыка"
     },
     "discovery showcase hd": {
@@ -315,7 +315,7 @@ CHANNEL_INFO = {
         "cat": "Музыка"
     },
     "мужское кино hd": {
-        "logo": "",
+        "logo": "http://torrent-tv.ru/uploads/PUDb8m2JFLndsPvb56tdH0V4RW0kZc.png",
         "cat": "Фильмы"
     },
     "xsport": {
@@ -407,7 +407,7 @@ CHANNEL_INFO = {
         "cat": "Новостные"
     },
     "рен тв (+7)": {
-        "logo": "",
+        "logo": "http://torrent-tv.ru/uploads/LJvkfB2kYaDzij1Y13Fy6syUCkP5Y6.png",
         "cat": "Общие"
     },
     "раз тв": {
@@ -424,7 +424,7 @@ CHANNEL_INFO = {
     },
     "рен тв": {
         "logo": "http://torrent-tv.ru/uploads/LJvkfB2kYaDzij1Y13Fy6syUCkP5Y6.png",
-        "cat": "Избранное"
+        "cat": "Общие"
     },
     "страна fm тв": {
         "logo": "",
@@ -467,7 +467,7 @@ CHANNEL_INFO = {
         "cat": "Фильмы"
     },
     "тнт hd": {
-        "logo": '',
+        "logo": "http://torrent-tv.ru/uploads/Vtt1KKIpLY4LTQGnV03sdBYyX3hyWR.png",
         "cat": "Развлекательные"
     },
     "спас тв": {
@@ -560,7 +560,7 @@ CHANNEL_INFO = {
     },
     "national geographic hd": {
         "logo": "http://torrent-tv.ru/uploads/hK1waimMq9eAp0ugM19moSoQvUeve5.png",
-        "cat": "Избранное"
+        "cat": "Познавательные"
     },
     "дом кино": {
         "logo": "http://torrent-tv.ru/uploads/jlC78Fy13KWjQUN6l3FtbsRLZDvc0x.png",
@@ -779,7 +779,7 @@ CHANNEL_INFO = {
         "cat": "Музыка"
     },
     "тнт4 (+4)": {
-        "logo": '',
+        "logo": "http://torrent-tv.ru/uploads/yTclqOAW0EWwhw9vt0spVSUcS70ZR0.png",
         "cat": "Развлекательные"
     },
     "112 украина hd": {
@@ -892,7 +892,7 @@ CHANNEL_INFO = {
     },
     "discovery channel hd": {
         "logo": "http://torrent-tv.ru/uploads/SmWnYlOvkJn8GzttT2UY0vmo8PYfMg.png",
-        "cat": "Избранное"
+        "cat": "Познавательные"
     },
     "travel + adventure": {
         "logo": "http://torrent-tv.ru/uploads/b1HifWKMyefmDDvaDAJTwNNTaD8LF4.png",
@@ -951,7 +951,7 @@ CHANNEL_INFO = {
         "cat": "Спорт"
     },
     "тнт (резерв)": {
-        "logo": "",
+        "logo": "http://torrent-tv.ru/uploads/Vtt1KKIpLY4LTQGnV03sdBYyX3hyWR.png",
         "cat": "Развлекательные"
     },
     "food network": {
@@ -1003,7 +1003,7 @@ CHANNEL_INFO = {
         "cat": "Региональные"
     },
     "первый канал (+4) hd": {
-        "logo": "",
+        "logo": "http://torrent-tv.ru/uploads/nHJycH0CkOhPeZ9DmB47iSMWP5HyWz.png",
         "cat": "Общие"
     },
     "fap tv legal porno": {
@@ -1203,11 +1203,11 @@ CHANNEL_INFO = {
         "cat": "Познавательные"
     },
     "матч! футбол 1 hd резерв 3": {
-        "logo": '',
+        "logo": "http://torrent-tv.ru/uploads/9PM8M6cN21wQ3M5isVZgjNepzUI4Ry.png",
         "cat": "Спорт"
     },
     "матч! футбол 1 hd резерв 1": {
-        "logo": '',
+        "logo": "http://torrent-tv.ru/uploads/9PM8M6cN21wQ3M5isVZgjNepzUI4Ry.png",
         "cat": "Спорт"
     },
     "russia today": {
@@ -1399,7 +1399,7 @@ CHANNEL_INFO = {
         "cat": "Развлекательные"
     },
     "amedia 1 hd": {
-        "logo": "",
+        "logo": "http://torrent-tv.ru/uploads/jT3vAEOG5jTd2t8GcC797Bw5W0kSl9.png",
         "cat": "Фильмы"
     },
     "черновицкий проминь hd": {
@@ -1535,7 +1535,7 @@ CHANNEL_INFO = {
         "cat": "Мужские"
     },
     "карусель (+3)": {
-        "logo": "",
+        "logo": "http://torrent-tv.ru/uploads/S233D4b6eq7KOXfdyi4dY2GokKeltg.png",
         "cat": "Детские"
     },
     "english club tv": {
@@ -1571,7 +1571,7 @@ CHANNEL_INFO = {
         "cat": "Общие"
     },
     "тнт4 (+7)": {
-        "logo": "",
+        "logo": "http://torrent-tv.ru/uploads/yTclqOAW0EWwhw9vt0spVSUcS70ZR0.png",
         "cat": "Развлекательные"
     },
     "tv 1000 action east": {
@@ -1611,7 +1611,7 @@ CHANNEL_INFO = {
         "cat": "Познавательные"
     },
     "стс love (+7)": {
-        "logo": "",
+        "logo": "http://torrent-tv.ru/uploads/iciJHbEmJ1hHXAMhzC9cRWhmh9gH0L.png",
         "cat": "Развлекательные"
     },
     "кинопоказ 2 hd": {
@@ -1724,7 +1724,7 @@ CHANNEL_INFO = {
     },
     "national geographic": {
         "logo": "http://torrent-tv.ru/uploads/i6STSw6Hg1wWP18yBAOyKoKpSMeKLu.png",
-        "cat": "Избранное"
+        "cat": "Познавательные"
     },
     "кинозал (боевики)": {
         "logo": '',
@@ -2160,7 +2160,7 @@ CHANNEL_INFO = {
     },
     "первый канал hd": {
         "logo": "http://torrent-tv.ru/uploads/VxAFWzh1y88c8Aqa17TsxD2IO5pqoi.png",
-        "cat": "Избранное"
+        "cat": "Общие"
     },
     "kronehit tv hd": {
         "logo": "http://torrent-tv.ru/uploads/dq6m0UE9ffgAbXNt49qDlIAr7T8lud.png",
@@ -2231,7 +2231,7 @@ CHANNEL_INFO = {
         "cat": "Эротика"
     },
     "россия 1 (+8)": {
-        "logo": "",
+        "logo": "http://torrent-tv.ru/uploads/UUrfoqi6NQcc9gRLnCc8ODZJ2T3ShE.png",
         "cat": "Общие"
     },
     "история": {
@@ -2395,7 +2395,7 @@ CHANNEL_INFO = {
         "cat": "Познавательные"
     },
     "рен тв (резерв)": {
-        "logo": "",
+        "logo": "http://torrent-tv.ru/uploads/LJvkfB2kYaDzij1Y13Fy6syUCkP5Y6.png",
         "cat": "Общие"
     },
     "твоётв": {
@@ -2524,7 +2524,7 @@ CHANNEL_INFO = {
     },
     "планета hd": {
         "logo": "http://torrent-tv.ru/uploads/1QjirpCLi3q9qPu1CTvEvCB0BfINeo.png",
-        "cat": "Избранное"
+        "cat": "Познавательные"
     },
     "кто есть кто": {
         "logo": "http://torrent-tv.ru/uploads/MwNkO3fXd6KefRdiGlOdOQ5q0Zu7kS.png",
@@ -2591,7 +2591,7 @@ CHANNEL_INFO = {
         "cat": "Региональные"
     },
     "стс (+4)": {
-        "logo": "",
+        "logo": "http://torrent-tv.ru/uploads/tPa64bmSSwAqcmgolRpPiJr3MA3XIc.png",
         "cat": "Развлекательные"
     },
     "mtv hits": {
@@ -2599,15 +2599,15 @@ CHANNEL_INFO = {
         "cat": "Музыка"
     },
     "матч! футбол 1 резерв 1": {
-        "logo": '',
+        "logo": "http://torrent-tv.ru/uploads/9PM8M6cN21wQ3M5isVZgjNepzUI4Ry.png",
         "cat": "Спорт"
     },
     "матч! футбол 1 резерв 3": {
-        "logo": '',
+        "logo": "http://torrent-tv.ru/uploads/9PM8M6cN21wQ3M5isVZgjNepzUI4Ry.png",
         "cat": "Спорт"
     },
     "матч! футбол 1 резерв 2": {
-        "logo": '',
+        "logo": "http://torrent-tv.ru/uploads/9PM8M6cN21wQ3M5isVZgjNepzUI4Ry.png",
         "cat": "Спорт"
     },
     "eska oldscool tv hd": {
@@ -2648,7 +2648,7 @@ CHANNEL_INFO = {
     },
     "discovery science": {
         "logo": "http://torrent-tv.ru/uploads/GAaO3EfDwMuHAIelG4gYW6TDEYbLnS.png",
-        "cat": "Избранное"
+        "cat": "Познавательные"
     },
     "set hd": {
         "logo": "http://torrent-tv.ru/uploads/sX1unYoKj8JR7m8lbtkmPCClRrjAZ9.png",
@@ -2679,7 +2679,7 @@ CHANNEL_INFO = {
         "cat": "Спорт"
     },
     "рен тв (+4)": {
-        "logo": "",
+        "logo": "http://torrent-tv.ru/uploads/LJvkfB2kYaDzij1Y13Fy6syUCkP5Y6.png",
         "cat": "Общие"
     },
     "рбк": {

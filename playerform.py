@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2014 Torrent-TV.RU
-# Writer (c) 2014, Welicobratov K.A., E-mail: 07pov23@gmail.com
-# Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
+# Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 import xbmcgui
 import threading
@@ -180,7 +178,6 @@ class MyPlayer(xbmcgui.WindowXML):
 
     def Start(self, channels):
         log("Start play")
-
         self.channels = channels
         self.channel_number = self.parent.selitem_id
         for src, channel in self.channels.iteritems():
@@ -189,6 +186,8 @@ class MyPlayer(xbmcgui.WindowXML):
 
                 for player in channel.get('players'):
                     try:
+                        if self._player:
+                            self._player.stop()
                         url = channel.get_url(player)
                         mode = channel.get_mode()
                         log.d(fmt('Try to play with {0} player', player))
