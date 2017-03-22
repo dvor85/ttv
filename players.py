@@ -16,6 +16,7 @@ import defines
 import logger
 import utils
 import json
+import time
 
 
 log = logger.Logger(__name__)
@@ -125,6 +126,7 @@ class AcePlayer(TPlayer):
         self.aceport = utils.str2int(defines.ADDON.getSetting('port'), 62062)
         self.port_file = ''
         self.sock_thr = None
+        self.prebuf = {"last_update": time.time(), "value": 0}
 
         log.d(defines.ADDON.getSetting('ip_addr'))
         if defines.ADDON.getSetting('ip_addr'):
@@ -353,17 +355,26 @@ class AcePlayer(TPlayer):
         if self.sock_thr and self.sock_thr.is_active():
             self.sock_thr.end()
 
-    def _Wait(self, msg):
+    def _Wait(self, msg, timeout=10):
         log.d(fmt('wait message: {0}', msg))
-        a = 0
+        t = 0
         try:
+            if msg == TSMessage.START:
+                self.prebuf['last_update'] = time.time()
+
             while self.sock_thr.getTSMessage().getType() != msg and not self.sock_thr.error and not defines.isCancel():
-                xbmc.sleep(122)
-                a += 1
-                if a >= 200:
+                xbmc.sleep(100)
+                t += 1
+                if msg == TSMessage.START:
+                    break_cond = time.time() - self.prebuf['last_update'] >= timeout
+                else:
+                    break_cond = t >= timeout * 10
+                if break_cond:
                     log.w('AceEngine is freeze')
-                    self.parent.showStatus("Ошибка ожидания. Операция прервана")
-                    raise ValueError('AceEngine is freeze')
+                    break
+
+#                     self.parent.showStatus("Ошибка ожидания. Операция прервана")
+#                     raise ValueError('AceEngine is freeze')
         except Exception as e:
             log.e(fmt('_Wait error: {0}', e))
             self.stop()
@@ -423,6 +434,9 @@ class AcePlayer(TPlayer):
 
                     _descr = _params['main'].split(';')
                     if _descr[0] == 'prebuf':
+                        if _descr[1] != self.prebuf['value']:
+                            self.prebuf['last_update'] = time.time()
+                            self.prebuf['value'] = _descr[1]
                         log.d('_showState: Пытаюсь показать состояние')
                         self.parent.showStatus(fmt('Пребуферизация {0}', _descr[1]))
                     elif _descr[0] == 'check':
@@ -430,7 +444,16 @@ class AcePlayer(TPlayer):
                         self.parent.showStatus(fmt('Проверка {0}', _descr[1]))
 #                     elif _descr[0] == 'dl':
 #                         self.parent.showInfoStatus('Total:%s DL:%s UL:%s' % (_descr[1], _descr[3], _descr[5]))
-#                     elif _descr[0] == 'buf':
+                    elif _descr[0] == 'buf':
+                        #                         self.parent.showStatus('Буферизация: %s DL: %s UL: %s' % (_descr[1], _descr[5], _descr[7]))
+
+                        if _descr[1] != self.prebuf['value']:
+                            self.prebuf['last_update'] = time.time()
+                            self.prebuf['value'] = _descr[1]
+                        if time.time() - self.prebuf['last_update'] > 10:
+                            log.w('AceEngine is freeze')
+                            self.stop()
+
 #                         self.parent.showInfoStatus('Buf:%s DL:%s UL:%s' % (_descr[1], _descr[5], _descr[7]))
 #                     else:
 #                         self.parent.showInfoStatus('%s' % _params)
@@ -535,7 +558,11 @@ class TSMessage:
 
     def __init__(self):
         self.type = TSMessage.NONE
+        self.update_time = time.time()
         self.params = {}
+
+    def getTime(self):
+        return self.update_time
 
     def getType(self):
         return self.type

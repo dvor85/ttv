@@ -191,7 +191,6 @@ class WMainForm(xbmcgui.WindowXML):
         self.channel_number_str = ''
 
         self.timers = {}
-#         self.get_epg_lock = threading.Event()
         self.rotate_screen_thr = None
 
     def onInit(self):
@@ -283,8 +282,6 @@ class WMainForm(xbmcgui.WindowXML):
 
     def getEpg(self, chs, timeout=0, callback=None):
         def get():
-            #             if not self.get_epg_lock.is_set():
-                #                 self.get_epg_lock.set()
             chnum = self.player.channel_number
             try:
                 epg = None

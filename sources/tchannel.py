@@ -18,7 +18,6 @@ class TChannel(UserDict):
 
     def __init__(self, data={}):
         self.data = {}
-        self.data['type'] = 'channel'
         self.data['mode'] = "PID"
         self.data['players'] = ['ace']
         self.data.update(data)
