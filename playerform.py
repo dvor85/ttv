@@ -108,22 +108,20 @@ class MyPlayer(xbmcgui.WindowXML):
         try:
             log.d('UpdateEpg')
 
-            name = None
             cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
             for ch in chs.itervalues():
                 logo = ch.get_logo()
-                name = ch.get_name()
                 if logo:
                     cicon.setImage(logo)
                     break
 
-            for ch in self.channels.itervalues():
-                try:
-                    if ch.get_name() != name:
-                        self.showNoEpg()
-                    break
-                except Exception as e:
-                    log.d(fmt("UpdateEpg error: {0}", e))
+#             for ch in self.channels.itervalues():
+#                 try:
+#                     if ch.get_name() != name:
+#                         self.showNoEpg()
+#                     break
+#                 except Exception as e:
+#                     log.d(fmt("UpdateEpg error: {0}", e))
 
             self.parent.getEpg(chs, callback=self.showEpg, timeout=0.5)
 
@@ -133,6 +131,9 @@ class MyPlayer(xbmcgui.WindowXML):
     def showEpg(self, curepg):
         try:
             ctime = datetime.datetime.now()
+            if not curepg:
+                self.showNoEpg()
+                return False
             for i, ep in enumerate(curepg):
                 try:
                     ce = self.getControl(MyPlayer.CONTROL_FIRST_EPG_ID + i)
@@ -149,8 +150,6 @@ class MyPlayer(xbmcgui.WindowXML):
 
         except Exception as e:
             log.e(fmt('showEpg error {0}', e))
-
-        self.showNoEpg()
 
     def showNoEpg(self):
         for i in range(99):
@@ -212,6 +211,7 @@ class MyPlayer(xbmcgui.WindowXML):
                 return True
             except Exception as e:
                 log.e(fmt('Start error: {0}', e))
+        self.close()
 
     def run_selected_channel(self, timeout=0):
         def run():

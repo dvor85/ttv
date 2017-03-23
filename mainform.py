@@ -292,7 +292,9 @@ class WMainForm(xbmcgui.WindowXML):
                         epg = ch.get_epg()
                         if epg and callback is not None and chnum == self.player.channel_number:
                             callback(epg)
-                        break
+                            break
+                    if callback is not None:
+                        callback(epg)
             except Exception as e:
                 log.d(fmt('getEpg->get error: {0}', e))
             finally:
