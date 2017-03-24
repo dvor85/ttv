@@ -22,6 +22,8 @@ import time
 log = logger.Logger(__name__)
 fmt = utils.fmt
 sys_platform = defines.platform()['os']
+manual_stopped = threading.Event()
+switch_source = threading.Event()
 
 
 class TPlayer(xbmc.Player):
@@ -44,22 +46,16 @@ class TPlayer(xbmc.Player):
 
     def __init__(self, parent=None, *args):
         self.parent = parent
-        self.manual_stopped = threading.Event()
-        self.switch_source = threading.Event()
 
         self.link = None  # Для передачи ссылки плееру
 
     def onPlayBackStopped(self):
         log('onPlayBackStopped')
         self.stop()
-        if not self.switch_source.is_set():
-            self.parent.player.close()
 
     def onPlayBackEnded(self):
         log('onPlayBackEnded')
-        self.manual_stopped.clear()
-        self.switch_source.set()
-        self.onPlayBackStopped()
+        self.next_source()
 
     def onPlayBackStarted(self):
         try:
@@ -67,7 +63,8 @@ class TPlayer(xbmc.Player):
         except Exception as e:
             log.e(fmt('onPlayBackStarted error: {0}', e))
 
-        self.manual_stopped.set()
+        manual_stopped.set()
+        switch_source.clear()
         self.parent.hide_main_window()
 
     def loop(self):
@@ -82,17 +79,19 @@ class TPlayer(xbmc.Player):
         self.stop()
 
     def play_item(self, title='', icon='', thumb='', *args, **kwargs):
-        self.manual_stopped.set()
-        self.switch_source.clear()
         li = xbmcgui.ListItem(title, iconImage=icon, thumbnailImage=thumb)
+        if not self.link:
+            self.parent.showStatus('Нечего проигрывать')
+            return
         self.play(self.link, li, windowed=True)
         self.parent.player.Show()
+        self.parent.player.hideStatus()
         self.loop()
-        return not self.switch_source.is_set()
+        return not switch_source.is_set() or manual_stopped.is_set()
 
     def next_source(self):
-        self.switch_source.set()
-        self.manual_stopped.clear()
+        switch_source.set()
+        manual_stopped.clear()
         self.stop()
 
     def end(self):
@@ -406,31 +405,32 @@ class AcePlayer(TPlayer):
 
         if self._sendCommand(comm):
             msg = self._Wait(TSMessage.LOADRESP)
-            log.d(fmt('_load_torrent - {0}', msg.getType()))
-            if msg and msg.getType() == TSMessage.LOADRESP:
-                try:
-                    log.d('Compile file list')
-                    jsonfile = msg.getParams()['json']
-                    if 'files' not in jsonfile:
-                        self.parent.showStatus(jsonfile['message'])
-                        self.last_error = Exception(jsonfile['message'])
-                        log.e(fmt('Compile file list {0}', self.last_error))
-                        return
-                    self.count = len(jsonfile['files'])
-                    self.files = {}
-                    for f in jsonfile['files']:
-                        self.files[f[1]] = urllib.unquote_plus(urllib.quote(f[0]))
-                    log.d('End Compile file list')
-                except Exception as e:
-                    log.e(fmt('_load_torrent error: {0}', e))
-                    self.last_error = e
-                    self.end()
-            else:
-                self.last_error = 'Incorrect msg from AceEngine'
-                self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
-                log.f(fmt('Incorrect msg from AceEngine {0}', msg.getType()))
-                self.stop()
-                return
+            if msg:
+                if msg.getType() == TSMessage.LOADRESP:
+                    try:
+                        log.d(fmt('_load_torrent - {0}', msg.getType()))
+                        log.d('Compile file list')
+                        jsonfile = msg.getParams()['json']
+                        if 'files' not in jsonfile:
+                            self.parent.showStatus(jsonfile['message'])
+                            self.last_error = Exception(jsonfile['message'])
+                            log.e(fmt('Compile file list {0}', self.last_error))
+                            return
+                        self.count = len(jsonfile['files'])
+                        self.files = {}
+                        for f in jsonfile['files']:
+                            self.files[f[1]] = urllib.unquote_plus(urllib.quote(f[0]))
+                        log.d('End Compile file list')
+                    except Exception as e:
+                        log.e(fmt('_load_torrent error: {0}', e))
+                        self.last_error = e
+                        self.end()
+                else:
+                    self.last_error = 'Incorrect msg from AceEngine'
+                    self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
+                    log.f(fmt('Incorrect msg from AceEngine {0}', msg.getType()))
+                    self.stop()
+                    return
 
             self.parent.hideStatus()
 
@@ -446,7 +446,8 @@ class AcePlayer(TPlayer):
                             self.prebuf['last_update'] = time.time()
                             self.prebuf['value'] = _descr[1]
                             log.d('_stateHandler: Пытаюсь показать состояние')
-                            self.parent.showStatus(fmt('Пребуферизация {0}', _descr[1]))
+                            self.parent.showStatus(fmt('Пребуферизация {0}', self.prebuf['value']))
+                            self.parent.player.showStatus(fmt('Пребуферизация {0}', self.prebuf['value']))
 
                     elif _descr[0] == 'check':
                         log.d(fmt('_stateHandler: Проверка {0}', _descr[1]))
@@ -460,7 +461,9 @@ class AcePlayer(TPlayer):
                         if _descr[1] != self.prebuf['value']:
                             self.prebuf['last_update'] = time.time()
                             self.prebuf['value'] = _descr[1]
+#                             self.parent.player.showStatus(fmt('Буферизация {0}', self.prebuf['value']))
                         if time.time() - self.prebuf['last_update'] >= AcePlayer.TIMEOUT_FREEZE:
+                            self.parent.player.showStatus(fmt('Пребуферизация {0}', self.prebuf['value']))
                             log.w('AceEngine is freeze')
                             self.next_source()
 
@@ -506,27 +509,27 @@ class AcePlayer(TPlayer):
         if self._sendCommand(comm):
             self.parent.showStatus("Запуск торрента")
             msg = self._Wait(TSMessage.START)
-            if msg and msg.getType() == TSMessage.START:
-                try:
-                    _params = msg.getParams()
-                    if not _params.get('url'):
-                        self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
-                        raise Exception(fmt('Incorrect msg from AceEngine {0}', msg.getType()))
+            if msg:
+                if msg.getType() == TSMessage.START:
+                    try:
+                        _params = msg.getParams()
+                        if not _params.get('url'):
+                            self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
+                            raise Exception(fmt('Incorrect msg from AceEngine {0}', msg.getType()))
 
-                    self.link = _params['url'].replace('127.0.0.1', self.server_ip).replace('6878', self.webport)
-                    log.d(fmt('Преобразование ссылки: {0}', self.link))
-                    self.sock_thr.msg = TSMessage()
+                        self.link = _params['url'].replace('127.0.0.1', self.server_ip).replace('6878', self.webport)
+                        log.d(fmt('Преобразование ссылки: {0}', self.link))
+                        self.sock_thr.msg = TSMessage()
 
-                    res = TPlayer.play_item(self, title, icon, thumb)
-                except Exception as e:
-                    log.e(fmt('play_item error: {0}', e))
-                    self.last_error = e
-                    self.parent.showStatus("Ошибка. Операция прервана")
-
-            else:
-                self.last_error = fmt('Incorrect msg from AceEngine {0}', msg.getType())
-                log.e(self.last_error)
-                self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
+                        res = TPlayer.play_item(self, title, icon, thumb)
+                    except Exception as e:
+                        log.e(fmt('play_item error: {0}', e))
+                        self.last_error = e
+                        self.parent.showStatus("Ошибка. Операция прервана")
+                else:
+                    self.last_error = fmt('Incorrect msg from AceEngine {0}', msg.getType())
+                    log.e(self.last_error)
+                    self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
             self.stop()
             return res
 
@@ -759,7 +762,4 @@ class NoxPlayer(TPlayer):
 
     def play_item(self, title='', icon='', thumb='', *args, **kwargs):
         self.link = kwargs.get('url')
-        if not self.link:
-            self.parent.showStatus('Нечего проигрывать')
-            return
         return TPlayer.play_item(self, title=title, icon=icon, thumb=thumb, *args, **kwargs)

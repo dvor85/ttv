@@ -10,6 +10,7 @@ import datetime
 import threading
 
 from playerform import MyPlayer
+from players import manual_stopped
 from menu import MenuForm
 from sources.table import Channels as ChannelSources
 import favdb
@@ -498,7 +499,7 @@ class WMainForm(xbmcgui.WindowXML):
 
                 self.player.Start(sel_chs)
 
-                if self.player._player and self.player._player.manual_stopped.is_set():
+                if manual_stopped.is_set():
                     break
                 if not defines.isCancel():
                     xbmc.sleep(223)
@@ -621,8 +622,8 @@ class WMainForm(xbmcgui.WindowXML):
             self.hide_main_window(timeout=10)
 
     def showStatus(self, text):
-        log.d(fmt("showStatus: {0}", text))
         try:
+            log.d(fmt("showStatus: {0}", text))
             if self.img_progress:
                 self.img_progress.setVisible(True)
             if self.txt_progress:

@@ -184,9 +184,9 @@
     <control type="label" id = "299">
         <animation effect="fade" delay="300" start="0" end="75" time="1000" pulse="True" condition="Control.IsVisible(299)">conditional</animation>
         <description>Switching</description>
-        <posx>500</posx>
-        <posy>350</posy>
-        <font>font30</font>
+        <align>center</align>
+        <aligny>center</aligny>        
+        <font>font60</font>
         <textcolor>FFFDFDF0</textcolor>
         <visible>true</visible>
         <label>Переключение...</label>

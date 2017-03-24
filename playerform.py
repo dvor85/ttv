@@ -69,7 +69,7 @@ class MyPlayer(xbmcgui.WindowXML):
         self.chinfo = self.getControl(MyPlayer.CH_NAME_ID)
         self.chinfo.setLabel(self.title)
         self.swinfo = self.getControl(MyPlayer.DLG_SWITCH_ID)
-        self.swinfo.setVisible(False)
+        self.hideStatus()
 
         if not self.timers.get(MyPlayer.TIMER_RUN_SEL_CHANNEL):
             self.init_channel_number()
@@ -167,8 +167,8 @@ class MyPlayer(xbmcgui.WindowXML):
     def Stop(self):
         log('AutoStop')
         # xbmc.executebuiltin('PlayerControl(Stop)')
+        players.manual_stopped.clear()
         if self._player:
-            self._player.manual_stopped.clear()
             self._player.stop()
 
     def Show(self):
@@ -187,6 +187,7 @@ class MyPlayer(xbmcgui.WindowXML):
                     try:
                         if self._player:
                             self._player.stop()
+
                         url = channel.get_url(player)
                         mode = channel.get_mode()
                         log.d(fmt('Try to play with {0} player', player))
@@ -203,6 +204,8 @@ class MyPlayer(xbmcgui.WindowXML):
                                                                    url=url, mode=mode):
                             log.d('End playing')
                             return True
+                        if defines.isCancel():
+                            return
                     except Exception as e:
                         log.error(fmt("Error play with {0} player: {1}", player, e))
                 else:
@@ -221,7 +224,7 @@ class MyPlayer(xbmcgui.WindowXML):
                 self.parent.selitem_id = self.channel_number
                 self.Stop()
             else:
-                self.swinfo.setVisible(False)
+                self.hideStatus()
             self.channel_number = self.parent.selitem_id
             self.chinfo.setLabel(self.parent.list.getListItem(self.parent.selitem_id).getLabel())
             self.channel_number_str = ''
@@ -247,11 +250,27 @@ class MyPlayer(xbmcgui.WindowXML):
         if self.channel_number <= 0:
             self.channel_number = self.parent.list.size() - 1
 
+    def showStatus(self, text):
+        try:
+            log.d(fmt("showStatus: {0}", text))
+            if self.swinfo:
+                self.swinfo.setLabel(text)
+                self.swinfo.setVisible(True)
+        except Exception as e:
+            log.w(fmt("showStatus error: {0}", e))
+
+    def hideStatus(self):
+        try:
+            if self.swinfo:
+                self.swinfo.setVisible(False)
+        except Exception as e:
+            log.w(fmt("hideStatus error: {0}", e))
+
     def onAction(self, action):
-        def viewEPG(swinfo_visible=True):
+        def viewEPG():
             selItem = self.parent.list.getListItem(self.channel_number)
             self.chinfo.setLabel(selItem.getLabel())
-            self.swinfo.setVisible(swinfo_visible)
+            self.showStatus('Переключение...')
 
             sel_chs = self.parent.get_channel_by_name(selItem.getProperty("name"))
             if sel_chs:
