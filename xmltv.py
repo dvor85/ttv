@@ -20,6 +20,7 @@ _servers = ['api.torrent-tv.ru', '1ttvxbmc.top']
 class XMLTV():
     _instance = None
     _lock = Event()
+    _xml_lib = 0
 
     @staticmethod
     def get_instance():
@@ -38,16 +39,21 @@ class XMLTV():
     def __init__(self):
         try:
             from lxml import etree
+            XMLTV._xml_lib = 0
             log.d("running with lxml.etree")
         except ImportError:
             try:
                 # Python 2.5
+                if XMLTV._xml_lib > 0:
+                    raise Exception("Already try this library")
                 import xml.etree.cElementTree as etree
-                log.d("running with cElementTree on Python 2.5+")
-            except ImportError:
+                XMLTV._xml_lib = 1
+                log.d("running with cElementTree")
+            except Exception:
                 # Python 2.5
                 import xml.etree.ElementTree as etree
-                log.d("running with ElementTree on Python 2.5+")
+                XMLTV._xml_lib = 2
+                log.d("running with ElementTree")
 
         self.channels = {}
         self.xmltv_root = None
@@ -59,7 +65,10 @@ class XMLTV():
 
         if not os.path.exists(self.xmltv_file) or not same_date:
             self.update_xmltv()
-        # при многократном запуске плагина возникает утечка памяти. Решение: weakref, но возникает ошибка создания ссылки
+        """
+        при многократном запуске плагина возможно возникновение утечки памяти.
+        Решение: weakref, но возникает ошибка создания ссылки
+        """
         with gzip.open(self.xmltv_file, 'rb') as fp:
             self.xmltv_root = etree.parse(fp)
 

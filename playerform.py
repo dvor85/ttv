@@ -143,7 +143,7 @@ class MyPlayer(xbmcgui.WindowXML):
                                     et.strftime("%H:%M"), ep['name'].replace('&quot;', '"')))
                     if self.progress and i == 0:
                         self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
-                except:
+                except Exception:
                     break
 
             return True
@@ -159,7 +159,7 @@ class MyPlayer(xbmcgui.WindowXML):
                     ce.setLabel('Нет программы')
                 else:
                     ce.setLabel('')
-            except:
+            except Exception:
                 break
         if self.progress:
             self.progress.setPercent(0)
@@ -176,6 +176,11 @@ class MyPlayer(xbmcgui.WindowXML):
             self.show()
 
     def Start(self, channels):
+        """
+        Start play. Try all availible channel sources and players
+        :channels: <dict> Channel sources
+        :return: If play was successful, then return True, else None
+        """
         log("Start play")
         self.channels = channels
         self.channel_number = self.parent.selitem_id

@@ -11,9 +11,9 @@
 		<setting default="true" id="use_ace" label="Использовать Acestream, если доступно" type="bool" />
 		<setting id="gender" label="Пол" type="enum" values="Мужской|Женский" />
 		<setting id="age" label="Возраст" type="enum" values="Младше 13|13-17|18-24|25-34|35-44|45-54|55-64|Старше 64" />
-		<setting default="127.0.0.1" id="ip_addr" label="IP-адрес acestreamengine" visible="false" />
+		<setting default="127.0.0.1" id="ip_addr" label="IP-адрес acestreamengine" type="text" visible="false" />
 		<setting default="8621" id="outport" label="Внеший порт AceStream" type="number" />
-		<setting default="20" id="freeze_timeout" label="Таймаут ожидания" type="number" visible="false" />
+		<setting default="20" id="freeze_timeout" label="Таймаут ожидания, сек." type="number" />
 	</category>
 	<category label="Noxbit">
 		<setting default="false" id="use_nox" label="Использовать Noxbit, если доступно" type="bool" />

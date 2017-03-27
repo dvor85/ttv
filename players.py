@@ -11,7 +11,6 @@ import threading
 import subprocess
 import random
 import urllib
-import copy
 import defines
 import logger
 import utils
@@ -138,6 +137,7 @@ class AcePlayer(TPlayer):
         self.port_file = ''
         self.sock_thr = None
         self.prebuf = {"last_update": time.time(), "value": 0}
+        self.waiting = {"msg": None, "event": threading.Event()}
 
         log.d(defines.ADDON.getSetting('ip_addr'))
         if defines.ADDON.getSetting('ip_addr'):
@@ -311,23 +311,22 @@ class AcePlayer(TPlayer):
         log.d('Все ок')
         # Общаемся
         try:
-            if self._sendCommand('HELLOBG version=4'):
-                msg = self._Wait(TSMessage.HELLOTS)
-                if msg and msg.getType() == TSMessage.HELLOTS:
+            if self._send_command('HELLOBG version=4'):
+                msg = self._wait_message(TSMessage.HELLOTS)
+                if msg:
                     if not msg.getParams().get('key'):
                         raise IOError('Incorrect msg from AceEngine')
                     ace_version = msg.getParams().get('version')
                     if ace_version < '3':
                         raise ValueError("It's necessary to update AceStream")
 
-                self.sock_thr.msg = TSMessage()
-                if self._sendCommand('READY key=' + self._get_key(msg.getParams().get('key'))):
-                    msg = self._Wait(TSMessage.AUTH)
-                    if msg and msg.getType() == TSMessage.AUTH:
-                        if utils.str2int(msg.getParams()) == 0:
-                            log.w('Пользователь не зарегистрирован')
-                    else:
-                        raise IOError('Incorrect msg from AceEngine')
+                    if self._send_command('READY key=' + self._get_key(msg.getParams().get('key'))):
+                        msg = self._wait_message(TSMessage.AUTH)
+                        if msg:
+                            if utils.str2int(msg.getParams()) == 0:
+                                log.w('Пользователь не зарегистрирован')
+                        else:
+                            raise IOError('Incorrect msg from AceEngine')
 
         except IOError as io:
             log.e(fmt('Error while auth: {0}', io))
@@ -345,7 +344,7 @@ class AcePlayer(TPlayer):
         log.d('End Init AceEngine')
         self.parent.hideStatus()
 
-    def _sendCommand(self, cmd):
+    def _send_command(self, cmd):
         for t in range(3):  # @UnusedVariable
             try:
                 if not (self.sock_thr and self.sock_thr.is_active()):
@@ -359,32 +358,33 @@ class AcePlayer(TPlayer):
                 self.sock.send(cmd + '\r\n')
                 return True
             except Exception as e:
-                log.e(fmt('_sendCommand error: "{0}" cmd: "{1}"', e, cmd))
+                log.e(fmt('_send_command error: "{0}" cmd: "{1}"', e, cmd))
 
         if self.sock_thr and self.sock_thr.is_active():
             self.sock_thr.end()
 
-    def _Wait(self, msg):
+    def _wait_message(self, msg):
+        """
+        Wait message
+        :msg: Message for wait (START, AUTH, etc)
+        :return: TSMessage object if wait was successfuly, else None
+        """
         log.d(fmt('wait message: {0}', msg))
-        t = 0
         try:
-            if msg == TSMessage.START:
-                self.prebuf['last_update'] = time.time()
+            self.waiting['msg'] = msg
+            self.waiting['event'].clear()
+            for t in xrange(AcePlayer.TIMEOUT_FREEZE * 3):  # @UnusedVariable
+                if not self.waiting['msg'] or self.sock_thr.error or defines.isCancel():
+                    raise ValueError(fmt('Abort waiting message: "{0}"', msg))
+                if self.waiting['event'].wait(1):
+                    return self.waiting['msg']
 
-            while self.sock_thr.getTSMessage().getType() != msg and not self.sock_thr.error and not defines.isCancel():
-                xbmc.sleep(100)
-                t += 1
+            self.parent.showStatus("Ошибка ожидания. Операция прервана")
+            raise ValueError('AceEngine is freeze')
 
-                break_cond = t >= AcePlayer.TIMEOUT_FREEZE * 10
-                if msg == TSMessage.START:
-                    break_cond = time.time() - self.prebuf['last_update'] >= AcePlayer.TIMEOUT_FREEZE
-
-                if break_cond:
-                    self.parent.showStatus("Ошибка ожидания. Операция прервана")
-                    raise ValueError('AceEngine is freeze')
-            return self.sock_thr.getTSMessage()
         except Exception as e:
-            log.e(fmt('_Wait error: {0}', e))
+            log.e(fmt('_wait_message error: {0}', e))
+            self.waiting["msg"] = None
             self.next_source()
 
     def _createThread(self):
@@ -403,51 +403,61 @@ class AcePlayer(TPlayer):
         self.parent.showStatus("Загрузка торрента")
         self.stop()
 
-        if self._sendCommand(comm):
-            msg = self._Wait(TSMessage.LOADRESP)
+        if self._send_command(comm):
+            msg = self._wait_message(TSMessage.LOADRESP)
             if msg:
-                if msg.getType() == TSMessage.LOADRESP:
-                    try:
-                        log.d(fmt('_load_torrent - {0}', msg.getType()))
-                        log.d('Compile file list')
-                        jsonfile = msg.getParams()['json']
-                        if 'files' not in jsonfile:
-                            self.parent.showStatus(jsonfile['message'])
-                            self.last_error = Exception(jsonfile['message'])
-                            log.e(fmt('Compile file list {0}', self.last_error))
-                            return
-                        self.count = len(jsonfile['files'])
-                        self.files = {}
-                        for f in jsonfile['files']:
-                            self.files[f[1]] = urllib.unquote_plus(urllib.quote(f[0]))
-                        log.d('End Compile file list')
-                    except Exception as e:
-                        log.e(fmt('_load_torrent error: {0}', e))
-                        self.last_error = e
-                        self.end()
-                else:
-                    self.last_error = 'Incorrect msg from AceEngine'
-                    self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
-                    log.f(fmt('Incorrect msg from AceEngine {0}', msg.getType()))
-                    self.stop()
-                    return
+                try:
+                    log.d(fmt('_load_torrent - {0}', msg.getType()))
+                    log.d('Compile file list')
+                    jsonfile = msg.getParams()['json']
+                    if 'files' not in jsonfile:
+                        self.parent.showStatus(jsonfile['message'])
+                        self.last_error = Exception(jsonfile['message'])
+                        log.e(fmt('Compile file list {0}', self.last_error))
+                        return
+                    self.count = len(jsonfile['files'])
+                    self.files = {}
+                    for f in jsonfile['files']:
+                        self.files[f[1]] = urllib.unquote_plus(urllib.quote(f[0]))
+                    log.d('End Compile file list')
+                except Exception as e:
+                    log.e(fmt('_load_torrent error: {0}', e))
+                    self.last_error = e
+                    self.end()
+            else:
+                self.last_error = 'Incorrect msg from AceEngine'
+                self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
+                self.stop()
+                return
 
             self.parent.hideStatus()
 
     def _stateHandler(self, state):
+        """
+        Run when a TSMessage are received.
+        If a message is waiting, then stop waiting.
+        :state: Received TSMessage
+        """
         try:
             if state.getType() == TSMessage.STATUS and self.parent:
                 _params = state.getParams()
                 if _params.get('main'):
-
                     _descr = _params['main'].split(';')
-                    if _descr[0] == 'prebuf':
+
+                    if _descr[0] == 'starting':
+                        self.prebuf['value'] = 0
+
+                    elif _descr[0] == 'prebuf':
                         if _descr[1] != self.prebuf['value']:
-                            self.prebuf['last_update'] = time.time()
+                            self.prebuf['last_update'] = state.getTime()
                             self.prebuf['value'] = _descr[1]
                             log.d('_stateHandler: Пытаюсь показать состояние')
                             self.parent.showStatus(fmt('Пребуферизация {0}', self.prebuf['value']))
                             self.parent.player.showStatus(fmt('Пребуферизация {0}', self.prebuf['value']))
+
+                        if time.time() - self.prebuf['last_update'] >= AcePlayer.TIMEOUT_FREEZE:
+                            log.w('AceEngine is freeze')
+                            self.next_source()
 
                     elif _descr[0] == 'check':
                         log.d(fmt('_stateHandler: Проверка {0}', _descr[1]))
@@ -459,7 +469,7 @@ class AcePlayer(TPlayer):
                         # _descr[5], _descr[7])) @IgnorePep8
 
                         if _descr[1] != self.prebuf['value']:
-                            self.prebuf['last_update'] = time.time()
+                            self.prebuf['last_update'] = state.getTime()
                             self.prebuf['value'] = _descr[1]
 #                             self.parent.player.showStatus(fmt('Буферизация {0}', self.prebuf['value']))
                         if time.time() - self.prebuf['last_update'] >= AcePlayer.TIMEOUT_FREEZE:
@@ -475,9 +485,9 @@ class AcePlayer(TPlayer):
 
             elif state.getType() == TSMessage.EVENT:
                 if state.getParams() == 'getuserdata':
-                    self._sendCommand(fmt('USERDATA [{"gender": {0}}, {"age": {1}}]',
-                                          utils.str2int(defines.GENDER) + 1,
-                                          utils.str2int(defines.AGE) + 1))
+                    self._send_command(fmt('USERDATA [{"gender": {0}}, {"age": {1}}]',
+                                           utils.str2int(defines.GENDER) + 1,
+                                           utils.str2int(defines.AGE) + 1))
                 elif state.getParams().startswith('showdialog'):
                     _parts = state.getParams().split()
                     self.parent.showStatus(fmt('{0}: {1}', urllib.unquote(_parts[2].split('=')[1]),
@@ -487,6 +497,14 @@ class AcePlayer(TPlayer):
 
         except Exception as e:
             log.e(fmt('_stateHandler error: "{0}"', e))
+        finally:
+            try:
+                if self.waiting['msg'] == state.getType():
+                    self.waiting['msg'] = state
+                    self.waiting['event'].set()
+
+            except Exception as e:
+                log.e(fmt('_stateHandler error: "{0}"', e))
 
     def play_item(self, title='', icon='', thumb='', *args, **kwargs):
         res = None
@@ -506,37 +524,35 @@ class AcePlayer(TPlayer):
                    spons=spons)
         log.d("Запуск торрента")
         xbmc.sleep(4)
-        if self._sendCommand(comm):
+        if self._send_command(comm):
             self.parent.showStatus("Запуск торрента")
-            msg = self._Wait(TSMessage.START)
+            msg = self._wait_message(TSMessage.START)
             if msg:
-                if msg.getType() == TSMessage.START:
-                    try:
-                        _params = msg.getParams()
-                        if not _params.get('url'):
-                            self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
-                            raise Exception(fmt('Incorrect msg from AceEngine {0}', msg.getType()))
+                try:
+                    _params = msg.getParams()
+                    if not _params.get('url'):
+                        self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
+                        raise Exception(fmt('Incorrect msg from AceEngine {0}', msg.getType()))
 
-                        self.link = _params['url'].replace('127.0.0.1', self.server_ip).replace('6878', self.webport)
-                        log.d(fmt('Преобразование ссылки: {0}', self.link))
-                        self.sock_thr.msg = TSMessage()
-
-                        res = TPlayer.play_item(self, title, icon, thumb)
-                    except Exception as e:
-                        log.e(fmt('play_item error: {0}', e))
-                        self.last_error = e
-                        self.parent.showStatus("Ошибка. Операция прервана")
-                else:
-                    self.last_error = fmt('Incorrect msg from AceEngine {0}', msg.getType())
-                    log.e(self.last_error)
-                    self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
+                    self.link = _params['url'].replace('127.0.0.1', self.server_ip).replace('6878', self.webport)
+                    log.d(fmt('Преобразование ссылки: {0}', self.link))
+                    res = TPlayer.play_item(self, title, icon, thumb)
+                except Exception as e:
+                    log.e(fmt('play_item error: {0}', e))
+                    self.last_error = e
+                    self.parent.showStatus("Ошибка. Операция прервана")
+            else:
+                self.last_error = 'Incorrect msg from AceEngine'
+                log.e(self.last_error)
+                self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
             self.stop()
             return res
 
     def end(self):
         self.link = None
-        if self._sendCommand('STOP'):
-            self._sendCommand('SHUTDOWN')
+        if self._send_command('STOP'):
+            self._send_command('SHUTDOWN')
+        self.waiting['msg'] = None
         self.last_error = None
         if self.sock_thr:
             self.sock_thr.end()
@@ -547,7 +563,8 @@ class AcePlayer(TPlayer):
     def stop(self):
         log('stop player method')
         self.link = None
-        self._sendCommand('STOP')
+        self._send_command('STOP')
+        self.waiting['msg'] = None
         if self.sock_thr:
             self.sock_thr.end()
             self.sock_thr.join()
@@ -569,8 +586,8 @@ class TSMessage:
     RESUME = 'RESUME'
     NONE = ''
 
-    def __init__(self):
-        self.type = TSMessage.NONE
+    def __init__(self, tstype=''):
+        self.type = tstype
         self.update_time = time.time()
         self.params = {}
 
@@ -586,9 +603,6 @@ class TSMessage:
     def setParams(self, value):
         self.params = value
 
-    def setType(self, value):
-        self.type = value
-
 
 class SockThread(threading.Thread):
 
@@ -601,10 +615,8 @@ class SockThread(threading.Thread):
         self.buffer = 65020
         self.isRecv = False
         self.lastRecv = ''
-        self.lstCmd = ''
         self.active = False
         self.error = None
-        self.msg = TSMessage()
         self.state_handler = None
         self.owner = None
 
@@ -631,8 +643,7 @@ class SockThread(threading.Thread):
                 self.end()
                 self.error = e
                 log.e(fmt('RECV THREADING {0}', e))
-                _msg = TSMessage()
-                _msg.type = TSMessage.ERROR
+                _msg = TSMessage(TSMessage.ERROR)
                 _msg.params = 'Ошибка соединения с AceEngine'
                 self.state_handler(_msg)
         log.d('Exit from sock thread')
@@ -646,27 +657,25 @@ class SockThread(threading.Thread):
             _msg = strmsg[:posparam]
 
         if _msg == TSMessage.HELLOTS:
-            self.msg = TSMessage()
-            self.msg.setType(TSMessage.HELLOTS)
+            msg = TSMessage(_msg)
             log.d(strmsg)
             prms = strmsg[posparam + 1:].split(" ")
-            self.msg.setParams({})
+            msg.setParams({})
             for prm in prms:
                 _prm = prm.split('=')
-                self.msg.getParams()[_prm[0]] = _prm[1]
-        elif _msg == TSMessage.AUTH:
-            self.msg = TSMessage()
-            self.msg.setType(TSMessage.AUTH)
-            self.msg.setParams(strmsg[posparam + 1:])
+                msg.getParams()[_prm[0]] = _prm[1]
+            self.state_handler(msg)
+
         elif _msg == TSMessage.LOADRESP:
-            self.msg = TSMessage()
+            msg = TSMessage(_msg)
             strparams = strmsg[posparam + 1:]
             posparam = strparams.find(' ')
             _params = {}
             _params['qid'] = strparams[:posparam]
             _params['json'] = json.loads(strparams[posparam + 1:])
-            self.msg.setType(TSMessage.LOADRESP)
-            self.msg.setParams(_params)
+            msg.setParams(_params)
+            self.state_handler(msg)
+
         elif _msg == TSMessage.STATUS:
             buf = strmsg[posparam + 1:].split('|')
             _params = {}
@@ -677,26 +686,14 @@ class SockThread(threading.Thread):
             if strmsg.find('err') >= 0:
                 raise Exception(strmsg[posparam + 1:])
             elif self.state_handler:
-                self.status = TSMessage()
-                self.status.setType(TSMessage.STATUS)
+                self.status = TSMessage(_msg)
                 self.status.setParams(_params)
                 self.state_handler(self.status)
             else:
                 log.w(fmt('I DONT KNOW HOW IT PROCESS {0}', strmsg))
-        elif _msg == TSMessage.STATE:
-            if self.state_handler:
-                self.state = TSMessage()
-                self.state.setType(TSMessage.STATE)
-                self.state.setParams(strmsg[posparam + 1:])
-                self.state_handler(self.state)
-        elif _msg == TSMessage.EVENT:
-            self.event = TSMessage()
-            _strparams = strmsg[posparam + 1:]
-            self.event.setType(TSMessage.EVENT)
-            self.event.setParams(_strparams)
-            self.state_handler(self.event)
+
         elif _msg == TSMessage.START:
-            self.msg = TSMessage()
+            msg = TSMessage(_msg)
             _strparams = strmsg[posparam + 1:].split(' ')
             _params = {}
             log.d(strmsg)
@@ -710,15 +707,13 @@ class SockThread(threading.Thread):
 
             else:
                 _params['url'] = _strparams[0].split("=")[1].replace("%3A", ":")
-            self.msg.setType(TSMessage.START)
-            self.msg.setParams(_params)
-        elif _msg in (TSMessage.PAUSE, TSMessage.RESUME):
-            msg = TSMessage()
-            msg.setType(_msg)
+            msg.setParams(_params)
             self.state_handler(msg)
 
-    def getTSMessage(self):
-        return copy.deepcopy(self.msg)
+        else:
+            msg = TSMessage(_msg)
+            msg.setParams(strmsg[posparam + 1:])
+            self.state_handler(msg)
 
     def is_active(self):
         return self.active

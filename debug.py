@@ -17,7 +17,7 @@ try:
     # for remote debug edit pydevd_file_utils.py on client
     import pydevd
     pydevd.settrace('localhost', stdoutToServer=True, stderrToServer=True)
-except:
+except Exception:
     t, v, tb = sys.exc_info()
     print "{0}:{1}".format(t, v)
     print "For remote debug in eclipse you must append org.python.pydev.pysrc to sys.path."
