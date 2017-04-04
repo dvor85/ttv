@@ -123,6 +123,7 @@ class RotateScreen(threading.Thread):
         self.img_control = img_control
         self.screens = screens
         self.daemon = False
+        self.name = "RotateScreen"
 
     def run(self):
         self.active = True

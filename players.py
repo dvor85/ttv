@@ -586,10 +586,10 @@ class TSMessage:
     RESUME = 'RESUME'
     NONE = ''
 
-    def __init__(self, tstype=''):
+    def __init__(self, tstype='', params=''):
         self.type = tstype
         self.update_time = time.time()
-        self.params = {}
+        self.params = params
 
     def getTime(self):
         return self.update_time
@@ -599,9 +599,6 @@ class TSMessage:
 
     def getParams(self):
         return self.params
-
-    def setParams(self, value):
-        self.params = value
 
 
 class SockThread(threading.Thread):
@@ -656,46 +653,32 @@ class SockThread(threading.Thread):
         else:
             _msg = strmsg[:posparam]
 
+        _params = {}
+
         if _msg == TSMessage.HELLOTS:
-            msg = TSMessage(_msg)
             log.d(strmsg)
             prms = strmsg[posparam + 1:].split(" ")
-            msg.setParams({})
             for prm in prms:
                 _prm = prm.split('=')
-                msg.getParams()[_prm[0]] = _prm[1]
-            self.state_handler(msg)
+                _params[_prm[0]] = _prm[1]
 
         elif _msg == TSMessage.LOADRESP:
-            msg = TSMessage(_msg)
             strparams = strmsg[posparam + 1:]
             posparam = strparams.find(' ')
-            _params = {}
             _params['qid'] = strparams[:posparam]
             _params['json'] = json.loads(strparams[posparam + 1:])
-            msg.setParams(_params)
-            self.state_handler(msg)
 
         elif _msg == TSMessage.STATUS:
             buf = strmsg[posparam + 1:].split('|')
-            _params = {}
             for item in buf:
                 buf1 = item.split(':')
                 _params[buf1[0]] = buf1[1]
 
             if strmsg.find('err') >= 0:
                 raise Exception(strmsg[posparam + 1:])
-            elif self.state_handler:
-                self.status = TSMessage(_msg)
-                self.status.setParams(_params)
-                self.state_handler(self.status)
-            else:
-                log.w(fmt('I DONT KNOW HOW IT PROCESS {0}', strmsg))
 
         elif _msg == TSMessage.START:
-            msg = TSMessage(_msg)
             _strparams = strmsg[posparam + 1:].split(' ')
-            _params = {}
             log.d(strmsg)
             if _strparams.__len__() >= 2:
                 log.d(_strparams)
@@ -707,13 +690,11 @@ class SockThread(threading.Thread):
 
             else:
                 _params['url'] = _strparams[0].split("=")[1].replace("%3A", ":")
-            msg.setParams(_params)
-            self.state_handler(msg)
 
         else:
-            msg = TSMessage(_msg)
-            msg.setParams(strmsg[posparam + 1:])
-            self.state_handler(msg)
+            _params = strmsg[posparam + 1:]
+
+        self.state_handler(TSMessage(_msg, _params))
 
     def is_active(self):
         return self.active
