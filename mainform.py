@@ -120,10 +120,10 @@ class RotateScreen(threading.Thread):
     def __init__(self, img_control, screens):
         threading.Thread.__init__(self)
         self.active = False
+        self.name = 'RotateScreen'
         self.img_control = img_control
         self.screens = screens
         self.daemon = False
-        self.name = "RotateScreen"
 
     def run(self):
         self.active = True
@@ -138,6 +138,71 @@ class RotateScreen(threading.Thread):
     def stop(self):
         self.active = False
         self.img_control.setImage('')
+
+
+class LoopPlay(threading.Thread):
+
+    def __init__(self, parent):
+        threading.Thread.__init__(self)
+        self.active = False
+        self.daemon = False
+        self.parent = parent
+        self.name = 'LoopPlay'
+
+    def stop(self):
+        self.active = False
+        self.parent.player.manualStop()
+
+    def run(self):
+        self.active = True
+        while self.active and not defines.isCancel():
+            try:
+                selItem = self.parent.list.getListItem(self.parent.selitem_id)
+                self.parent.cur_channel = selItem.getProperty('name')
+                sel_chs = self.parent.get_channel_by_name(self.parent.cur_channel)
+                if not sel_chs:
+                    msg = "Канал временно не доступен"
+                    self.parent.showStatus(msg)
+                    raise Exception(fmt("{msg}. Возможно не все каналы загрузились...", msg=msg))
+
+                defines.ADDON.setSetting('cur_category', self.parent.cur_category)
+                defines.ADDON.setSetting('cur_channel', self.parent.cur_channel)
+
+                self.parent.player.Start(sel_chs)
+
+                if manual_stopped.is_set():
+                    break
+                if not defines.isCancel():
+                    xbmc.sleep(223)
+                    self.parent.select_channel()
+
+            except Exception as e:
+                log.e(fmt('LoopPlay error: {0}', e))
+                xbmc.sleep(1000)
+
+        self.parent.player.close()
+
+        if xbmc.getCondVisibility("Window.IsVisible(home)"):
+            log.d("Close from HOME Window")
+            self.parent.close()
+        elif xbmc.getCondVisibility("Window.IsVisible(video)"):
+            self.parent.close()
+            log.d("Is Video Window")
+        elif xbmc.getCondVisibility("Window.IsVisible(programs)"):
+            self.parent.close()
+            log.d("Is programs Window")
+        elif xbmc.getCondVisibility("Window.IsVisible(addonbrowser)"):
+            self.parent.close()
+            log.d("Is addonbrowser Window")
+        elif xbmc.getCondVisibility("Window.IsVisible(12345)"):
+            self.parent.close()
+            log.d("Is plugin Window")
+        else:
+            jrpc = json.loads(xbmc.executeJSONRPC(
+                '{"jsonrpc":"2.0","method":"GUI.GetProperties","params":{"properties":["currentwindow"]},"id":1}'))
+            if jrpc["result"]["currentwindow"]["id"] == 10025:
+                log.d("Is video plugins window")
+                self.parent.close()
 
 
 class WMainForm(xbmcgui.WindowXML):
@@ -194,6 +259,7 @@ class WMainForm(xbmcgui.WindowXML):
 
         self.timers = {}
         self.rotate_screen_thr = None
+        self.loop_play_thr = None
 
     def onInit(self):
         self.img_progress = self.getControl(WMainForm.IMG_PROGRESS)
@@ -433,9 +499,17 @@ class WMainForm(xbmcgui.WindowXML):
                 self.startChannel()
         self.hideStatus()
 
+    def Play(self):
+        if self.loop_play_thr:
+            self.loop_play_thr.stop()
+            self.loop_play_thr.join(2)
+
+        self.loop_play_thr = LoopPlay(self)
+        self.loop_play_thr.start()
+
     def startChannel(self):
         self.select_channel()
-        self.LoopPlay()
+        self.Play()
 
     def select_channel(self, sch='', timeout=0):
         def clear():
@@ -484,56 +558,6 @@ class WMainForm(xbmcgui.WindowXML):
             self.timers[WMainForm.TIMER_HIDE_WINDOW].daemon = False
             self.timers[WMainForm.TIMER_HIDE_WINDOW].start()
 
-    def LoopPlay(self, *args):
-        while not defines.isCancel():
-            try:
-                selItem = self.list.getListItem(self.selitem_id)
-                self.cur_channel = selItem.getProperty('name')
-                sel_chs = self.get_channel_by_name(self.cur_channel)
-                if not sel_chs:
-                    msg = "Канал временно не доступен"
-                    self.showStatus(msg)
-                    raise Exception(fmt("{msg}. Возможно не все каналы загрузились...", msg=msg))
-
-                defines.ADDON.setSetting('cur_category', self.cur_category)
-                defines.ADDON.setSetting('cur_channel', self.cur_channel)
-
-                self.player.Start(sel_chs)
-
-                if manual_stopped.is_set():
-                    break
-                if not defines.isCancel():
-                    xbmc.sleep(223)
-                    self.select_channel()
-
-            except Exception as e:
-                log.e(fmt('LoopPlay error: {0}', e))
-                xbmc.sleep(1000)
-
-        self.player.close()
-
-        if xbmc.getCondVisibility("Window.IsVisible(home)"):
-            log.d("Close from HOME Window")
-            self.close()
-        elif xbmc.getCondVisibility("Window.IsVisible(video)"):
-            self.close()
-            log.d("Is Video Window")
-        elif xbmc.getCondVisibility("Window.IsVisible(programs)"):
-            self.close()
-            log.d("Is programs Window")
-        elif xbmc.getCondVisibility("Window.IsVisible(addonbrowser)"):
-            self.close()
-            log.d("Is addonbrowser Window")
-        elif xbmc.getCondVisibility("Window.IsVisible(12345)"):
-            self.close()
-            log.d("Is plugin Window")
-        else:
-            jrpc = json.loads(xbmc.executeJSONRPC(
-                '{"jsonrpc":"2.0","method":"GUI.GetProperties","params":{"properties":["currentwindow"]},"id":1}'))
-            if jrpc["result"]["currentwindow"]["id"] == 10025:
-                log.d("Is video plugins window")
-                self.close()
-
     def onClick(self, controlID):
         log.d(fmt('onClick {0}', controlID))
         if controlID == 200:
@@ -555,7 +579,7 @@ class WMainForm(xbmcgui.WindowXML):
                 return
 
             self.selitem_id = self.list.getSelectedPosition()
-            self.LoopPlay()
+            self.Play()
 
         elif controlID == WMainForm.BTN_FULLSCREEN:
             self.player.Show()
@@ -705,5 +729,8 @@ class WMainForm(xbmcgui.WindowXML):
 
         if self.rotate_screen_thr:
             self.rotate_screen_thr.stop()
+
+        if self.loop_play_thr:
+            self.loop_play_thr.stop()
 
         xbmcgui.WindowXML.close(self)

@@ -80,6 +80,7 @@ class MyPlayer(xbmcgui.WindowXML):
 
         self.control_window.setVisible(True)
         self.hide_control_window(timeout=5)
+#         self.visible = True
 
     def init_channel_number(self):
         if self.channel_number != 0:
@@ -164,15 +165,21 @@ class MyPlayer(xbmcgui.WindowXML):
         if self.progress:
             self.progress.setPercent(0)
 
-    def Stop(self):
-        log('AutoStop')
-        # xbmc.executebuiltin('PlayerControl(Stop)')
+    def autoStop(self):
+        log('autoStop')
         players.manual_stopped.clear()
+        if self._player:
+            self._player.stop()
+
+    def manualStop(self):
+        log('manualStop')
+        players.manual_stopped.set()
         if self._player:
             self._player.stop()
 
     def Show(self):
         if self._player:
+            #             if not self.visible:
             self.show()
 
     def Start(self, channels):
@@ -227,7 +234,7 @@ class MyPlayer(xbmcgui.WindowXML):
             log.d(fmt('CHANNEL NUMBER IS: {0}', self.channel_number))
             if 0 < self.channel_number < self.parent.list.size() and self.parent.selitem_id != self.channel_number:
                 self.parent.selitem_id = self.channel_number
-                self.Stop()
+                self.autoStop()
             else:
                 self.hideStatus()
             self.channel_number = self.parent.selitem_id
@@ -328,17 +335,17 @@ class MyPlayer(xbmcgui.WindowXML):
                 self.setFocusId(MyPlayer.CONTROL_BUTTON_PAUSE)
             else:
                 self.setFocusId(self.focusId)
-            self.setFocusId(self.getFocusId())
-            self.control_window.setVisible(True)
-            self.hide_control_window(timeout=5)
+
+        self.setFocusId(self.getFocusId())
+        self.control_window.setVisible(True)
+        self.hide_control_window(timeout=5)
 
     def onClick(self, controlID):
         if controlID == MyPlayer.CONTROL_BUTTON_STOP:
             self.close()
-        if controlID == self.CONTROL_BUTTON_INFOWIN:
-            self.parent.showInfoWindow()
 
     def close(self):
+        self.visible = False
         for timer in self.timers.itervalues():
             if timer:
                 timer.cancel()

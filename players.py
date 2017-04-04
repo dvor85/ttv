@@ -45,7 +45,6 @@ class TPlayer(xbmc.Player):
 
     def __init__(self, parent=None, *args):
         self.parent = parent
-
         self.link = None  # Для передачи ссылки плееру
 
     def onPlayBackStopped(self):
@@ -137,7 +136,7 @@ class AcePlayer(TPlayer):
         self.port_file = ''
         self.sock_thr = None
         self.prebuf = {"last_update": time.time(), "value": 0}
-        self.waiting = {"msg": None, "event": threading.Event()}
+        self.waiting = Waiting()
 
         log.d(defines.ADDON.getSetting('ip_addr'))
         if defines.ADDON.getSetting('ip_addr'):
@@ -369,23 +368,26 @@ class AcePlayer(TPlayer):
         :msg: Message for wait (START, AUTH, etc)
         :return: TSMessage object if wait was successfuly, else None
         """
-        log.d(fmt('wait message: {0}', msg))
-        try:
-            self.waiting['msg'] = msg
-            self.waiting['event'].clear()
-            for t in xrange(AcePlayer.TIMEOUT_FREEZE * 3):  # @UnusedVariable
-                if not self.waiting['msg'] or self.sock_thr.error or defines.isCancel():
-                    raise ValueError(fmt('Abort waiting message: "{0}"', msg))
-                if self.waiting['event'].wait(1):
-                    return self.waiting['msg']
+        with self.waiting.lock:
+            log.d(fmt('wait message: {0}', msg))
+            try:
+                self.waiting.msg = msg
+                self.waiting.event.clear()
+                for t in xrange(AcePlayer.TIMEOUT_FREEZE * 3):  # @UnusedVariable
+                    log.d(fmt("waiting message {msg} ({t})", msg=msg, t=t))
+                    if not self.waiting.msg or self.sock_thr.error or defines.isCancel():
+                        raise ValueError(fmt('Abort waiting message: "{0}"', msg))
+                    if self.waiting.event.wait(1):
+                        return self.waiting.msg
 
-            self.parent.showStatus("Ошибка ожидания. Операция прервана")
-            raise ValueError('AceEngine is freeze')
+                self.parent.showStatus("Ошибка ожидания. Операция прервана")
+                raise ValueError('AceEngine is freeze')
 
-        except Exception as e:
-            log.e(fmt('_wait_message error: {0}', e))
-            self.waiting["msg"] = None
-            self.next_source()
+            except Exception as e:
+                log.e(fmt('_wait_message error: {0}', e))
+                self.waiting.msg = None
+                if not manual_stopped.is_set():
+                    self.next_source()
 
     def _createThread(self):
         self.sock_thr = SockThread(self.sock)
@@ -499,9 +501,9 @@ class AcePlayer(TPlayer):
             log.e(fmt('_stateHandler error: "{0}"', e))
         finally:
             try:
-                if self.waiting['msg'] == state.getType():
-                    self.waiting['msg'] = state
-                    self.waiting['event'].set()
+                if self.waiting.msg == state.getType():
+                    self.waiting.msg = state
+                    self.waiting.event.set()
 
             except Exception as e:
                 log.e(fmt('_stateHandler error: "{0}"', e))
@@ -552,7 +554,7 @@ class AcePlayer(TPlayer):
         self.link = None
         if self._send_command('STOP'):
             self._send_command('SHUTDOWN')
-        self.waiting['msg'] = None
+        self.waiting.msg = None
         self.last_error = None
         if self.sock_thr:
             self.sock_thr.end()
@@ -564,7 +566,7 @@ class AcePlayer(TPlayer):
         log('stop player method')
         self.link = None
         self._send_command('STOP')
-        self.waiting['msg'] = None
+        self.waiting.msg = None
         if self.sock_thr:
             self.sock_thr.end()
             self.sock_thr.join()
@@ -573,7 +575,15 @@ class AcePlayer(TPlayer):
         TPlayer.stop(self)
 
 
-class TSMessage:
+class Waiting():
+
+    def __init__(self):
+        self.event = threading.Event()
+        self.lock = threading.Lock()
+        self.msg = None
+
+
+class TSMessage():
     ERROR = 'ERROR'
     HELLOTS = 'HELLOTS'
     AUTH = 'AUTH'
@@ -618,6 +628,7 @@ class SockThread(threading.Thread):
         self.owner = None
 
     def run(self):
+        log.d(fmt("run SockThread{0}", self.ident))
         self.active = True
 
         def isCancel():
