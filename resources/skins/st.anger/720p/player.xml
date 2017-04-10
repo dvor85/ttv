@@ -54,7 +54,7 @@
             <posy>100</posy>
             <width>30</width>
             <height>30</height>
-            <onleft>209</onleft>
+            <onleft>208</onleft>
             <onright>200</onright>
             <texturefocus>pausefocus.png</texturefocus>
             <texturenofocus>pause.png</texturenofocus>
@@ -118,25 +118,12 @@
             <width>30</width>
             <height>30</height>
             <onleft>207</onleft>
-            <onright>209</onright>
+            <onright>208</onright>
             <texturefocus>fullscreenfocus.png</texturefocus>
             <texturenofocus>fullscreen.png</texturenofocus>
             <onclick>Action(FullScreen)</onclick>
           </control>
 
-          <control type="button" id="209">
-            <description>Show Window Information</description>
-            <posx>420</posx>
-            <posy>100</posy>
-            <width>30</width>
-            <height>30</height>
-            <onleft>208</onleft>
-            <onright>204</onright>
-            <visible>true</visible>
-            <texturefocus>infofocus.png</texturefocus>
-            <texturenofocus>infonofocus.png</texturenofocus>
-          </control>
-          
           <control type="image" id="202">
             <posx>20</posx>
             <posy>30</posy>
@@ -163,6 +150,8 @@
               <posy>60</posy>
               <visible>true</visible>
               <colordiffuse>88FFFFFF</colordiffuse>
+              <texturebg>progressback.png</texturebg>
+	      	  <midtexture>progressfront.png</midtexture>
               <width>1100</width>
               <height>9</height>
               <info>ListItem.Progress</info>
@@ -195,9 +184,9 @@
     <control type="label" id = "299">
         <animation effect="fade" delay="300" start="0" end="75" time="1000" pulse="True" condition="Control.IsVisible(299)">conditional</animation>
         <description>Switching</description>
-        <posx>500</posx>
-        <posy>350</posy>
-        <font>font30</font>
+        <align>center</align>
+        <aligny>center</aligny>        
+        <font>font60</font>
         <textcolor>FFFDFDF0</textcolor>
         <visible>true</visible>
         <label>Переключение...</label>

@@ -2,3 +2,7 @@
 *.pyo
 *.log
 *.db
+*.bak*
+.idea/
+logo/
+
