@@ -24,6 +24,7 @@ PTR_FILE = ADDON.getSetting('port_path')
 
 # TTV_VERSION = '1.5.3'
 AUTOSTART = ADDON.getSetting('autostart') == 'true'
+AUTOSTART_LASTCH = ADDON.getSetting('autostart_lastch') == 'true'
 GENDER = ADDON.getSetting('gender')
 AGE = ADDON.getSetting('age')
 FAVOURITE = ADDON.getSetting('favourite')

@@ -254,7 +254,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.cur_channel = defines.ADDON.getSetting('cur_channel')
         self.selitem_id = -1
         self.user = None
-        self.first_init = True
+        self.first_init = defines.AUTOSTART_LASTCH
         self.channel_number_str = ''
 
         self.timers = {}
