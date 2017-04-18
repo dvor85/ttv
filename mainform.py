@@ -619,7 +619,14 @@ class WMainForm(xbmcgui.WindowXML):
             self.showStatus('Канал не найден в избранном')
 
     def onAction(self, action):
-        # log.d(fmt('Событие {0}', action.getId()))
+        #         log.d(fmt('Событие {0}', action.getId()))
+
+        if action in (xbmcgui.ACTION_NAV_BACK, xbmcgui.ACTION_BACKSPACE, xbmcgui.ACTION_PARENT_DIR):
+            selItem = self.list.getListItem(0)
+            if selItem and selItem.getLabel() == "..":
+                self.fillCategory()
+                return
+
         if action in WMainForm.CANCEL_DIALOG:
             log.d('ACTION CLOSE FORM')
             self.close()
@@ -627,17 +634,17 @@ class WMainForm(xbmcgui.WindowXML):
         if not defines.isCancel():
             if action.getButtonCode() == 61513:
                 return
-            elif action.getId() in WMainForm.ARROW_ACTIONS:
+            elif action in WMainForm.ARROW_ACTIONS:
                 self.onFocus(self.getFocusId())
-            elif action.getId() in WMainForm.CONTEXT_MENU_IDS and self.getFocusId() == WMainForm.CONTROL_LIST:
-                if action.getId() == 101:
+            elif action in WMainForm.CONTEXT_MENU_IDS and self.getFocusId() == WMainForm.CONTROL_LIST:
+                if action == 101:
                     return
                 self.showMenuWindow()
 
-            elif action.getId() == WMainForm.ACTION_MOUSE:
+            elif action == WMainForm.ACTION_MOUSE:
                 if (self.getFocusId() == WMainForm.CONTROL_LIST):
                     self.onFocus(WMainForm.CONTROL_LIST)
-            elif action.getId() in WMainForm.DIGIT_BUTTONS:
+            elif action in WMainForm.DIGIT_BUTTONS:
                 # IN PRESSING DIGIT KEYS ############ @IgnorePep8
                 self.channel_number_str += str(action.getId() - 58)
                 self.select_channel(timeout=1)
