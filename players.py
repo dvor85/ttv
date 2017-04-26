@@ -487,7 +487,7 @@ class AcePlayer(TPlayer):
 
             elif state.getType() == TSMessage.EVENT:
                 if state.getParams() == 'getuserdata':
-                    self._send_command(fmt('USERDATA [{"gender": {0}}, {"age": {1}}]',
+                    self._send_command(fmt('USERDATA [{{"gender": {0}}}, {{"age": {1}}}]',
                                            utils.str2int(defines.GENDER) + 1,
                                            utils.str2int(defines.AGE) + 1))
                 elif state.getParams().startswith('showdialog'):
