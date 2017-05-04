@@ -310,22 +310,20 @@ class AcePlayer(TPlayer):
         log.d('Все ок')
         # Общаемся
         try:
-            if self._send_command('HELLOBG version=4'):
-                msg = self._wait_message(TSMessage.HELLOTS)
-                if msg:
-                    if not msg.getParams().get('key'):
-                        raise IOError('Incorrect msg from AceEngine')
-                    ace_version = msg.getParams().get('version')
-                    if ace_version < '3':
-                        raise ValueError("It's necessary to update AceStream")
+            msg = self._send_command('HELLOBG version=4', TSMessage.HELLOTS)
+            if msg:
+                if not msg.getParams().get('key'):
+                    raise IOError('Incorrect msg from AceEngine')
+                ace_version = msg.getParams().get('version')
+                if ace_version < '3':
+                    raise ValueError("It's necessary to update AceStream")
 
-                    if self._send_command('READY key=' + self._get_key(msg.getParams().get('key'))):
-                        msg = self._wait_message(TSMessage.AUTH)
-                        if msg:
-                            if utils.str2int(msg.getParams()) == 0:
-                                log.w('Пользователь не зарегистрирован')
-                        else:
-                            raise IOError('Incorrect msg from AceEngine')
+                msg = self._send_command('READY key=' + self._get_key(msg.getParams().get('key')), TSMessage.AUTH)
+                if msg:
+                    if utils.str2int(msg.getParams()) == 0:
+                        log.w('Пользователь не зарегистрирован')
+                else:
+                    raise IOError('Incorrect msg from AceEngine')
 
         except IOError as io:
             log.e(fmt('Error while auth: {0}', io))
@@ -343,21 +341,52 @@ class AcePlayer(TPlayer):
         log.d('End Init AceEngine')
         self.parent.hideStatus()
 
-    def _send_command(self, cmd):
-        for t in range(3):  # @UnusedVariable
-            try:
-                if not (self.sock_thr and self.sock_thr.is_active()):
-                    if cmd not in ("STOP", "SHUTDOWN"):
-                        self._createThread()
-                    else:
+    def _send_command(self, cmd, wait_msg=None):
+        """
+        Send command to aceEngine and wait a message if wait_msg given
+        :cmd: Command to send
+        :wai_msg: Message for wait (START, AUTH, etc)
+        :return: TSMessage object if wait_msg is given and waiting was successfuly, else
+                if wait_msg is not given and sending command was successfuly then return True else None
+        """
+        try:
+            if not (self.sock_thr and self.sock_thr.is_active()):
+                if cmd not in ("STOP", "SHUTDOWN"):
+                    self._createThread()
+                else:
+                    return
+            # Waiting message if need
+            log.d(fmt('>> "{0}"', cmd))
+            if wait_msg:
+                with self.waiting.lock:
+                    log.d(fmt('wait message: {0}', wait_msg))
+                    try:
+                        self.waiting.msg = wait_msg
+                        self.waiting.event.clear()
+                        self.sock.send(cmd + '\r\n')
+                        for t in xrange(AcePlayer.TIMEOUT_FREEZE * 3):  # @UnusedVariable
+                            log.d(fmt("waiting message {msg} ({t})", msg=wait_msg, t=t))
+                            if not self.waiting.msg or self.sock_thr.error or defines.isCancel():
+                                raise ValueError(fmt('Abort waiting message: "{0}"', wait_msg))
+                            if self.waiting.event.wait(1):
+                                return self.waiting.msg
+
+                        self.parent.showStatus("Ошибка ожидания. Операция прервана")
+                        raise ValueError('AceEngine is freeze')
+
+                    except Exception as e:
+                        log.e(fmt('_wait_message error: {0}', e))
+                        self.waiting.msg = None
+                        if not manual_stopped.is_set():
+                            self.next_source()
                         return
 
-                log.d(fmt('>> "{0}"', cmd))
-#                 raise Exception('Test Exception')
+            else:
                 self.sock.send(cmd + '\r\n')
                 return True
-            except Exception as e:
-                log.e(fmt('_send_command error: "{0}" cmd: "{1}"', e, cmd))
+
+        except Exception as e:
+            log.e(fmt('_send_command error: "{0}" cmd: "{1}"', e, cmd))
 
         if self.sock_thr and self.sock_thr.is_active():
             self.sock_thr.end()
@@ -406,7 +435,7 @@ class AcePlayer(TPlayer):
         self.stop()
 
         if self._send_command(comm):
-            msg = self._wait_message(TSMessage.LOADRESP)
+            msg = self._send_command(comm, TSMessage.LOADRESP)
             if msg:
                 try:
                     log.d(fmt('_load_torrent - {0}', msg.getType()))
@@ -526,29 +555,28 @@ class AcePlayer(TPlayer):
                    spons=spons)
         log.d("Запуск торрента")
         xbmc.sleep(4)
-        if self._send_command(comm):
-            self.parent.showStatus("Запуск торрента")
-            msg = self._wait_message(TSMessage.START)
-            if msg:
-                try:
-                    _params = msg.getParams()
-                    if not _params.get('url'):
-                        self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
-                        raise Exception(fmt('Incorrect msg from AceEngine {0}', msg.getType()))
+        self.parent.showStatus("Запуск торрента")
+        msg = self._send_command(comm, TSMessage.START)
+        if msg:
+            try:
+                _params = msg.getParams()
+                if not _params.get('url'):
+                    self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
+                    raise Exception(fmt('Incorrect msg from AceEngine {0}', msg.getType()))
 
-                    self.link = _params['url'].replace('127.0.0.1', self.server_ip).replace('6878', self.webport)
-                    log.d(fmt('Преобразование ссылки: {0}', self.link))
-                    res = TPlayer.play_item(self, title, icon, thumb)
-                except Exception as e:
-                    log.e(fmt('play_item error: {0}', e))
-                    self.last_error = e
-                    self.parent.showStatus("Ошибка. Операция прервана")
-            else:
-                self.last_error = 'Incorrect msg from AceEngine'
-                log.e(self.last_error)
-                self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
-            self.stop()
-            return res
+                self.link = _params['url'].replace('127.0.0.1', self.server_ip).replace('6878', self.webport)
+                log.d(fmt('Преобразование ссылки: {0}', self.link))
+                res = TPlayer.play_item(self, title, icon, thumb)
+            except Exception as e:
+                log.e(fmt('play_item error: {0}', e))
+                self.last_error = e
+                self.parent.showStatus("Ошибка. Операция прервана")
+        else:
+            self.last_error = 'Incorrect msg from AceEngine'
+            log.e(self.last_error)
+            self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
+        self.stop()
+        return res
 
     def end(self):
         self.link = None
