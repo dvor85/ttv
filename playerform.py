@@ -283,12 +283,14 @@ class MyPlayer(xbmcgui.WindowXML):
     def onAction(self, action):
         def viewEPG():
             selItem = self.parent.list.getListItem(self.channel_number)
-            self.chinfo.setLabel(selItem.getLabel())
-            self.showStatus('Переключение...')
+            if selItem and selItem.getProperty("type") == 'channel':
+                self.chinfo.setLabel(selItem.getLabel())
+                self.showStatus('Переключение...')
 
-            sel_chs = self.parent.get_channel_by_name(selItem.getProperty("name"))
-            if sel_chs:
-                self.UpdateEpg(sel_chs)
+                sel_chs = self.parent.get_channel_by_name(selItem.getProperty("name"))
+                if sel_chs:
+                    self.UpdateEpg(sel_chs)
+                return True
 
         # log.d(fmt('Action {0} | ButtonCode {1}', action.getId(), action.getButtonCode()))
         if action in MyPlayer.CANCEL_DIALOG or action.getId() == MyPlayer.ACTION_RBC:
@@ -307,9 +309,8 @@ class MyPlayer(xbmcgui.WindowXML):
                 self.dec_channel_number()
 
             self.channel_number_str = str(self.channel_number)
-            viewEPG()
-
-            self.run_selected_channel(timeout=5)
+            if viewEPG():
+                self.run_selected_channel(timeout=5)
 
         elif action.getId() in MyPlayer.DIGIT_BUTTONS:
             # IF PRESSED DIGIT KEYS - SWITCH CHANNEL ############## @IgnorePep8
@@ -322,9 +323,8 @@ class MyPlayer(xbmcgui.WindowXML):
                     self.channel_number_str = str(digit_pressed)
                     self.channel_number = utils.str2int(self.channel_number_str)
 
-                viewEPG()
-
-                self.run_selected_channel(timeout=5)
+                if viewEPG():
+                    self.run_selected_channel(timeout=5)
         elif action.getId() == 0 and action.getButtonCode() == 61530:
             xbmc.executebuiltin('Action(FullScreen)')
             xbmc.sleep(4000)

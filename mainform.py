@@ -158,17 +158,18 @@ class LoopPlay(threading.Thread):
         while self.active and not defines.isCancel():
             try:
                 selItem = self.parent.list.getListItem(self.parent.selitem_id)
-                self.parent.cur_channel = selItem.getProperty('name')
-                sel_chs = self.parent.get_channel_by_name(self.parent.cur_channel)
-                if not sel_chs:
-                    msg = "Канал временно не доступен"
-                    self.parent.showStatus(msg)
-                    raise Exception(fmt("{msg}. Возможно не все каналы загрузились...", msg=msg))
+                if selItem and selItem.getProperty('type') == "channel":
+                    self.parent.cur_channel = selItem.getProperty('name')
+                    sel_chs = self.parent.get_channel_by_name(self.parent.cur_channel)
+                    if not sel_chs:
+                        msg = "Канал временно не доступен"
+                        self.parent.showStatus(msg)
+                        raise Exception(fmt("{msg}. Возможно не все каналы загрузились...", msg=msg))
 
-                defines.ADDON.setSetting('cur_category', self.parent.cur_category)
-                defines.ADDON.setSetting('cur_channel', self.parent.cur_channel)
+                    defines.ADDON.setSetting('cur_category', self.parent.cur_category)
+                    defines.ADDON.setSetting('cur_channel', self.parent.cur_channel)
 
-                self.parent.player.Start(sel_chs)
+                    self.parent.player.Start(sel_chs)
 
                 if manual_stopped.is_set():
                     break
@@ -308,7 +309,7 @@ class WMainForm(xbmcgui.WindowXML):
             if not self.list:
                 return
             selItem = self.list.getSelectedItem()
-            if selItem and not selItem.getLabel() == '..':
+            if selItem and selItem.getProperty('type') == 'channel':
 
                 sel_chs = self.get_channel_by_name(selItem.getProperty("name"))
                 if sel_chs:
@@ -546,6 +547,7 @@ class WMainForm(xbmcgui.WindowXML):
             if isPlaying():
                 log.d('hide main window')
                 self.player.Show()
+                self.loadList()
             self.timers[WMainForm.TIMER_HIDE_WINDOW] = None
 
         if self.timers.get(WMainForm.TIMER_HIDE_WINDOW):
@@ -692,6 +694,7 @@ class WMainForm(xbmcgui.WindowXML):
                             chname = fmt("{0}. {1}", i + 1, ch.get_name())
                             chli = xbmcgui.ListItem(chname, ch.get_id(), ch.get_logo(), ch.get_logo())
                             chli.setProperty("icon", ch.get_logo())
+                            chli.setProperty('type', 'channel')
                             chli.setProperty("id", ch.get_id())
                             chli.setProperty("name", ch.get_name())
                             if self.cur_category not in WMainForm.USER_GROUPS:
