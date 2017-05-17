@@ -368,7 +368,7 @@ class AcePlayer(TPlayer):
                             log.d(fmt("waiting message {msg} ({t})", msg=wait_msg, t=t))
                             if not self.waiting.msg or self.sock_thr.error or defines.isCancel():
                                 raise ValueError(fmt('Abort waiting message: "{0}"', wait_msg))
-                            if self.waiting.event.wait(1):
+                            if self.waiting.wait(1):
                                 return self.waiting.msg
 
                         self.parent.showStatus("Ошибка ожидания. Операция прервана")
@@ -609,6 +609,10 @@ class Waiting():
         self.event = threading.Event()
         self.lock = threading.Lock()
         self.msg = None
+
+    def wait(self, timeout):
+        self.event.wait(timeout)
+        return self.event.is_set()
 
 
 class TSMessage():
