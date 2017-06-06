@@ -31,6 +31,7 @@ class MyPlayer(xbmcgui.WindowXML):
     DIGIT_BUTTONS = range(58, 68)
     CH_NAME_ID = 399
     DLG_SWITCH_ID = 299
+    PLAYER_WINDOW_ID = 12346
 
     TIMER_RUN_SEL_CHANNEL = 'run_selected_channel'
     TIMER_HIDE_CONTROL = 'hide_control_timer'
@@ -41,7 +42,6 @@ class MyPlayer(xbmcgui.WindowXML):
         self.parent = None
         self.channels = None
         self.title = ''
-        self.visible = False
         self.focusId = MyPlayer.CONTROL_WINDOW_ID
 
         self.timers = {}
@@ -80,7 +80,6 @@ class MyPlayer(xbmcgui.WindowXML):
 
         self.control_window.setVisible(True)
         self.hide_control_window(timeout=5)
-#         self.visible = True
 
     def init_channel_number(self):
         if self.channel_number != 0:
@@ -179,10 +178,13 @@ class MyPlayer(xbmcgui.WindowXML):
         if self._player:
             self._player.stop()
 
+    def isVisible(self):
+        return xbmc.getCondVisibility(fmt("Window.IsVisible({window})", window=MyPlayer.PLAYER_WINDOW_ID))
+
     def Show(self):
         if self._player:
-            #             if not self.visible:
-            self.show()
+            if not self.isVisible():
+                self.show()
 
     def Start(self, channels):
         """
@@ -332,7 +334,7 @@ class MyPlayer(xbmcgui.WindowXML):
         else:
             self.UpdateEpg(self.channels)
 
-        if not self.visible:
+        if not self.isVisible():
             if self.focusId == MyPlayer.CONTROL_WINDOW_ID:
                 self.setFocusId(MyPlayer.CONTROL_BUTTON_PAUSE)
             else:
@@ -347,7 +349,6 @@ class MyPlayer(xbmcgui.WindowXML):
             self.close()
 
     def close(self):
-        self.visible = False
         for timer in self.timers.itervalues():
             if timer:
                 timer.cancel()

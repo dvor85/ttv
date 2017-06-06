@@ -363,6 +363,7 @@ class AcePlayer(TPlayer):
                     try:
                         self.waiting.msg = wait_msg
                         self.waiting.event.clear()
+                        self.waiting.abort.clear()
                         self.sock.send(cmd + '\r\n')
                         for t in xrange(AcePlayer.TIMEOUT_FREEZE * 3):  # @UnusedVariable
                             log.d(fmt("waiting message {msg} ({t})", msg=wait_msg, t=t))
@@ -526,6 +527,15 @@ class AcePlayer(TPlayer):
             elif state.getType() == TSMessage.ERROR:
                 self.parent.showStatus(state.getParams())
 
+            elif state.getType() == TSMessage.STOP:
+                self.waiting.abort.set()
+
+            elif state.getType() == TSMessage.STATE:
+                _params = state.getParams()
+                _param = utils.str2int(_params)
+                if _param == 0:
+                    self.waiting.abort.set()
+
         except Exception as e:
             log.e(fmt('_stateHandler error: "{0}"', e))
         finally:
@@ -608,9 +618,12 @@ class Waiting():
     def __init__(self):
         self.event = threading.Event()
         self.lock = threading.Lock()
+        self.abort = threading.Event()
         self.msg = None
 
     def wait(self, timeout):
+        if self.abort.is_set():
+            raise Exception("Abort waiting")
         self.event.wait(timeout)
         return self.event.is_set()
 
@@ -623,6 +636,7 @@ class TSMessage():
     STATUS = 'STATUS'
     STATE = 'STATE'
     START = 'START'
+    STOP = 'STOP'
     EVENT = 'EVENT'
     PAUSE = 'PAUSE'
     RESUME = 'RESUME'
