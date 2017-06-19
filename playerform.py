@@ -51,6 +51,7 @@ class MyPlayer(xbmcgui.WindowXML):
         self.progress = None
         self.chinfo = None
         self.swinfo = None
+        self.cicon = None
         self.control_window = None
         self._re_source = re.compile('(loadPlayer|loadTorrent)\("(?P<src>[\w/_:.]+)"')
 
@@ -59,12 +60,15 @@ class MyPlayer(xbmcgui.WindowXML):
         if not (self.channels and self.parent):
             return
         self.progress = self.getControl(MyPlayer.CONTROL_PROGRESS_ID)
-        cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
+        self.cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
+        self.cicon.setVisible(False)
         for ch in self.channels.itervalues():
             logo = ch.get_logo()
             if logo:
-                cicon.setImage(logo)
+                self.cicon.setVisible(True)
                 break
+
+        self.cicon.setImage(logo)
         self.control_window = self.getControl(MyPlayer.CONTROL_WINDOW_ID)
         self.chinfo = self.getControl(MyPlayer.CH_NAME_ID)
         self.chinfo.setLabel(self.title)
@@ -108,11 +112,9 @@ class MyPlayer(xbmcgui.WindowXML):
         try:
             log.d('UpdateEpg')
 
-            cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
             for ch in chs.itervalues():
                 logo = ch.get_logo()
                 if logo:
-                    cicon.setImage(logo)
                     break
 
 #             for ch in self.channels.itervalues():
@@ -122,7 +124,8 @@ class MyPlayer(xbmcgui.WindowXML):
 #                     break
 #                 except Exception as e:
 #                     log.d(fmt("UpdateEpg error: {0}", e))
-
+            if self.cicon:
+                self.cicon.setImage(logo)
             self.parent.getEpg(chs, callback=self.showEpg, timeout=0.5)
 
         except Exception as e:
@@ -206,6 +209,9 @@ class MyPlayer(xbmcgui.WindowXML):
 
                         url = channel.get_url(player)
                         mode = channel.get_mode()
+                        logo = channel.get_logo()
+                        if self.cicon:
+                            self.cicon.setImage(logo)
                         log.d(fmt('Try to play with {0} player', player))
                         if player == 'ace':
                             self._player = players.AcePlayer.get_instance(parent=self.parent)
@@ -215,8 +221,8 @@ class MyPlayer(xbmcgui.WindowXML):
                             self._player = players.TPlayer.get_instance(parent=self.parent)
 
                         if self._player and self._player.play_item(index=0, title=self.title,
-                                                                   iconImage=channel.get_logo(),
-                                                                   thumbnailImage=channel.get_logo(),
+                                                                   iconImage=logo,
+                                                                   thumbnailImage=logo,
                                                                    url=url, mode=mode):
                             log.d('End playing')
                             return True
@@ -294,7 +300,7 @@ class MyPlayer(xbmcgui.WindowXML):
                     self.UpdateEpg(sel_chs)
                 return True
 
-        # log.d(fmt('Action {0} | ButtonCode {1}', action.getId(), action.getButtonCode()))
+#         log.d(fmt('Action {0} | ButtonCode {1}', action.getId(), action.getButtonCode()))
         if action in MyPlayer.CANCEL_DIALOG or action.getId() == MyPlayer.ACTION_RBC:
             log.d(fmt('Close player {0} {1}', action.getId(), action.getButtonCode()))
             if self.timers.get(MyPlayer.TIMER_RUN_SEL_CHANNEL):
@@ -303,6 +309,11 @@ class MyPlayer(xbmcgui.WindowXML):
                 self.UpdateEpg(self.channels)
             else:
                 self.close()
+
+        elif action in (xbmcgui.ACTION_NEXT_ITEM, xbmcgui.ACTION_PREV_ITEM):
+            if self._player:
+                self._player.next_source()
+
         elif action.getId() in (3, 4, 5, 6):
             # IF ARROW UP AND DOWN PRESSED - SWITCH CHANNEL ##### @IgnorePep8
             if action.getId() in (3, 5):

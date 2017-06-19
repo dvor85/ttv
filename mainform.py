@@ -13,6 +13,7 @@ from playerform import MyPlayer
 from players import manual_stopped
 from menu import MenuForm
 from sources.table import Channels as ChannelSources
+from sources import grouplang
 import favdb
 try:
     import simplejson as json
@@ -46,6 +47,7 @@ class ChannelGroups(UserDict):
 
     def addGroup(self, groupname, title=None):
         groupname = utils.utf(groupname)
+        groupname = grouplang.translate.get(groupname, groupname)
         self.data[groupname] = {}
         if title:
             title = utils.utf(title)
@@ -76,12 +78,16 @@ class ChannelGroups(UserDict):
                 groupname = utils.utf(ch.get_group())
             if groupname is None:
                 groupname = src_name
+            groupname = grouplang.translate.get(groupname, groupname)
             if utils.lower(groupname, 'utf8') in ("эротика") and utils.str2int(defines.AGE) < 2:
                 return
             if not self.data.get(groupname):
                 self.addGroup(groupname)
             chs = self.find_channel_by_name(groupname, ch.get_name())
             if chs:
+                for c in chs.itervalues():
+                    if c.get('url') and ch.get('url') and c['url'] == ch['url']:
+                        return
                 chs[src_name] = ch
             else:
                 self.getChannels(groupname).append({src_name: ch})

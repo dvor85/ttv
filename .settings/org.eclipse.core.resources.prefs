@@ -1,6 +1,8 @@
 eclipse.preferences.version=1
+encoding//sources/acestream.py=utf-8
 encoding//sources/allfon.py=utf-8
 encoding//sources/channel_info.py=utf-8
+encoding//sources/grouplang.py=utf-8
 encoding//sources/name_logo.py=utf-8
 encoding//sources/pomoyka.py=utf-8
 encoding//sources/table.py=utf-8

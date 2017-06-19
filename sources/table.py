@@ -5,9 +5,11 @@
 import ttv
 import pomoyka
 import allfon
+import acestream
 
 Channels = dict(
     ttv=ttv.TTV(),
     pomoyka=pomoyka.Pomoyka(),
     allfon=allfon.Allfon(),
+    acestream=acestream.Acestream()
 )
