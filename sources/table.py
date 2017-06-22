@@ -3,13 +3,17 @@
 
 
 import ttv
-import pomoyka
+import ttelik
 import allfon
 import acestream
+import defines
 
-Channels = dict(
-    ttv=ttv.TTV(),
-    pomoyka=pomoyka.Pomoyka(),
-    allfon=allfon.Allfon(),
-    acestream=acestream.Acestream()
-)
+ChannelSources = {}
+if defines.ADDON.getSetting('ttv') == 'true':
+    ChannelSources['ttv'] = ttv.Channels()
+if defines.ADDON.getSetting('ttelik') == 'true':
+    ChannelSources['ttelik'] = ttelik.Channels()
+if defines.ADDON.getSetting('allfon') == 'true':
+    ChannelSources['allfon'] = allfon.Channels()
+if defines.ADDON.getSetting('acestream') == 'true':
+    ChannelSources['acestream'] = acestream.Channels()

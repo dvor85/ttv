@@ -12,7 +12,7 @@ import threading
 from playerform import MyPlayer
 from players import manual_stopped
 from menu import MenuForm
-from sources.table import Channels as ChannelSources
+from sources.table import ChannelSources
 from sources import grouplang
 import favdb
 try:
@@ -257,8 +257,8 @@ class WMainForm(xbmcgui.WindowXML):
         self.list = None
         self.player = MyPlayer("player.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
         self.player.parent = self
-        self.cur_category = defines.ADDON.getSetting('cur_category')
-        self.cur_channel = defines.ADDON.getSetting('cur_channel')
+        self.cur_category = None
+        self.cur_channel = None
         self.selitem_id = -1
         self.user = None
         self.first_init = defines.AUTOSTART_LASTCH
@@ -269,6 +269,8 @@ class WMainForm(xbmcgui.WindowXML):
         self.loop_play_thr = None
 
     def onInit(self):
+        self.cur_category = defines.ADDON.getSetting('cur_category')
+        self.cur_channel = defines.ADDON.getSetting('cur_channel')
         self.img_progress = self.getControl(WMainForm.IMG_PROGRESS)
         self.txt_progress = self.getControl(WMainForm.TXT_PROGRESS)
         self.progress = self.getControl(WMainForm.PROGRESS_BAR)
@@ -553,7 +555,6 @@ class WMainForm(xbmcgui.WindowXML):
             if isPlaying():
                 log.d('hide main window')
                 self.player.Show()
-                self.loadList()
             self.timers[WMainForm.TIMER_HIDE_WINDOW] = None
 
         if self.timers.get(WMainForm.TIMER_HIDE_WINDOW):

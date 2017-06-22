@@ -12,7 +12,7 @@ log = logger.Logger(__name__)
 _servers = ['api.torrent-tv.ru', '1ttvxbmc.top']
 
 
-class TTVChannel(TChannel):
+class Channel(TChannel):
 
     def __init__(self, data={}, session=None):
         TChannel.__init__(self, data)
@@ -105,7 +105,7 @@ class TTVChannel(TChannel):
                 log.w(fmt('get_screenshots error: {0}', e))
 
 
-class TTV(TChannels):
+class Channels(TChannels):
 
     def __init__(self):
         self.user = {}
@@ -193,6 +193,6 @@ class TTV(TChannels):
                             continue
                         channel = ch
                         channel['cat'] = self._get_groupname_by_id(jdata.get("categories"), ch['group'])
-                        self.channels.append(TTVChannel(channel, self.session))
+                        self.channels.append(Channel(channel, self.session))
                     except Exception as e:
                         log.e(fmt('Add channel error: {0}', e))

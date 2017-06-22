@@ -10,7 +10,7 @@ log = logger.Logger(__name__)
 fmt = utils.fmt
 
 
-class AllfonChannel(TChannel):
+class Channel(TChannel):
 
     def __init__(self, data={}):
         TChannel.__init__(self, data=data)
@@ -20,11 +20,11 @@ class AllfonChannel(TChannel):
         return TChannel.get_name(self)
 
 
-class Allfon(TChannels):
+class Channels(TChannels):
 
     def __init__(self):
         self.url = 'http://super-pomoyka.us.to/trash/ttv-list/allfon.json'
-        TChannels.__init__(self, reload_interval=3600)
+        TChannels.__init__(self, reload_interval=900)
 
     def update_channels(self):
         TChannels.update_channels(self)
@@ -34,6 +34,6 @@ class Allfon(TChannels):
 
             chs = jdata.get('channels', [])
             for ch in chs:
-                self.channels.append(AllfonChannel(ch))
+                self.channels.append(Channel(ch))
         except Exception as e:
             log.error(fmt("get_channels error: {0}", e))

@@ -14,5 +14,5 @@ translate = {
     'other_18_plus': "Эротика",
     'amateur': "Эротика",
     'kids': "Детские",
-    'series': "Серийные",
+    'series': "Сериалы",
 }

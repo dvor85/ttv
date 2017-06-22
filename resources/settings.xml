@@ -8,6 +8,12 @@
 		<setting default="" id="login" label="Логин Torrent-tv.ru" type="text" />
 		<setting default="" id="password" label="Пароль Torrent-tv.ru" option="hidden" type="text" />	
 	</category>
+	<category label="Источники">
+		<setting id="ttv" label="Торрент-ТВ" type="bool" default="true" />
+		<setting id="ttelik" label="Торрент-телик" type="bool" default="true" />
+		<setting id="allfon" label="Allfon" type="bool" default="true" />
+		<setting id="acestream" label="Acestream" type="bool" default="true" />
+	</category>
 	<category label="AceStream">
 		<setting default="true" id="use_ace" label="Использовать Acestream, если доступно" type="bool" />
 		<setting id="gender" label="Пол" type="enum" values="Мужской|Женский" />
