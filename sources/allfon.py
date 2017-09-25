@@ -23,7 +23,7 @@ class Channel(TChannel):
 class Channels(TChannels):
 
     def __init__(self):
-        self.url = 'http://super-pomoyka.us.to/trash/ttv-list/allfon.json'
+        self.url = 'http://pomoyka.lib.emergate.net/trash/ttv-list/allfon.json'
         TChannels.__init__(self, reload_interval=900)
 
     def update_channels(self):
