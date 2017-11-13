@@ -69,19 +69,31 @@
             <width>30</width>
             <height>30</height>
             <onleft>204</onleft>
-            <onright>205</onright>
+            <onright>209</onright>
             <texturefocus>stopfocus.png</texturefocus>
             <texturenofocus>stop.png</texturenofocus>
             <onclick>XBMC.PlayerControl(Stop)</onclick>
           </control>
-          
-          <control type="button" id="205">
-            <description>VIDEO SETTINGS</description>
-            <posx>235</posx>
+          <control type="button" id="209">
+            <description>Следующий источник</description>
+            <posx>205</posx>
             <posy>100</posy>
             <width>30</width>
             <height>30</height>
             <onleft>200</onleft>
+            <onright>205</onright>
+            <texturefocus>nextitemfocus.png</texturefocus>
+            <texturenofocus>nextitem.png</texturenofocus>
+            <onclick>XBMC.PlayerControl(Next)</onclick>
+          </control>
+          
+          <control type="button" id="205">
+            <description>VIDEO SETTINGS</description>
+            <posx>275</posx>
+            <posy>100</posy>
+            <width>30</width>
+            <height>30</height>
+            <onleft>209</onleft>
             <onright>206</onright>
             <texturefocus>videosetfocus.png</texturefocus>
             <texturenofocus>videoset.png</texturenofocus>
@@ -89,7 +101,7 @@
           </control>
           <control type="button" id="206">
             <description>AUDIO SETTINGS</description>
-            <posx>270</posx>
+            <posx>310</posx>
             <posy>100</posy>
             <width>30</width>
             <height>30</height>
@@ -101,7 +113,7 @@
           </control>
           <control type="button" id="207">
             <description>CHANNEL LIST</description>
-            <posx>330</posx>
+            <posx>380</posx>
             <posy>100</posy>
             <width>30</width>
             <height>30</height>
@@ -113,7 +125,7 @@
           </control>
           <control type="button" id="208">
             <description>STANDARDP LAYER</description>
-            <posx>375</posx>
+            <posx>415</posx>
             <posy>100</posy>
             <width>30</width>
             <height>30</height>
