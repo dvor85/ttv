@@ -688,37 +688,37 @@ class WMainForm(xbmcgui.WindowXML):
             return
         log.d('fillChannels: Clear list')
         self.list.reset()
-        if not self.channel_groups.getChannels(self.cur_category):
-            self.fillCategory()
-            self.hideStatus()
-        else:
-            li = xbmcgui.ListItem('..')
-            self.list.addItem(li)
-            for i, chs in enumerate(self.channel_groups.getChannels(self.cur_category)):
-                if chs:
-                    for ch in chs.itervalues():
-                        try:
-                            chname = fmt("{0}. {1}", i + 1, ch.get_name())
-                            chli = xbmcgui.ListItem(chname, ch.get_id(), ch.get_logo(), ch.get_logo())
-                            chli.setProperty("icon", ch.get_logo())
-                            chli.setProperty('type', 'channel')
-                            chli.setProperty("id", ch.get_id())
-                            chli.setProperty("name", ch.get_name())
-                            if self.cur_category not in WMainForm.USER_GROUPS:
-                                chli.setProperty('commands', fmt("{0}", MenuForm.CMD_ADD_FAVOURITE))
-                            else:
-                                chli.setProperty('commands', fmt("{0},{1},{2},{3}",
-                                                                 MenuForm.CMD_MOVE_FAVOURITE,
-                                                                 MenuForm.CMD_DEL_FAVOURITE,
-                                                                 MenuForm.CMD_DOWN_FAVOURITE,
-                                                                 MenuForm.CMD_UP_FAVOURITE))
-                            self.list.addItem(chli)
-                            break
-                        except Exception as e:
-                            log.e(fmt("fillChannels error: {0}", e))
-            self.hideStatus()
-            if self.selitem_id < 1:
-                self.selitem_id = self.get_selitem_id(self.cur_channel)
+#         if not self.channel_groups.getChannels(self.cur_category):
+#             self.fillCategory()
+#             self.hideStatus()
+#         else:
+        li = xbmcgui.ListItem('..')
+        self.list.addItem(li)
+        for i, chs in enumerate(self.channel_groups.getChannels(self.cur_category)):
+            if chs:
+                for ch in chs.itervalues():
+                    try:
+                        chname = fmt("{0}. {1}", i + 1, ch.get_name())
+                        chli = xbmcgui.ListItem(chname, ch.get_id(), ch.get_logo(), ch.get_logo())
+                        chli.setProperty("icon", ch.get_logo())
+                        chli.setProperty('type', 'channel')
+                        chli.setProperty("id", ch.get_id())
+                        chli.setProperty("name", ch.get_name())
+                        if self.cur_category not in WMainForm.USER_GROUPS:
+                            chli.setProperty('commands', fmt("{0}", MenuForm.CMD_ADD_FAVOURITE))
+                        else:
+                            chli.setProperty('commands', fmt("{0},{1},{2},{3}",
+                                                             MenuForm.CMD_MOVE_FAVOURITE,
+                                                             MenuForm.CMD_DEL_FAVOURITE,
+                                                             MenuForm.CMD_DOWN_FAVOURITE,
+                                                             MenuForm.CMD_UP_FAVOURITE))
+                        self.list.addItem(chli)
+                        break
+                    except Exception as e:
+                        log.e(fmt("fillChannels error: {0}", e))
+        self.hideStatus()
+        if self.selitem_id < 1:
+            self.selitem_id = self.get_selitem_id(self.cur_channel)
 
     def fillCategory(self):
         def AddItem(groupname):
