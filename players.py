@@ -50,6 +50,7 @@ class TPlayer(xbmc.Player):
     def onPlayBackStopped(self):
         log('onPlayBackStopped')
         self.stop()
+#         self.next_source()
 
     def onPlayBackEnded(self):
         log('onPlayBackEnded')
@@ -107,6 +108,7 @@ class AcePlayer(TPlayer):
     MODE_NONE = None
 
     TIMEOUT_FREEZE = utils.str2num(defines.ADDON.getSetting('freeze_timeout'), 20)
+    ACE_PATH = utils.true_enc(defines.ADDON.getSetting('ace_path'), 'utf8')
 
     _instance = None
     _lock = threading.RLock()
@@ -184,6 +186,8 @@ class AcePlayer(TPlayer):
 
     def _getAceEngine_path(self):
         log.d('Считываем путь к ace_engine.exe')
+        if AcePlayer.ACE_PATH:
+            return AcePlayer.ACE_PATH
         if sys_platform == 'windows':
             import _winreg
             t = _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, 'Software\\ACEStream')  # @UndefinedVariable
@@ -192,7 +196,7 @@ class AcePlayer(TPlayer):
             finally:
                 _winreg.CloseKey(t)  # @UndefinedVariable
         elif sys_platform == 'linux':
-            return utils.true_enc(subprocess.check_output(["which", "acestreamengine"]).strip())
+            return "acestreamengine"
         else:
             return ""
 

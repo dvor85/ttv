@@ -20,7 +20,7 @@ class Channels(TChannels):
 
     def __init__(self):
         self.url = 'http://pomoyka.lib.emergate.net/trash/ttv-list/ace.json'
-        TChannels.__init__(self, reload_interval=900)
+        TChannels.__init__(self, reload_interval=1800)
 
     def update_channels(self):
         TChannels.update_channels(self)
