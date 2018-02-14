@@ -6,7 +6,8 @@
 		<setting default="0" id="favourite" label="База избранных" type="enum" values="Auto|Локальная" visible="false" />
 		<setting default="false" id="debug" label="Debug" type="bool" visible="false" />	
 		<setting default="" id="login" label="Логин Torrent-tv.ru" type="text" />
-		<setting default="" id="password" label="Пароль Torrent-tv.ru" option="hidden" type="text" />	
+		<setting default="" id="password" label="Пароль Torrent-tv.ru" option="hidden" type="text" />
+		<setting default="false" id="manual_stop" label="Manual stop playback alghoritm" type="bool" visible="false" />	
 	</category>
 	<category label="Источники">
 		<setting id="ttv" label="Торрент-ТВ" type="bool" default="true" />
@@ -18,7 +19,7 @@
 		<setting default="true" id="use_ace" label="Использовать Acestream, если доступно" type="bool" />
 		<setting id="gender" label="Пол" type="enum" values="Мужской|Женский" />
 		<setting id="age" label="Возраст" type="enum" values="Младше 13|13-17|18-24|25-34|35-44|45-54|55-64|Старше 64" />
-		<setting default="" id="ace_path" label="Путь до acestreamengine" type="text" visible="false" />
+		<setting default="" id="ace_path" label="Путь до AceEngine" type="text" visible="true" />
 		<setting default="127.0.0.1" id="ip_addr" label="IP-адрес acestreamengine" type="text" visible="false" />
 		<setting default="8621" id="outport" label="Внеший порт AceStream" type="number" />
 		<setting default="20" id="freeze_timeout" label="Таймаут ожидания, сек." type="number" />

@@ -177,7 +177,7 @@ class LoopPlay(threading.Thread):
 
                     self.parent.player.Start(sel_chs)
 
-                if manual_stopped.is_set():
+                if manual_stopped.is_set() and defines.MANUAL_STOP:
                     break
                 if not defines.isCancel():
                     xbmc.sleep(223)

@@ -170,14 +170,14 @@ class MyPlayer(xbmcgui.WindowXML):
     def autoStop(self):
         log('autoStop')
         players.manual_stopped.clear()
-#         players.switch_source.clear()
+        players.switch_source.clear()
         if self._player:
             self._player.stop()
 
     def manualStop(self):
         log('manualStop')
         players.manual_stopped.set()
-#         players.switch_source.clear()
+        players.switch_source.clear()
         if self._player:
             self._player.stop()
 

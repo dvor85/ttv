@@ -29,6 +29,7 @@ GENDER = ADDON.getSetting('gender')
 AGE = ADDON.getSetting('age')
 FAVOURITE = ADDON.getSetting('favourite')
 DEBUG = ADDON.getSetting('debug') == 'true'
+MANUAL_STOP = ADDON.getSetting('manual_stop') == 'true'
 
 skin = ADDON.getSetting('skin')
 if (skin is not None) and (skin != "") and (skin != 'st.anger'):

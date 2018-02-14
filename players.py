@@ -62,9 +62,9 @@ class TPlayer(xbmc.Player):
         except Exception as e:
             log.e(fmt('onPlayBackStarted error: {0}', e))
 
-        manual_stopped.set()
-        switch_source.clear()
-        self.parent.hide_main_window()
+#         manual_stopped.set()
+#         switch_source.clear()
+#         self.parent.hide_main_window()
 
     def loop(self):
         while self.isPlaying() and not defines.isCancel():
@@ -83,6 +83,11 @@ class TPlayer(xbmc.Player):
             self.parent.showStatus('Нечего проигрывать')
             return
         self.play(self.link, li, windowed=True)
+        log.debug(fmt('play_item {title}', title=title))
+#         manual_stopped.set()
+        manual_stopped.clear()
+        switch_source.clear()
+        self.parent.hide_main_window()
         self.parent.player.Show()
         self.parent.player.hideStatus()
         self.loop()
@@ -90,7 +95,7 @@ class TPlayer(xbmc.Player):
 
     def next_source(self):
         switch_source.set()
-        manual_stopped.clear()
+        manual_stopped.set()
         self.stop()
 
     def end(self):
@@ -134,7 +139,7 @@ class AcePlayer(TPlayer):
         self.last_error = None
         self.quid = 0
         self.ace_engine = ''
-        self.aceport = utils.str2int(defines.ADDON.getSetting('port'), 62062)
+        self.aceport = 62062
         self.port_file = ''
         self.sock_thr = None
         self.prebuf = {"last_update": time.time(), "value": 0}
@@ -157,6 +162,7 @@ class AcePlayer(TPlayer):
         if sys_platform == "windows":
             self.port_file = os.path.join(os.path.dirname(self.ace_engine), 'acestream.port')
             log.d(fmt('AceEngine port file: "{0}"', self.port_file))
+            self.aceport = self._getWinPort()
 
         if not defines.ADDON.getSetting('age'):
             defines.ADDON.setSetting('age', '1')
@@ -242,9 +248,7 @@ class AcePlayer(TPlayer):
                     log.d(fmt('pid = {0}', p.pid))
 
                     self.aceport = self._getWinPort()
-                    if self.aceport > 0:
-                        defines.ADDON.setSetting('port', str(self.aceport))
-                    else:
+                    if self.aceport <= 0:
                         return
 
                 except Exception as e:
