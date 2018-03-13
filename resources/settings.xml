@@ -7,7 +7,7 @@
 		<setting default="false" id="debug" label="Debug" type="bool" visible="false" />	
 		<setting default="" id="login" label="Логин Torrent-tv.ru" type="text" />
 		<setting default="" id="password" label="Пароль Torrent-tv.ru" option="hidden" type="text" />
-		<setting default="false" id="manual_stop" label="Manual stop playback alghoritm" type="bool" visible="false" />	
+		<setting default="true" id="manual_stop" label="Manual stop playback alghoritm" type="bool" visible="false" />	
 	</category>
 	<category label="Источники">
 		<setting id="ttv" label="Торрент-ТВ" type="bool" default="true" />

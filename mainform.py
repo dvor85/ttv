@@ -737,8 +737,10 @@ class WMainForm(xbmcgui.WindowXML):
 
     def close(self):
         defines.closeRequested.set()
-        if self.player._player:
-            self.player._player.end()
+        if self.player:
+            self.player.close()
+            if self.player._player:
+                self.player._player.end()
 
         for timer in self.timers.itervalues():
             if timer:

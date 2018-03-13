@@ -56,6 +56,10 @@ class TPlayer(xbmc.Player):
         log('onPlayBackEnded')
         self.next_source()
 
+    def onPlayBackError(self):
+        log('onPlayBackError')
+        self.next_source()
+
     def onPlayBackStarted(self):
         try:
             log(fmt('onPlayBackStarted: {0} {1}', xbmcgui.getCurrentWindowId(),  self.getPlayingFile()))
@@ -72,7 +76,7 @@ class TPlayer(xbmc.Player):
                 xbmc.sleep(250)
             except Exception as e:
                 log.e(fmt('ERROR SLEEPING: {0}', e))
-                self.end()
+                self.parent.close()
                 raise
 
         self.stop()
@@ -84,18 +88,19 @@ class TPlayer(xbmc.Player):
             return
         self.play(self.link, li, windowed=True)
         log.debug(fmt('play_item {title}', title=title))
-#         manual_stopped.set()
-        manual_stopped.clear()
+        manual_stopped.set()
+#         manual_stopped.clear()
         switch_source.clear()
         self.parent.hide_main_window()
         self.parent.player.Show()
         self.parent.player.hideStatus()
         self.loop()
+        log.debug(fmt("switch source is {ss}; manual stopped is {ms}", ss=switch_source.is_set(), ms=manual_stopped.is_set()))
         return not switch_source.is_set() or manual_stopped.is_set()
 
     def next_source(self):
         switch_source.set()
-        manual_stopped.set()
+        manual_stopped.clear()
         self.stop()
 
     def end(self):
