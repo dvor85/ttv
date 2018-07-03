@@ -61,10 +61,7 @@ class TPlayer(xbmc.Player):
         self.next_source()
 
     def onPlayBackStarted(self):
-        try:
-            log(fmt('onPlayBackStarted: {0} {1}', xbmcgui.getCurrentWindowId(),  self.getPlayingFile()))
-        except Exception as e:
-            log.e(fmt('onPlayBackStarted error: {0}', e))
+        log('onPlayBackStarted')
 
 #         manual_stopped.set()
 #         switch_source.clear()

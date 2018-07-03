@@ -19,7 +19,7 @@ class Channel(TChannel):
 class Channels(TChannels):
 
     def __init__(self):
-        self.url = 'http://pomoyka.lib.emergate.net/trash/ttv-list/ace.json'
+        self.url = fmt('http://{pomoyka}/trash/ttv-list/ace.json', pomoyka=defines.ADDON.getSetting('pomoyka_domain'))
         TChannels.__init__(self, reload_interval=1800)
 
     def update_channels(self):

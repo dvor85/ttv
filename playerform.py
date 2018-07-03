@@ -213,6 +213,7 @@ class MyPlayer(xbmcgui.WindowXML):
                         if self.cicon:
                             self.cicon.setImage(logo)
                         log.d(fmt('Try to play with {0} player', player))
+                        self._player = None
                         if player == 'ace':
                             self._player = players.AcePlayer.get_instance(parent=self.parent)
                         elif player == 'nox':
