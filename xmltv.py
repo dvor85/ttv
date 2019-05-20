@@ -58,7 +58,9 @@ class XMLTV():
         self.channels = {}
         self.xmltv_root = None
         log.d('start initialization')
+        self.epg_url = defines.ADDON.getSetting('epg_url')
         self.xmltv_file = os.path.join(defines.DATA_PATH, 'xmltv.xml.gz')
+
         same_date = False
         if os.path.exists(self.xmltv_file):
             same_date = datetime.date.today() == datetime.date.fromtimestamp(os.path.getmtime(self.xmltv_file))
@@ -75,16 +77,17 @@ class XMLTV():
         log.d('stop initialization')
 
     def update_xmltv(self):
-        for server in _servers:
-            try:
-                        #    url = 'http://www.teleguide.info/download/new3/xmltv.xml.gz'
-                url = fmt('http://{server}/ttv.xmltv.xml.gz', server=server)
-                r = defines.request(url)
-                with open(self.xmltv_file, 'wb') as fp:
-                    fp.write(r.content)
-                return True
-            except Exception as e:
-                log.error(fmt('update_xmltv error: {0}', e))
+        # for server in _servers:
+        try:
+            #url = 'http://www.teleguide.info/download/new3/xmltv.xml.gz'
+            url = self.epg_url
+            #url = fmt('http://{server}/ttv.xmltv.xml.gz', server=server)
+            r = defines.request(url)
+            with open(self.xmltv_file, 'wb') as fp:
+                fp.write(r.content)
+            return True
+        except Exception as e:
+            log.error(fmt('update_xmltv error: {0}', e))
 
     def get_channels(self):
         if not self.channels:

@@ -12,7 +12,8 @@
 	</category>
 	<category label="Источники">
 		<setting default="pomoyka.win" id="pomoyka_domain" label="IP адрес или доменное имя помойки" type="text" />
-		<setting id="ttv" label="Торрент-ТВ" type="bool" default="true" />
+		<setting default="https://iptvx.one/epg/epg.xml.gz" id="epg_url" label="Ссылка EPG (xmltv)" type="text" />
+		<setting id="ttv" label="Торрент-ТВ" type="bool" default="false" />
 		<setting id="ttelik" label="Торрент-телик" type="bool" default="true" />
 		<setting id="allfon" label="Allfon" type="bool" default="true" />
 		<setting id="acestream" label="Acestream" type="bool" default="true" />
