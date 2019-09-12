@@ -92,7 +92,7 @@ def isCancel():
     return xbmc.abortRequested or closeRequested.isSet()
 
 
-def request(url, method='get', params=None, trys=3, **kwargs):
+def request(url, method='get', params=None, trys=3, interval=0, **kwargs):
     import requests
     params_str = "?" + "&".join((fmt("{0}={1}", *i)
                                  for i in params.iteritems())) if params is not None and method == 'get' else ""
@@ -104,6 +104,7 @@ def request(url, method='get', params=None, trys=3, **kwargs):
             Chrome/45.0.2454.99 Safari/537.36'})
     kwargs.setdefault('timeout', 3.05)
     t = 0
+    xbmc.sleep(interval)
     while not isCancel():
         t += 1
         if 0 < trys < t:
@@ -114,22 +115,7 @@ def request(url, method='get', params=None, trys=3, **kwargs):
             return r
         except Exception as e:
             log.error(fmt('Request error ({t}): {e}', t=t, e=e))
-            xbmc.sleep(1000)
-
-
-def checkPort(*args):
-    try:
-        from BeautifulSoup import BeautifulSoup
-        port = args[0]
-        r = request("https://2ip.ru/check-port", params=dict(port=port))
-        beautifulSoup = BeautifulSoup(r.content)
-        bsdata = beautifulSoup.find('div', attrs={'class': 'ip-entry'})
-        if utils.utf(bsdata.text).find("закрыт") > -1:
-            return False
-        else:
-            return True
-    except Exception as e:
-        log.w(fmt('checkPort Error: {0}', e))
+            xbmc.sleep(interval + 1000)
 
 
 def platform():

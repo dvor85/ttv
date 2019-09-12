@@ -189,27 +189,27 @@ class LoopPlay(threading.Thread):
 
         self.parent.player.close()
 
-        if xbmc.getCondVisibility("Window.IsVisible(home)"):
-            log.d("Close from HOME Window")
-            self.parent.close()
-        elif xbmc.getCondVisibility("Window.IsVisible(video)"):
-            self.parent.close()
-            log.d("Is Video Window")
-        elif xbmc.getCondVisibility("Window.IsVisible(programs)"):
-            self.parent.close()
-            log.d("Is programs Window")
-        elif xbmc.getCondVisibility("Window.IsVisible(addonbrowser)"):
-            self.parent.close()
-            log.d("Is addonbrowser Window")
-        elif xbmc.getCondVisibility("Window.IsVisible(12345)"):
-            self.parent.close()
-            log.d("Is plugin Window")
-        else:
-            jrpc = json.loads(xbmc.executeJSONRPC(
-                '{"jsonrpc":"2.0","method":"GUI.GetProperties","params":{"properties":["currentwindow"]},"id":1}'))
-            if jrpc["result"]["currentwindow"]["id"] == 10025:
-                log.d("Is video plugins window")
-                self.parent.close()
+#         if xbmc.getCondVisibility("Window.IsVisible(home)"):
+#             log.d("Close from HOME Window")
+#             self.parent.close()
+#         elif xbmc.getCondVisibility("Window.IsVisible(video)"):
+#             self.parent.close()
+#             log.d("Is Video Window")
+#         elif xbmc.getCondVisibility("Window.IsVisible(programs)"):
+#             self.parent.close()
+#             log.d("Is programs Window")
+#         elif xbmc.getCondVisibility("Window.IsVisible(addonbrowser)"):
+#             self.parent.close()
+#             log.d("Is addonbrowser Window")
+#         elif xbmc.getCondVisibility("Window.IsVisible(12345)"):
+#             self.parent.close()
+#             log.d("Is plugin Window")
+#         else:
+#             jrpc = json.loads(xbmc.executeJSONRPC(
+#                 '{"jsonrpc":"2.0","method":"GUI.GetProperties","params":{"properties":["currentwindow"]},"id":1}'))
+#             if jrpc["result"]["currentwindow"]["id"] == 10025:
+#                 log.d("Is video plugins window")
+#                 self.parent.close()
 
 
 class WMainForm(xbmcgui.WindowXML):

@@ -45,12 +45,7 @@ class TChannel(UserDict):
             except KeyError:
                 self.data['logo'] = ''
 
-        if self.data.get('logo'):
-            if ':' not in self.data['logo']:
-                self.data['logo'] = utils.utf(fmt('http://{0}/uploads/{1}', 'torrent-tv.ru', self.data['logo']))
-            else:
-                self.data['logo'] = utils.utf(self.data['logo'])
-        else:
+        if not self.data.get('logo'):
             logo = fmt("{addon_path}/resources/logo/{name}.png",
                        addon_path=utils.utf(defines.ADDON_PATH), name=utils.utf(self.get_name()))
             if os.path.exists(logo):

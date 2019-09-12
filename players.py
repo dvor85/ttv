@@ -80,6 +80,8 @@ class TPlayer(xbmc.Player):
 
     def play_item(self, title='', icon='', thumb='', *args, **kwargs):
         li = xbmcgui.ListItem(title, iconImage=icon, thumbnailImage=thumb)
+        if kwargs.get('url'):
+            self.link = kwargs['url']
         if not self.link:
             self.parent.showStatus('Нечего проигрывать')
             return

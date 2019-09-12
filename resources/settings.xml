@@ -5,18 +5,20 @@
 		<setting default="true" id="autostart_lastch" label="Автозапуск последнего канала" type="bool" />
 		<setting default="0" id="favourite" label="База избранных" type="enum" values="Auto|Локальная" visible="false" />
 		<setting default="false" id="debug" label="Debug" type="bool" visible="false" />	
-		<setting default="" id="login" label="Логин Torrent-tv.ru" type="text" />
-		<setting default="" id="password" label="Пароль Torrent-tv.ru" option="hidden" type="text" />
 		<setting default="true" id="manual_stop" label="Manual stop playback alghoritm" type="bool" visible="false" />	
 		
 	</category>
 	<category label="Источники">
 		<setting default="pomoyka.win" id="pomoyka_domain" label="IP адрес или доменное имя помойки" type="text" />
 		<setting default="https://iptvx.one/epg/epg.xml.gz" id="epg_url" label="Ссылка EPG (xmltv)" type="text" />
-		<setting id="ttv" label="Торрент-ТВ" type="bool" default="false" />
 		<setting id="ttelik" label="Торрент-телик" type="bool" default="true" />
 		<setting id="allfon" label="Allfon" type="bool" default="true" />
 		<setting id="acestream" label="Acestream" type="bool" default="true" />
+		<setting id="pazltv3" label="Пазл ТВ 3.0" type="bool" default="false" />
+	</category>
+	<category label="Пазл ТВ 3.0">
+		<setting default="127.0.0.1" id="pazl_addr" label="IP-адрес сервера Пазл ТВ 3.0" type="text" visible="true" />
+		<setting default="8185" id="pazl_port" label="Внеший порт сервера ПАЗЛ ТВ 3.0" type="number" />		
 	</category>
 	<category label="AceStream">
 		<setting default="true" id="use_ace" label="Использовать Acestream, если доступно" type="bool" />

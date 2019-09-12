@@ -13,15 +13,6 @@ except Exception as e:
     defines.log(e)
 
 
-def checkPort(*args):
-    param = args[0]
-    if not defines.checkPort(param):
-        mess = "Порт %s закрыт. \
-        Для стабильной работы сервиса и трансляций, настоятельно рекомендуется его открыть." % defines.ADDON.getSetting('outport')
-        defines.showNotification(mess)
-        defines.log(mess)
-
-
 def main():
     import mainform
     if not defines.ADDON.getSetting('skin'):
@@ -35,7 +26,6 @@ def main():
     w = mainform.WMainForm("mainform.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
     w.doModal()
     defines.log('Close plugin')
-#     defines.showNotification('Close plugin')
     del w
 
 
