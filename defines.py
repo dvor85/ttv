@@ -38,6 +38,7 @@ else:
     SKIN_PATH = ADDON_PATH
 
 closeRequested = threading.Event()
+monitor = xbmc.Monitor()
 
 
 def AutostartViaAutoexec(state):
@@ -89,7 +90,9 @@ def showNotification(msg, icon=ADDON_ICON):
 
 
 def isCancel():
-    return xbmc.abortRequested or closeRequested.isSet()
+    ret = monitor.abortRequested() or closeRequested.isSet()
+#     log.d(fmt("isCancel {ret}", ret=monitor.abortRequested()))
+    return ret
 
 
 def request(url, method='get', params=None, trys=3, interval=0, **kwargs):

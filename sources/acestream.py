@@ -38,7 +38,8 @@ class Channels(TChannels):
                     return json.load(fp)
 
     def _save_jdata(self, jdata):
-        os.makedirs(os.path.dirname(self._temp))
+        if not os.path.exists(os.path.dirname(self._temp)):
+            os.makedirs(os.path.dirname(self._temp))
         with open(self._temp, 'wb') as fp:
             json.dump(jdata, fp)
 

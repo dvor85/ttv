@@ -27,7 +27,6 @@ from UserDict import UserDict
 #     from ordereddict import OrderedDict
 import logger
 
-
 log = logger.Logger(__name__)
 fmt = utils.fmt
 
@@ -187,29 +186,30 @@ class LoopPlay(threading.Thread):
                 log.e(fmt('LoopPlay error: {0}', e))
                 xbmc.sleep(1000)
 
-        self.parent.player.close()
+#         self.parent.player.close()
+#         self.parent.show()
 
-#         if xbmc.getCondVisibility("Window.IsVisible(home)"):
-#             log.d("Close from HOME Window")
-#             self.parent.close()
-#         elif xbmc.getCondVisibility("Window.IsVisible(video)"):
-#             self.parent.close()
-#             log.d("Is Video Window")
-#         elif xbmc.getCondVisibility("Window.IsVisible(programs)"):
-#             self.parent.close()
-#             log.d("Is programs Window")
-#         elif xbmc.getCondVisibility("Window.IsVisible(addonbrowser)"):
-#             self.parent.close()
-#             log.d("Is addonbrowser Window")
-#         elif xbmc.getCondVisibility("Window.IsVisible(12345)"):
-#             self.parent.close()
-#             log.d("Is plugin Window")
-#         else:
-#             jrpc = json.loads(xbmc.executeJSONRPC(
-#                 '{"jsonrpc":"2.0","method":"GUI.GetProperties","params":{"properties":["currentwindow"]},"id":1}'))
-#             if jrpc["result"]["currentwindow"]["id"] == 10025:
-#                 log.d("Is video plugins window")
-#                 self.parent.close()
+        if xbmc.getCondVisibility("Window.IsVisible(home)"):
+            log.d("Close from HOME Window")
+            self.parent.close()
+        elif xbmc.getCondVisibility("Window.IsVisible(video)"):
+            self.parent.close()
+            log.d("Is Video Window")
+        elif xbmc.getCondVisibility("Window.IsVisible(programs)"):
+            self.parent.close()
+            log.d("Is programs Window")
+        elif xbmc.getCondVisibility("Window.IsVisible(addonbrowser)"):
+            self.parent.close()
+            log.d("Is addonbrowser Window")
+        elif xbmc.getCondVisibility("Window.IsVisible(12345)"):
+            self.parent.close()
+            log.d("Is plugin Window")
+        else:
+            jrpc = json.loads(xbmc.executeJSONRPC(
+                '{"jsonrpc":"2.0","method":"GUI.GetProperties","params":{"properties":["currentwindow"]},"id":1}'))
+            if jrpc["result"]["currentwindow"]["id"] == 10025:
+                log.d("Is video plugins window")
+                self.parent.close()
 
 
 class WMainForm(xbmcgui.WindowXML):
@@ -358,6 +358,7 @@ class WMainForm(xbmcgui.WindowXML):
                 log.d(fmt('loadChannels {0} error: {1}', src_name, e))
 
     def getEpg(self, chs, timeout=0, callback=None):
+
         def get():
             chnum = self.player.channel_number
             try:
@@ -422,6 +423,7 @@ class WMainForm(xbmcgui.WindowXML):
             self.progress.setPercent(0)
 
     def showScreen(self, chs, timeout=0):
+
         def show():
             log.d('showScreen')
             screens = None
@@ -452,6 +454,7 @@ class WMainForm(xbmcgui.WindowXML):
             self.timers[WMainForm.TIMER_SHOW_SCREEN].start()
 
     def updateList(self):
+
         def dump_channel_groups():
             namedb = {}
             for cat, val in self.channel_groups.iteritems():
@@ -521,6 +524,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.Play()
 
     def select_channel(self, sch='', timeout=0):
+
         def clear():
             self.channel_number_str = ''
             self.timers[WMainForm.TIMER_SEL_CHANNEL] = None
@@ -721,6 +725,7 @@ class WMainForm(xbmcgui.WindowXML):
             self.selitem_id = self.get_selitem_id(self.cur_channel)
 
     def fillCategory(self):
+
         def AddItem(groupname):
             li = xbmcgui.ListItem(self.channel_groups[groupname]['title'])
             li.setProperty('type', 'category')

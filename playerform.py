@@ -11,7 +11,6 @@ import utils
 import logger
 import players
 
-
 log = logger.Logger(__name__)
 fmt = utils.fmt
 
@@ -92,6 +91,7 @@ class MyPlayer(xbmcgui.WindowXML):
             self.channel_number = self.parent.selitem_id
 
     def hide_control_window(self, timeout=0):
+
         def hide():
             self.control_window.setVisible(False)
             self.setFocusId(MyPlayer.CONTROL_WINDOW_ID)
@@ -240,6 +240,7 @@ class MyPlayer(xbmcgui.WindowXML):
         self.close()
 
     def run_selected_channel(self, timeout=0):
+
         def run():
             self.channel_number = utils.str2int(self.channel_number_str)
             log.d(fmt('CHANNEL NUMBER IS: {0}', self.channel_number))
@@ -290,6 +291,7 @@ class MyPlayer(xbmcgui.WindowXML):
             log.w(fmt("hideStatus error: {0}", e))
 
     def onAction(self, action):
+
         def viewEPG():
             selItem = self.parent.list.getListItem(self.channel_number)
             if selItem and selItem.getProperty("type") == 'channel':
@@ -310,6 +312,7 @@ class MyPlayer(xbmcgui.WindowXML):
                 self.UpdateEpg(self.channels)
             else:
                 self.close()
+                self.parent.show()
 
         elif action in (xbmcgui.ACTION_NEXT_ITEM, xbmcgui.ACTION_PREV_ITEM):
             if self._player:
@@ -364,5 +367,5 @@ class MyPlayer(xbmcgui.WindowXML):
         for timer in self.timers.itervalues():
             if timer:
                 timer.cancel()
-
+ 
         xbmcgui.WindowXML.close(self)

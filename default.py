@@ -3,8 +3,7 @@
 # Writer (c) 2011, Welicobratov K.A., E-mail: 07pov23@gmail.com
 # Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-import defines
-
+import defines, xbmc
 
 try:
     if defines.DEBUG:

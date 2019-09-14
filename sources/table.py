@@ -7,8 +7,6 @@ import acestream
 import defines
 
 ChannelSources = {}
-if defines.ADDON.getSetting('ttelik') == 'true':
-    ChannelSources['ttelik'] = ttelik.Channels()
 if defines.ADDON.getSetting('allfon') == 'true':
     ChannelSources['allfon'] = allfon.Channels()
 if defines.ADDON.getSetting('acestream') == 'true':
