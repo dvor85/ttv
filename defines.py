@@ -18,6 +18,7 @@ ADDON_ID = ADDON.getAddonInfo('id')
 ADDON_ICON = ADDON.getAddonInfo('icon')
 ADDON_PATH = utils.true_enc(ADDON.getAddonInfo('path'), 'utf8')
 DATA_PATH = utils.true_enc(xbmc.translatePath(os.path.join("special://profile/addon_data", ADDON_ID)), 'utf8')
+CACHE_PATH = utils.true_enc(xbmc.translatePath(os.path.join("special://temp", ADDON_ID)), 'utf8')
 PTR_FILE = ADDON.getSetting('port_path')
 # API_MIRROR = ADDON.getSetting('api_mirror')
 # SITE_MIRROR = '1ttv.org' if API_MIRROR == '1ttvxbmc.top' else 'torrent-tv.ru'
@@ -36,6 +37,8 @@ if (skin is not None) and (skin != "") and (skin != 'st.anger'):
     SKIN_PATH = DATA_PATH
 else:
     SKIN_PATH = ADDON_PATH
+if not os.path.exists(CACHE_PATH):
+    os.makedirs(CACHE_PATH)
 
 closeRequested = threading.Event()
 monitor = xbmc.Monitor()

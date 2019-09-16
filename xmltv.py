@@ -59,7 +59,7 @@ class XMLTV():
         self.xmltv_root = None
         log.d('start initialization')
         self.epg_url = defines.ADDON.getSetting('epg_url')
-        self.xmltv_file = os.path.join(defines.DATA_PATH, 'xmltv.xml.gz')
+        self.xmltv_file = os.path.join(defines.CACHE_PATH, 'xmltv.xml.gz')
 
         same_date = False
         if os.path.exists(self.xmltv_file):

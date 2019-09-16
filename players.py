@@ -60,12 +60,15 @@ class TPlayer(xbmc.Player):
         log('onPlayBackError')
         self.next_source()
 
-    def onPlayBackStarted(self):
-        log('onPlayBackStarted')
+    def onAVStarted(self):
+        log('onAVStarted')
+        manual_stopped.set()
+        switch_source.clear()
+        self.parent.hide_main_window()
+        self.parent.player.hideStatus()
 
-#         manual_stopped.set()
-#         switch_source.clear()
-#         self.parent.hide_main_window()
+    def onAVChange(self):
+        log('onAVChange')
 
     def loop(self):
         while self.isPlaying() and not defines.isCancel():
@@ -87,12 +90,7 @@ class TPlayer(xbmc.Player):
             return
         self.play(self.link, li, windowed=True)
         log.debug(fmt('play_item {title}', title=title))
-        manual_stopped.set()
-#         manual_stopped.clear()
-        switch_source.clear()
-        self.parent.hide_main_window()
         self.parent.player.Show()
-        self.parent.player.hideStatus()
         self.loop()
         log.debug(fmt("switch source is {ss}; manual stopped is {ms}", ss=switch_source.is_set(), ms=manual_stopped.is_set()))
         return not switch_source.is_set() or manual_stopped.is_set()

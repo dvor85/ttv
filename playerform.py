@@ -312,7 +312,7 @@ class MyPlayer(xbmcgui.WindowXML):
                 self.UpdateEpg(self.channels)
             else:
                 self.close()
-                self.parent.show()
+#                 self.parent.show()
 
         elif action in (xbmcgui.ACTION_NEXT_ITEM, xbmcgui.ACTION_PREV_ITEM):
             if self._player:
@@ -367,5 +367,5 @@ class MyPlayer(xbmcgui.WindowXML):
         for timer in self.timers.itervalues():
             if timer:
                 timer.cancel()
- 
+
         xbmcgui.WindowXML.close(self)

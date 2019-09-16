@@ -5,7 +5,6 @@ import utils
 import defines
 import logger
 from tchannel import TChannel, TChannels
-import xbmc
 import os
 import time
 try:
@@ -27,7 +26,7 @@ class Channels(TChannels):
 
     def __init__(self):
         self.url = fmt('http://{pomoyka}/trash/ttv-list/ace.json', pomoyka=defines.ADDON.getSetting('pomoyka_domain'))
-        self._temp = utils.true_enc(xbmc.translatePath(os.path.join("special://temp/pomoyka", "ace.json")), 'utf8')
+        self._temp = os.path.join(defines.CACHE_PATH, "ace.json")
         TChannels.__init__(self, reload_interval=1800)
 
     def _load_jdata(self):
@@ -38,8 +37,6 @@ class Channels(TChannels):
                     return json.load(fp)
 
     def _save_jdata(self, jdata):
-        if not os.path.exists(os.path.dirname(self._temp)):
-            os.makedirs(os.path.dirname(self._temp))
         with open(self._temp, 'wb') as fp:
             json.dump(jdata, fp)
 

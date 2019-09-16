@@ -175,7 +175,6 @@ class LoopPlay(threading.Thread):
                     defines.ADDON.setSetting('cur_channel', self.parent.cur_channel)
 
                     self.parent.player.Start(sel_chs)
-
                 if manual_stopped.is_set() and defines.MANUAL_STOP:
                     break
                 if not defines.isCancel():
