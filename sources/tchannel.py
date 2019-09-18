@@ -5,6 +5,7 @@ from UserDict import UserDict
 import datetime
 import utils
 import defines
+import yatv
 import xmltv
 import logger
 import os
@@ -39,11 +40,6 @@ class TChannel(UserDict):
 
     def get_logo(self):
         name = utils.lower(self.get_name(), 'utf8')
-        if not self.data.get('logo'):
-            try:
-                self.data['logo'] = CHANNEL_INFO[name]['logo']
-            except KeyError:
-                self.data['logo'] = ''
 
         if not self.data.get('logo'):
             logo = fmt("{addon_path}/resources/logo/{name}.png",
@@ -67,10 +63,13 @@ class TChannel(UserDict):
 
     def update_epglist(self):
         try:
-            xmltv_epg = xmltv.XMLTV.get_instance()
-            if not self.data.get('epg') and xmltv_epg is not None:
+            if defines.platform()['os'] == 'linux':
+                epg = xmltv.XMLTV.get_instance()
+            else:
+                epg = yatv.YATV.get_instance()
+            if not self.data.get('epg') and epg is not None:
                 self.data['epg'] = []
-                for ep in xmltv_epg.get_epg_by_name(self.get_name()):
+                for ep in epg.get_epg_by_name(self.get_name()):
                     self.data['epg'].append(ep)
         except Exception as e:
             log.e(fmt('update_epglist error {0}', e))
