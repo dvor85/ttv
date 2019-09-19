@@ -9,6 +9,7 @@ import threading
 import os
 import utils
 import logger
+import requests
 
 log = logger.Logger(__name__)
 fmt = utils.fmt
@@ -98,17 +99,21 @@ def isCancel():
     return ret
 
 
-def request(url, method='get', params=None, trys=3, interval=0, **kwargs):
-    import requests
+def request(url, method='get', params=None, trys=3, interval=0, session=None, **kwargs):
+
     params_str = "?" + "&".join((fmt("{0}={1}", *i)
                                  for i in params.iteritems())) if params is not None and method == 'get' else ""
     log.d(fmt('try to get: {url}{params}', url=url, params=params_str))
     if not url:
         return
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) \
+Chrome/45.0.2454.99 Safari/537.36'}
+    if 'headers' in kwargs:
+        headers.update(kwargs['headers'])
+        del kwargs['headers']
     kwargs.setdefault('allow_redirects', True)
-    kwargs.setdefault('headers', {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) \
-            Chrome/45.0.2454.99 Safari/537.36'})
     kwargs.setdefault('timeout', 3.05)
+
     t = 0
     xbmc.sleep(interval)
     while not isCancel():
@@ -116,7 +121,10 @@ def request(url, method='get', params=None, trys=3, interval=0, **kwargs):
         if 0 < trys < t:
             raise Exception('Attempts are over')
         try:
-            r = requests.request(method, url, params=params, **kwargs)
+            if session:
+                r = session.request(method, url, params=params, headers=headers, **kwargs)
+            else:
+                r = requests.request(method, url, params=params, headers=headers, **kwargs)
             r.raise_for_status()
             return r
         except Exception as e:
