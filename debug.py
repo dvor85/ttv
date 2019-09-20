@@ -1,15 +1,20 @@
 # -*- coding: utf-8 -*-
 import sys
 import os
+import platform
 # append pydev remote debugger
 # Make pydev debugger works for auto reload.
 try:
     #     sys.path.insert(0, os.path.expanduser('~/org.python.pydev_4.5.5.201603221110/pysrc'))
-    # sys.path.insert(0, os.path.expanduser('~/eclipse/org.python.pydev.core_7.3.0.201908161924/pysrc'))
-    # print os.path.expanduser('~/eclipse/org.python.pydev.core_7.3.0.201908161924/pysrc')
-    sys.path.insert(0, 'd:\\python\\eclipse\\plugins\\org.python.pydev.core_7.3.0.201908161924\\pysrc')
+    #
+    if platform.system() == 'Linux':
+        print "Append pydevd for Linux"
+        sys.path.insert(0, os.path.expanduser('~/eclipse/plugins/org.python.pydev.core_7.3.0.201908161924/pysrc'))
+    elif platform.system() == 'Windows':
+        print "Append pydevd for Windows"
+        sys.path.insert(0, 'd:\\python\\eclipse\\plugins\\org.python.pydev.core_7.3.0.201908161924\\pysrc')
     # print sys.path
-#     sys.path.insert(0, os.path.expanduser('~/eclipse/plugins/org.python.pydev.core_7.3.0.201908161924/pysrc'))
+#
     #     sys.path.append('d:/python/eclipse/plugins/org.python.pydev_5.5.0.201701191708/pysrc')
     #     sys.path.append('i:/python/eclipse/plugins/org.python.pydev_5.5.0.201701191708/pysrc')
 

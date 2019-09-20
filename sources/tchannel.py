@@ -22,6 +22,9 @@ class TChannel(UserDict):
         self.data['mode'] = "PID"
         self.data['players'] = ['ace']
         self.data.update(data)
+        self.yatv_logo_path = os.path.join(defines.CACHE_PATH, 'logo')
+        if not os.path.exists(self.yatv_logo_path):
+            os.mkdir(self.yatv_logo_path)
 
     def get_url(self, player=None):
         return self.data.get('url')
@@ -40,12 +43,26 @@ class TChannel(UserDict):
 
     def get_logo(self):
         name = utils.lower(self.get_name(), 'utf8')
-
+        logo = os.path.join(self.yatv_logo_path, fmt("{name}.png", name=name))
         if not self.data.get('logo'):
-            logo = fmt("{addon_path}/resources/logo/{name}.png",
-                       addon_path=utils.utf(defines.ADDON_PATH), name=utils.utf(self.get_name()))
             if os.path.exists(logo):
                 self.data['logo'] = logo
+            else:
+                self.data['logo'] = ''
+
+        try:
+            if not self.data.get('logo'):
+                epg = yatv.YATV.get_instance()
+                if epg is not None:
+                    ylogo = epg.get_logo_by_name(name)
+                    if ylogo:
+                        r = defines.request(ylogo, session=epg.get_yatv_sess(), headers={'Referer': 'https://tv.yandex.ru/'})
+                        with open(logo, 'wb') as fp:
+                            fp.write(r.content)
+                        self.data['logo'] = logo
+
+        except Exception as e:
+            log.e(fmt('update_logo error {0}', e))
 
         return self.data.get('logo')
 
@@ -63,10 +80,10 @@ class TChannel(UserDict):
 
     def update_epglist(self):
         try:
-            if defines.platform()['os'] == 'linux':
-                epg = xmltv.XMLTV.get_instance()
-            else:
-                epg = yatv.YATV.get_instance()
+            #             if defines.platform()['os'] == 'linux':
+            #                 epg = xmltv.XMLTV.get_instance()
+            #             else:
+            epg = yatv.YATV.get_instance()
             if not self.data.get('epg') and epg is not None:
                 self.data['epg'] = []
                 for ep in epg.get_epg_by_name(self.get_name()):

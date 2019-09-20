@@ -14,24 +14,13 @@
 	<onload condition="Control.IsVisible(1)">Control.SetFocus(1,1)</onload>
 	<controls>
     <control type="group">
-      <destiption>Wallpaper</destiption>
-      <control type="image">
-        <description>Normal Default Background Image</description>
-        <posx>0</posx>
-        <posy>0</posy>
-        <width>1280</width>
-        <height>720</height>
-        <aspectratio>scale</aspectratio>
-        <texture>$INFO[Skin.CurrentTheme,special://skin/backgrounds/,.jpg]</texture>
-        <visible>!Player.HasVideo</visible>
-      </control>
-			<control type="videowindow">
-				<posx>0</posx>
-				<posy>0</posy>
-				<width>1280</width>
-				<height>720</height>
-				<visible>Player.HasVideo + !Skin.HasSetting(ShowBackgroundVideo) + ![Window.IsVisible(PVR) + [Control.IsVisible(11) | Control.IsVisible(12)]]</visible>
-			</control>
+		<control type="videowindow">
+			<posx>0</posx>
+			<posy>0</posy>
+			<width>1280</width>
+			<height>720</height>
+			<visible>Player.HasVideo + !Skin.HasSetting(ShowBackgroundVideo)</visible>
+		</control>
       <control type="group">
         <description>Window</description>
         <control type="label">

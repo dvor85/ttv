@@ -1,5 +1,5 @@
 ﻿<window id="12346">
-  <visible>Player.HasMedia + Window.IsActive(PlayerControls) + !Window.IsActive(FullscreenVideo) + !Window.IsActive(Visualisation)</visible>
+  <visible>Player.HasMedia + Window.IsActive(playercontrols) + !Window.IsActive(fullscreenvideo) + !Window.IsActive(visualisation)</visible>
     <controls>
     
     <control type="group" id="201">
@@ -8,7 +8,7 @@
         <posy>0</posy>
         <width>1280</width>
         <height>720</height>
-        <visible>Player.HasVideo + !Skin.HasSetting(ShowBackgroundVideo) + ![Window.IsVisible(PVR) + [Control.IsVisible(11) | Control.IsVisible(12)]]</visible>
+        <visible>Player.HasVideo + !Skin.HasSetting(ShowBackgroundVideo)</visible>
       </control>
       <control type="group" id="203">
         <animation effect="fade" start="100" end="0" delay="3000" time="4000" reversible="True">Visible</animation>

@@ -78,7 +78,7 @@ class ChannelGroups(UserDict):
             if groupname is None:
                 groupname = src_name
             groupname = grouplang.translate.get(groupname, groupname)
-            if utils.lower(groupname, 'utf8') in ("эротика") and utils.str2int(defines.AGE) < 2:
+            if utils.lower(groupname, 'utf8') in ("эротика", "18+") and utils.str2int(defines.AGE) < 2:
                 return
             if not self.data.get(groupname):
                 self.addGroup(groupname)
@@ -244,6 +244,7 @@ class WMainForm(xbmcgui.WindowXML):
     TIMER_SHOW_SCREEN = 'show_screen_timer'
     TIMER_SEL_CHANNEL = 'sel_channel_timer'
     TIMER_HIDE_WINDOW = 'hide_window_timer'
+    THREAD_SET_LOGO = 'set_logo_thread'
 
     def __init__(self, *args, **kwargs):
         log.d('__init__')
@@ -262,6 +263,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.user = None
         self.first_init = defines.AUTOSTART_LASTCH
         self.channel_number_str = ''
+        self.set_logo_sema = threading.Semaphore(24)
 
         self.timers = {}
         self.rotate_screen_thr = None
@@ -697,13 +699,16 @@ class WMainForm(xbmcgui.WindowXML):
 #         else:
         li = xbmcgui.ListItem('..')
         self.list.addItem(li)
+
         for i, chs in enumerate(self.channel_groups.getChannels(self.cur_category)):
             if chs:
                 for ch in chs.itervalues():
                     try:
                         chname = fmt("{0}. {1}", i + 1, ch.get_name())
-                        chli = xbmcgui.ListItem(chname, ch.get_id(), ch.get_logo(), ch.get_logo())
-                        chli.setProperty("icon", ch.get_logo())
+                        chli = xbmcgui.ListItem(chname, ch.get_id())
+                        self.setLogo(ch, chli, self.set_logo_sema)
+#                         chli.setArt({"icon": ch.get_logo()})
+#                         chli.setProperty("icon", ch.get_logo())
                         chli.setProperty('type', 'channel')
                         chli.setProperty("id", ch.get_id())
                         chli.setProperty("name", ch.get_name())
@@ -716,12 +721,26 @@ class WMainForm(xbmcgui.WindowXML):
                                                              MenuForm.CMD_DOWN_FAVOURITE,
                                                              MenuForm.CMD_UP_FAVOURITE))
                         self.list.addItem(chli)
+
                         break
                     except Exception as e:
                         log.e(fmt("fillChannels error: {0}", e))
         self.hideStatus()
         if self.selitem_id < 1:
             self.selitem_id = self.get_selitem_id(self.cur_channel)
+
+    def setLogo(self, ch, chli, sema):
+
+        def set_logo():
+            with sema:
+                chli.setArt({"icon": ch.get_logo()})
+                chli.setProperty("icon", ch.get_logo())
+
+        if not defines.isCancel():
+            slthread = threading.Thread(target=set_logo)
+            slthread.name = 'thread_set_logo'
+            slthread.daemon = False
+            slthread.start()
 
     def fillCategory(self):
 

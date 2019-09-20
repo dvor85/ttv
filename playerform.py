@@ -237,7 +237,7 @@ class MyPlayer(xbmcgui.WindowXML):
                 return True
             except Exception as e:
                 log.e(fmt('Start error: {0}', e))
-        self.close()
+#         self.close()
 
     def run_selected_channel(self, timeout=0):
 
@@ -364,6 +364,7 @@ class MyPlayer(xbmcgui.WindowXML):
             self.close()
 
     def close(self):
+        self.visible = False
         for timer in self.timers.itervalues():
             if timer:
                 timer.cancel()
