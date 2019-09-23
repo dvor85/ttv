@@ -185,7 +185,7 @@ class LoopPlay(threading.Thread):
                 log.e(fmt('LoopPlay error: {0}', e))
                 xbmc.sleep(1000)
 
-#         self.parent.player.close()
+        self.parent.player.close()
 #         self.parent.show()
 
         if xbmc.getCondVisibility("Window.IsVisible(home)"):

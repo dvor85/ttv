@@ -48,9 +48,8 @@ class TPlayer(xbmc.Player):
         self.link = None  # Для передачи ссылки плееру
 
     def onPlayBackStopped(self):
-        log('onPlayBackStopped')
-        self.stop()
-#         self.next_source()
+        log("onPlayBackStopped")
+        manual_stopped.set()
 
     def onPlayBackEnded(self):
         log('onPlayBackEnded')
@@ -62,7 +61,7 @@ class TPlayer(xbmc.Player):
 
     def onAVStarted(self):
         log('onAVStarted')
-        manual_stopped.set()
+        manual_stopped.clear()
         switch_source.clear()
         self.parent.hide_main_window()
         self.parent.player.hideStatus()
@@ -93,18 +92,21 @@ class TPlayer(xbmc.Player):
         self.parent.player.Show()
         self.loop()
         log.debug(fmt("switch source is {ss}; manual stopped is {ms}", ss=switch_source.is_set(), ms=manual_stopped.is_set()))
-        return not switch_source.is_set() or manual_stopped.is_set()
+        return not switch_source.is_set() or not manual_stopped.is_set()
 
     def next_source(self):
         switch_source.set()
-        manual_stopped.clear()
         self.stop()
 
     def end(self):
+        log('end player method')
         xbmc.Player.stop(self)
+        self.onPlayBackEnded()
 
     def stop(self):
+        log('stop player method')
         xbmc.Player.stop(self)
+        self.onPlayBackStopped()
 
 
 class AcePlayer(TPlayer):
@@ -611,7 +613,6 @@ class AcePlayer(TPlayer):
         TPlayer.end(self)
 
     def stop(self):
-        log('stop player method')
         self.link = None
         self._send_command('STOP')
         self.waiting.msg = None

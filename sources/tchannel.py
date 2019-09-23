@@ -43,9 +43,9 @@ class TChannel(UserDict):
 
     def get_logo(self):
         name = utils.lower(self.get_name(), 'utf8')
-        logo = os.path.join(self.yatv_logo_path, fmt("{name}.png", name=name))
+        logo = os.path.join(utils.utf(self.yatv_logo_path), fmt("{name}.png", name=name))
         if not self.data.get('logo'):
-            if os.path.exists(logo):
+            if os.path.exists(utils.true_enc(logo, 'utf8')):
                 self.data['logo'] = logo
             else:
                 self.data['logo'] = ''
@@ -57,7 +57,7 @@ class TChannel(UserDict):
                     ylogo = epg.get_logo_by_name(name)
                     if ylogo:
                         r = defines.request(ylogo, session=epg.get_yatv_sess(), headers={'Referer': 'https://tv.yandex.ru/'})
-                        with open(logo, 'wb') as fp:
+                        with open(utils.true_enc(logo, 'utf8'), 'wb') as fp:
                             fp.write(r.content)
                         self.data['logo'] = logo
 
