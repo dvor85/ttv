@@ -22,7 +22,7 @@ class MyPlayer(xbmcgui.WindowXML):
     CONTROL_ICON_ID = 202
     CONTROL_WINDOW_ID = 203
     CONTROL_BUTTON_PAUSE = 204
-    CONTROL_BUTTON_INFOWIN = 209
+    CONTROL_BUTTON_NEXT = 209
     CONTROL_BUTTON_STOP = 200
     ACTION_RBC = 101
     ARROW_ACTIONS = (1, 2, 3, 4)
@@ -52,12 +52,14 @@ class MyPlayer(xbmcgui.WindowXML):
         self.swinfo = None
         self.cicon = None
         self.control_window = None
+        self.visible = threading.Event()
         self._re_source = re.compile('(loadPlayer|loadTorrent)\("(?P<src>[\w/_:.]+)"')
 
     def onInit(self):
         log.d('onInit')
         if not (self.channels and self.parent):
             return
+        self.visible.set()
         self.progress = self.getControl(MyPlayer.CONTROL_PROGRESS_ID)
         self.cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
         self.cicon.setVisible(False)
@@ -170,7 +172,7 @@ class MyPlayer(xbmcgui.WindowXML):
     def autoStop(self):
         log('autoStop')
         players.manual_stopped.clear()
-        players.switch_source.clear()
+        players.switch_source.set()
         if self._player:
             self._player.stop()
 
@@ -181,13 +183,13 @@ class MyPlayer(xbmcgui.WindowXML):
         if self._player:
             self._player.stop()
 
-    def isVisible(self):
-        return xbmc.getCondVisibility(fmt("Window.IsVisible({window})", window=MyPlayer.PLAYER_WINDOW_ID))
+
+#     def isVisible(self):
+#         return xbmc.getCondVisibility(fmt("Window.IsVisible({window})", window=MyPlayer.PLAYER_WINDOW_ID))
 
     def Show(self):
         if self._player:
-            if not self.isVisible():
-                self.show()
+            self.show()
 
     def Start(self, channels):
         """
@@ -237,7 +239,7 @@ class MyPlayer(xbmcgui.WindowXML):
                 return True
             except Exception as e:
                 log.e(fmt('Start error: {0}', e))
-#         self.close()
+        self.close()
 
     def run_selected_channel(self, timeout=0):
 
@@ -311,12 +313,14 @@ class MyPlayer(xbmcgui.WindowXML):
                 self.run_selected_channel()
                 self.UpdateEpg(self.channels)
             else:
+                #                 self.setVisible(False)
                 self.close()
 #                 self.parent.show()
 
         elif action in (xbmcgui.ACTION_NEXT_ITEM, xbmcgui.ACTION_PREV_ITEM):
-            if self._player:
-                self._player.next_source()
+            #             if self._player:
+            #                 self._player.next_source()
+            self.autoStop()
 
         elif action in (xbmcgui.ACTION_MOVE_UP, xbmcgui.ACTION_MOVE_DOWN, xbmcgui.ACTION_PAGE_UP, xbmcgui.ACTION_PAGE_DOWN):
             # IF ARROW UP AND DOWN PRESSED - SWITCH CHANNEL ##### @IgnorePep8
@@ -349,7 +353,7 @@ class MyPlayer(xbmcgui.WindowXML):
         else:
             self.UpdateEpg(self.channels)
 
-        if not self.isVisible():
+        if not self.visible.is_set():
             if self.focusId == MyPlayer.CONTROL_WINDOW_ID:
                 self.setFocusId(MyPlayer.CONTROL_BUTTON_PAUSE)
             else:
@@ -361,12 +365,15 @@ class MyPlayer(xbmcgui.WindowXML):
 
     def onClick(self, controlID):
         if controlID == MyPlayer.CONTROL_BUTTON_STOP:
+            self.manualStop()
             self.close()
+        elif controlID == MyPlayer.CONTROL_BUTTON_NEXT:
+            self.autoStop()
 
     def close(self):
-        self.visible = False
         for timer in self.timers.itervalues():
             if timer:
                 timer.cancel()
-
-        xbmcgui.WindowXML.close(self)
+        if self.visible.is_set():
+            xbmcgui.WindowXML.close(self)
+        self.visible.clear()

@@ -92,7 +92,7 @@ class YATV():
         """
 
         _yparams = {"fields": "schedules,channel,title,id,events,channelId,start,finish,program,logo,sizes,src",
-                    "duration": 96400,
+                    #                     "duration": 96400,
                     "channelLimit": 24,
                     "channelProgramsLimit": self.availableChannels["availableChannels"],
                     "channelOffset": 0,
@@ -127,7 +127,18 @@ class YATV():
             self.jdata = json.load(fp)
 
     def get_finish(self):
-        return self.strptime(self.jdata.pop()['schedules'].pop()['finish'].split('+')[0])
+        m = None
+        for p in self.jdata:
+            for sch in p['schedules']:
+                try:
+                    cm = self.strptime(sch['finish'].split('+')[0])
+                    if not m or m > cm:
+                        m = cm
+                except Exception as e:
+                    pass
+        if not m:
+            return datetime.datetime.now()
+        return m
 
     def strptime(self, date_string):
         try:

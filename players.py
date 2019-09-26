@@ -106,7 +106,6 @@ class TPlayer(xbmc.Player):
     def stop(self):
         log('stop player method')
         xbmc.Player.stop(self)
-        self.onPlayBackStopped()
 
 
 class AcePlayer(TPlayer):

@@ -174,8 +174,8 @@ class LoopPlay(threading.Thread):
                     defines.ADDON.setSetting('cur_category', self.parent.cur_category)
                     defines.ADDON.setSetting('cur_channel', self.parent.cur_channel)
 
-                    self.parent.player.Start(sel_chs)
-                if manual_stopped.is_set() and defines.MANUAL_STOP:
+                    ret = self.parent.player.Start(sel_chs)
+                if (manual_stopped.is_set() and defines.MANUAL_STOP) or not ret:
                     break
                 if not defines.isCancel():
                     xbmc.sleep(223)
