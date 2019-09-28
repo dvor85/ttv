@@ -49,7 +49,7 @@ class TPlayer(xbmc.Player):
 
     def onPlayBackStopped(self):
         log("onPlayBackStopped")
-        manual_stopped.set()
+#         manual_stopped.set()
 
     def onPlayBackEnded(self):
         log('onPlayBackEnded')
@@ -92,7 +92,7 @@ class TPlayer(xbmc.Player):
         self.parent.player.Show()
         self.loop()
         log.debug(fmt("switch source is {ss}; manual stopped is {ms}", ss=switch_source.is_set(), ms=manual_stopped.is_set()))
-        return not switch_source.is_set() or not manual_stopped.is_set()
+        return not (manual_stopped.is_set() and defines.MANUAL_STOP) and (switch_source.is_set() or manual_stopped.is_set())
 
     def next_source(self):
         switch_source.set()
@@ -106,6 +106,18 @@ class TPlayer(xbmc.Player):
     def stop(self):
         log('stop player method')
         xbmc.Player.stop(self)
+
+    def autoStop(self):
+        log('autoStop')
+        manual_stopped.clear()
+        switch_source.set()
+        self.stop()
+
+    def manualStop(self):
+        log('manualStop')
+        manual_stopped.set()
+        switch_source.clear()
+        self.stop()
 
 
 class AcePlayer(TPlayer):

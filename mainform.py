@@ -10,7 +10,6 @@ import datetime
 import threading
 
 from playerform import MyPlayer
-from players import manual_stopped
 from menu import MenuForm
 from sources.table import ChannelSources
 from sources import grouplang
@@ -174,9 +173,8 @@ class LoopPlay(threading.Thread):
                     defines.ADDON.setSetting('cur_category', self.parent.cur_category)
                     defines.ADDON.setSetting('cur_channel', self.parent.cur_channel)
 
-                    ret = self.parent.player.Start(sel_chs)
-                if (manual_stopped.is_set() and defines.MANUAL_STOP) or not ret:
-                    break
+                    if not self.parent.player.Start(sel_chs):
+                        break
                 if not defines.isCancel():
                     xbmc.sleep(223)
                     self.parent.select_channel()

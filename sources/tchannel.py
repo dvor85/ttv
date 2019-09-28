@@ -6,7 +6,6 @@ import datetime
 import utils
 import defines
 import yatv
-import xmltv
 import logger
 import os
 from channel_info import CHANNEL_INFO

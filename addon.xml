@@ -5,7 +5,8 @@
        provider-name="dvor85">
     <requires>
 		<import addon="xbmc.python" version="2.19.0" />
-		<import addon="script.module.requests" />      
+		<import addon="script.module.requests" />   
+		<import addon="script.module.simplejson" />   
     </requires>
     <extension point="xbmc.python.script" library="default.py">
         <provides>video</provides>

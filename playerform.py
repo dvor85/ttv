@@ -169,21 +169,6 @@ class MyPlayer(xbmcgui.WindowXML):
         if self.progress:
             self.progress.setPercent(0)
 
-    def autoStop(self):
-        log('autoStop')
-        players.manual_stopped.clear()
-        players.switch_source.set()
-        if self._player:
-            self._player.stop()
-
-    def manualStop(self):
-        log('manualStop')
-        players.manual_stopped.set()
-        players.switch_source.clear()
-        if self._player:
-            self._player.stop()
-
-
 #     def isVisible(self):
 #         return xbmc.getCondVisibility(fmt("Window.IsVisible({window})", window=MyPlayer.PLAYER_WINDOW_ID))
 
@@ -291,6 +276,14 @@ class MyPlayer(xbmcgui.WindowXML):
                 self.swinfo.setVisible(False)
         except Exception as e:
             log.w(fmt("hideStatus error: {0}", e))
+
+    def autoStop(self):
+        if self._player:
+            self._player.autoStop()
+
+    def manualStop(self):
+        if self._player:
+            self._player.manualStop()
 
     def onAction(self, action):
 
