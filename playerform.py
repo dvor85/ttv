@@ -191,8 +191,8 @@ class MyPlayer(xbmcgui.WindowXML):
                 log.d(fmt('Channel source is "{0}"', src))
                 for player in channel.get('players'):
                     try:
-                        if self._player:
-                            self._player.stop()
+                        if self.Stop():
+                            return
 
                         url = channel.get_url(player)
                         mode = channel.get_mode()
@@ -284,6 +284,10 @@ class MyPlayer(xbmcgui.WindowXML):
     def manualStop(self):
         if self._player:
             self._player.manualStop()
+
+    def Stop(self):
+        if self._player:
+            return self._player.stop()
 
     def onAction(self, action):
 

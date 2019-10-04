@@ -154,8 +154,9 @@ class LoopPlay(threading.Thread):
         self.name = 'LoopPlay'
 
     def stop(self):
+        log.d(fmt("stop from {0}", self.name))
         self.active = False
-        self.parent.player.manualStop()
+        self.parent.player.Stop()
 
     def run(self):
         self.active = True

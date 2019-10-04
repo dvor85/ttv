@@ -295,7 +295,7 @@
 	      <midtexture>progressfront.png</midtexture>
           <width>900</width>
           <height>9</height>
-          <info>ListItem.Progress</info>
+          <info></info>
         </control>
         <control type="label" id="107">
           <description>My First label</description>

@@ -166,7 +166,7 @@
 	      	  <midtexture>progressfront.png</midtexture>
               <width>1100</width>
               <height>9</height>
-              <info>ListItem.Progress</info>
+              <info></info>
             </control>
             <control type="label" id ="110">
               <description>Next EPG</description>

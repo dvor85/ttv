@@ -53,11 +53,11 @@ class TPlayer(xbmc.Player):
 
     def onPlayBackEnded(self):
         log('onPlayBackEnded')
-        self.next_source()
+        self.autoStop()
 
     def onPlayBackError(self):
         log('onPlayBackError')
-        self.next_source()
+        self.autoStop()
 
     def onAVStarted(self):
         log('onAVStarted')
@@ -94,18 +94,15 @@ class TPlayer(xbmc.Player):
         log.debug(fmt("switch source is {ss}; manual stopped is {ms}", ss=switch_source.is_set(), ms=manual_stopped.is_set()))
         return not (manual_stopped.is_set() and defines.MANUAL_STOP) and (switch_source.is_set() or manual_stopped.is_set())
 
-    def next_source(self):
-        switch_source.set()
-        self.stop()
-
     def end(self):
         log('end player method')
         xbmc.Player.stop(self)
         self.onPlayBackEnded()
 
     def stop(self):
-        log('stop player method')
+        log.d(fmt('stop player method | manual_stop is: {0}', manual_stopped.is_set()))
         xbmc.Player.stop(self)
+        return manual_stopped.is_set()
 
     def autoStop(self):
         log('autoStop')
@@ -402,7 +399,7 @@ class AcePlayer(TPlayer):
                         log.e(fmt('_wait_message error: {0}', e))
                         self.waiting.msg = None
                         if not manual_stopped.is_set():
-                            self.next_source()
+                            self.autoStop()
                         return
 
             else:
@@ -440,7 +437,7 @@ class AcePlayer(TPlayer):
                 log.e(fmt('_wait_message error: {0}', e))
                 self.waiting.msg = None
                 if not manual_stopped.is_set():
-                    self.next_source()
+                    self.autoStop()
 
     def _createThread(self):
         self.sock_thr = SockThread(self.sock)
@@ -512,7 +509,7 @@ class AcePlayer(TPlayer):
 
                         if time.time() - self.prebuf['last_update'] >= AcePlayer.TIMEOUT_FREEZE:
                             log.w('AceEngine is freeze')
-                            self.next_source()
+                            self.autoStop()
 
                     elif _descr[0] == 'check':
                         log.d(fmt('_stateHandler: Проверка {0}', _descr[1]))
@@ -530,7 +527,7 @@ class AcePlayer(TPlayer):
                         if time.time() - self.prebuf['last_update'] >= AcePlayer.TIMEOUT_FREEZE:
                             self.parent.player.showStatus(fmt('Пребуферизация {0}', self.prebuf['value']))
                             log.w('AceEngine is freeze')
-                            self.next_source()
+                            self.autoStop()
 
 #                         self.parent.showInfoStatus('Buf:%s DL:%s UL:%s' % (_descr[1], _descr[5], _descr[7]))
 #                     else:
@@ -632,7 +629,7 @@ class AcePlayer(TPlayer):
             self.sock_thr.join()
             self.sock_thr = None
         self.last_error = None
-        TPlayer.stop(self)
+        return TPlayer.stop(self)
 
 
 class Waiting():
