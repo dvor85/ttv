@@ -156,7 +156,7 @@ class LoopPlay(threading.Thread):
     def stop(self):
         log.d(fmt("stop from {0}", self.name))
         self.active = False
-        self.parent.player.Stop()
+        self.parent.player.channelStop()
 
     def run(self):
         self.active = True
@@ -575,6 +575,7 @@ class WMainForm(xbmcgui.WindowXML):
         log.d(fmt('onClick {0}', controlID))
         if controlID == 200:
             self.setFocusId(WMainForm.CONTROL_LIST)
+            self.player.manualStop()
         elif controlID == WMainForm.CONTROL_LIST:
             selItem = self.list.getSelectedItem()
 

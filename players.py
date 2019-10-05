@@ -23,6 +23,7 @@ fmt = utils.fmt
 sys_platform = defines.platform()['os']
 manual_stopped = threading.Event()
 switch_source = threading.Event()
+channel_stop = threading.Event()
 
 
 class TPlayer(xbmc.Player):
@@ -63,6 +64,7 @@ class TPlayer(xbmc.Player):
         log('onAVStarted')
         manual_stopped.clear()
         switch_source.clear()
+        channel_stop.clear()
         self.parent.hide_main_window()
         self.parent.player.hideStatus()
 
@@ -114,6 +116,11 @@ class TPlayer(xbmc.Player):
         log('manualStop')
         manual_stopped.set()
         switch_source.clear()
+        self.stop()
+
+    def channelStop(self):
+        log('channelStop')
+        channel_stop.set()
         self.stop()
 
 

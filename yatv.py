@@ -46,7 +46,7 @@ class YATV():
 
         valid_date = False
         if os.path.exists(self.yatv_file_json):
-            valid_date = datetime.date.today() < datetime.date.fromtimestamp(os.path.getmtime(self.yatv_file_json))
+            valid_date = datetime.date.today() == datetime.date.fromtimestamp(os.path.getmtime(self.yatv_file_json))
 
         self.availableChannels = self.get_availible_channels()
 
@@ -61,9 +61,9 @@ class YATV():
             with open(self.yatv_file_json, 'rb') as fp:
                 self.jdata = json.load(fp)
             log.d(fmt("Loading yatv from json in {t} sec", t=time.time() - bt))
-        if self.jdata:
-            ft = time.mktime(self.get_finish().timetuple())
-            os.utime(self.yatv_file_json, (ft, ft))
+#         if self.jdata:
+#             ft = time.mktime(self.get_finish().timetuple())
+#             os.utime(self.yatv_file_json, (ft, ft))
         log.d('stop initialization')
 
     def get_yatv_sess(self):

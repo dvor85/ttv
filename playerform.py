@@ -86,6 +86,18 @@ class MyPlayer(xbmcgui.WindowXML):
         self.control_window.setVisible(True)
         self.hide_control_window(timeout=5)
 
+    @property
+    def manual_stop_requested(self):
+        return players.manual_stopped.is_set()
+
+    @property
+    def switch_source_requested(self):
+        return players.switch_source.is_set()
+
+    @property
+    def channel_stop_requested(self):
+        return players.channel_stop.is_set()
+
     def init_channel_number(self):
         if self.channel_number != 0:
             self.parent.selitem_id = self.channel_number
@@ -191,8 +203,8 @@ class MyPlayer(xbmcgui.WindowXML):
                 log.d(fmt('Channel source is "{0}"', src))
                 for player in channel.get('players'):
                     try:
-                        if self.Stop():
-                            return
+                        #                         if self.Stop():
+                        #                             return
 
                         url = channel.get_url(player)
                         mode = channel.get_mode()
@@ -208,23 +220,36 @@ class MyPlayer(xbmcgui.WindowXML):
                         else:
                             self._player = players.TPlayer.get_instance(parent=self.parent)
 
-                        if self._player and self._player.play_item(index=0, title=self.title,
-                                                                   iconImage=logo,
-                                                                   thumbnailImage=logo,
-                                                                   url=url, mode=mode):
+                        if self._player:
+                            self._player.play_item(index=0, title=self.title,
+                                                   iconImage=logo,
+                                                   thumbnailImage=logo,
+                                                   url=url, mode=mode)
                             log.d('End playing')
-                            return True
-                        if defines.isCancel():
-                            return
-                    except Exception as e:
-                        log.error(fmt("Error play with {0} player: {1}", player, e))
-                else:
-                    raise Exception(fmt('There are no availible players for "{0}" in source "{1}"', channel.get_name(), src))
 
-                return True
+                    except Exception as e:
+                        log.e(fmt("Error play with {0} player: {1}", player, e))
+                    finally:
+                        if self.manual_stop_requested or defines.isCancel():
+                            self.close()
+                            return
+                        if self.channel_stop_requested:
+                            return True
+                        if self.switch_source_requested:
+                            break
+#                 else:
+#                     raise Exception(fmt('There are no availible players for "{0}" in source "{1}"', channel.get_name(), src))
+#
+
             except Exception as e:
                 log.e(fmt('Start error: {0}', e))
-        self.close()
+
+#         self.close()
+        if self.manual_stop_requested or defines.isCancel():
+            self.close()
+            return
+        if self.switch_source_requested or self.channel_stop_requested:
+            return True
 
     def run_selected_channel(self, timeout=0):
 
@@ -233,7 +258,7 @@ class MyPlayer(xbmcgui.WindowXML):
             log.d(fmt('CHANNEL NUMBER IS: {0}', self.channel_number))
             if 0 < self.channel_number < self.parent.list.size() and self.parent.selitem_id != self.channel_number:
                 self.parent.selitem_id = self.channel_number
-                self.autoStop()
+                self.channelStop()
             else:
                 self.hideStatus()
             self.channel_number = self.parent.selitem_id
@@ -284,6 +309,10 @@ class MyPlayer(xbmcgui.WindowXML):
     def manualStop(self):
         if self._player:
             self._player.manualStop()
+
+    def channelStop(self):
+        if self._player:
+            self._player.channelStop()
 
     def Stop(self):
         if self._player:
