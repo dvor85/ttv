@@ -7,7 +7,7 @@ import utils
 import defines
 import logger
 import requests
-from threading import Event
+from threading import Event, Timer
 
 import os
 try:
@@ -40,15 +40,22 @@ class YATV():
     def __init__(self):
         log.d('start initialization')
         self.jdata = []
+        self.update_timer = None
         self.yatv_file_json = os.path.join(defines.CACHE_PATH, 'yatv.json')
         self.yatv_logo_path = os.path.join(defines.CACHE_PATH, 'logo')
         self.sess = requests.Session()
 
+        self.availableChannels = self.get_availible_channels()
+        self._get_jdata()
+
+        log.d('stop initialization')
+
+    def _get_jdata(self):
         valid_date = False
         if os.path.exists(self.yatv_file_json):
             valid_date = datetime.date.today() == datetime.date.fromtimestamp(os.path.getmtime(self.yatv_file_json))
-
-        self.availableChannels = self.get_availible_channels()
+        interval = (datetime.datetime.combine(datetime.date.today() + datetime.timedelta(days=1),
+                                              datetime.time(3, 0)) - datetime.datetime.now()).seconds
 
         if not os.path.exists(self.yatv_file_json) or not valid_date:
             if os.path.exists(self.yatv_file_json):
@@ -61,10 +68,16 @@ class YATV():
             with open(self.yatv_file_json, 'rb') as fp:
                 self.jdata = json.load(fp)
             log.d(fmt("Loading yatv from json in {t} sec", t=time.time() - bt))
-#         if self.jdata:
-#             ft = time.mktime(self.get_finish().timetuple())
-#             os.utime(self.yatv_file_json, (ft, ft))
-        log.d('stop initialization')
+
+        self.update_timer = Timer(interval, self._get_jdata)
+        self.update_timer.name = "update_yatv_timer"
+        self.update_timer.daemon = False
+        self.update_timer.start()
+
+    def cancel(self):
+        if self.update_timer:
+            self.update_timer.cancel()
+            self.update_timer = None
 
     def get_yatv_sess(self):
         return self.sess

@@ -20,6 +20,7 @@ except ImportError:
     import json
 import utils
 from UserDict import UserDict
+import yatv
 # try:
 #     from collections import OrderedDict
 # except ImportError:
@@ -267,6 +268,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.timers = {}
         self.rotate_screen_thr = None
         self.loop_play_thr = None
+        self._yatv_instance = None
 
     def onInit(self):
         self.cur_category = defines.ADDON.getSetting('cur_category')
@@ -468,8 +470,9 @@ class WMainForm(xbmcgui.WindowXML):
                 fp.write(s)
 
         def LoadOther():
-            for thr in thrs.itervalues():
-                thr.join(20)
+            for name, thr in thrs.iteritems():
+                if name not in ('yatv_epg'):
+                    thr.join(20)
 
 #             dump_channel_groups()
 
@@ -481,6 +484,7 @@ class WMainForm(xbmcgui.WindowXML):
 
         thrs = {}
         thrs['favourite'] = defines.MyThread(self.loadFavourites)
+        thrs['yatv_epg'] = defines.MyThread(lambda: setattr(self, '_yatv_instance', yatv.YATV.get_instance()))
         for src_name in ChannelSources.iterkeys():
             thrs[src_name] = defines.MyThread(self.loadChannels, src_name)
 
@@ -499,16 +503,18 @@ class WMainForm(xbmcgui.WindowXML):
         self.loadList()
 
     def loadList(self):
-        log.i('loadList: Clear list')
-        self.list.reset()
-        self.fillChannels()
-        if self.init:
-            self.select_channel()
-            self.init = False
-        if (self.list) and (0 < self.selitem_id < self.list.size()):
-            if self.first_init:  # автостарт канала
-                self.first_init = False
-                self.startChannel()
+        if self.cur_category == '' or self.cur_category not in self.channel_groups.getGroups():
+            self.fillCategory()
+        else:
+            self.list.reset()
+            self.fillChannels()
+            if self.init:
+                self.select_channel()
+                self.init = False
+            if (self.list) and (0 < self.selitem_id < self.list.size()):
+                if self.first_init:  # автостарт канала
+                    self.first_init = False
+                    self.startChannel()
         self.hideStatus()
 
     def Play(self):
@@ -774,5 +780,8 @@ class WMainForm(xbmcgui.WindowXML):
 
         if self.loop_play_thr:
             self.loop_play_thr.stop()
+
+        if self._yatv_instance:
+            self._yatv_instance.cancel()
 
         xbmcgui.WindowXML.close(self)
