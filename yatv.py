@@ -104,7 +104,7 @@ class YATV():
         https://tv.yandex.ru/ajax/i-tv-region/get?params={"duration":96400,"fields":"schedules,channel,title,id,events,channelId,start,finish,program,availableChannels,availableChannelsIds"}&resource=schedule&lang=ru&userRegion=193
         """
 
-        _yparams = {"fields": "schedules,channel,title,id,events,channelId,start,finish,program,logo,sizes,src",
+        _yparams = {"fields": "schedules,channel,title,id,events,description,channelId,start,finish,program,logo,sizes,src",
                     #                     "duration": 96400,
                     "channelLimit": 24,
                     "channelProgramsLimit": self.availableChannels["availableChannels"],
@@ -178,6 +178,7 @@ class YATV():
 #                         et = self.strptime(et[0])
                         ep['etime'] = time.mktime(et.timetuple())
                         ep['name'] = evt['program']['title']
+                        ep['desc'] = evt['program'].get('description', '')
 
                         yield ep
 

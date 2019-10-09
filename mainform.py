@@ -223,11 +223,11 @@ class WMainForm(xbmcgui.WindowXML):
     IMG_SCREEN = 210
     IMG_LOGO = 1111
     CONTROL_LIST = 50
-    PANEL_ADS = 105
 
     TXT_PROGRESS = 107
     IMG_PROGRESS = 108
     PROGRESS_BAR = 110
+    DESC_LABEL = 105
 
     BTN_INFO = 209
     LBL_FIRST_EPG = 300
@@ -276,6 +276,8 @@ class WMainForm(xbmcgui.WindowXML):
         self.img_progress = self.getControl(WMainForm.IMG_PROGRESS)
         self.txt_progress = self.getControl(WMainForm.TXT_PROGRESS)
         self.progress = self.getControl(WMainForm.PROGRESS_BAR)
+        self.description_label = self.getControl(WMainForm.DESC_LABEL)
+
         self.list = self.getControl(WMainForm.CONTROL_LIST)
         self.init = True
 
@@ -311,7 +313,7 @@ class WMainForm(xbmcgui.WindowXML):
         if self.rotate_screen_thr:
             self.rotate_screen_thr.stop()
 
-        for controlId in (WMainForm.IMG_LOGO, WMainForm.IMG_SCREEN):
+        for controlId in (WMainForm.IMG_SCREEN,):
             self.getControl(controlId).setImage('')
 
         self.showNoEpg()
@@ -326,7 +328,7 @@ class WMainForm(xbmcgui.WindowXML):
                     self.getEpg(sel_chs, timeout=0.5, callback=self.showEpg)
                     self.showScreen(sel_chs, timeout=0.5)
 
-                for controlId in (WMainForm.IMG_LOGO, WMainForm.IMG_SCREEN):
+                for controlId in (WMainForm.IMG_SCREEN,):
                     self.getControl(controlId).setImage(selItem.getProperty('icon'))
 
     def loadFavourites(self, *args):
@@ -401,8 +403,12 @@ class WMainForm(xbmcgui.WindowXML):
                     et = datetime.datetime.fromtimestamp(float(ep['etime']))
                     ce.setLabel(fmt("{0} - {1} {2}",
                                     bt.strftime("%H:%M"), et.strftime("%H:%M"), ep['name'].replace('&quot;', '"')))
-                    if self.progress and i == 0:
-                        self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
+                    if i == 0:
+                        if self.progress:
+                            self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
+                        if self.description_label:
+                            self.description_label.setLabel(ep['desc'])
+
                 except:
                     break
 
@@ -423,6 +429,8 @@ class WMainForm(xbmcgui.WindowXML):
                 break
         if self.progress:
             self.progress.setPercent(0)
+        if self.description_label:
+            self.description_label.setLabel('')
 
     def showScreen(self, chs, timeout=0):
 
