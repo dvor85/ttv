@@ -60,11 +60,15 @@ class TPlayer(xbmc.Player):
         log('onPlayBackError')
         self.autoStop()
 
-    def onAVStarted(self):
-        log('onAVStarted')
+    def _clear_flags(self):
+        log.d('Clear flags')
         manual_stopped.clear()
         switch_source.clear()
         channel_stop.clear()
+
+    def onAVStarted(self):
+        log('onAVStarted')
+        self._clear_flags()
         self.parent.hide_main_window()
         self.parent.player.hideStatus()
 
@@ -72,7 +76,10 @@ class TPlayer(xbmc.Player):
         log('onAVChange')
 
     def loop(self):
-        while self.isPlaying() and not defines.isCancel():
+        log.d('loop')
+        self._clear_flags()
+        while self.isPlaying() and \
+                not (defines.isCancel() or manual_stopped.is_set() or switch_source.is_set() or channel_stop.is_set()):
             try:
                 xbmc.sleep(250)
             except Exception as e:
@@ -94,7 +101,6 @@ class TPlayer(xbmc.Player):
         self.parent.player.Show()
         self.loop()
         log.debug(fmt("switch source is {ss}; manual stopped is {ms}", ss=switch_source.is_set(), ms=manual_stopped.is_set()))
-        return not (manual_stopped.is_set() and defines.MANUAL_STOP) and (switch_source.is_set() or manual_stopped.is_set())
 
     def end(self):
         log('end player method')
@@ -603,7 +609,7 @@ class AcePlayer(TPlayer):
 
                 self.link = _params['url'].replace('127.0.0.1', self.server_ip).replace('6878', self.webport)
                 log.d(fmt('Преобразование ссылки: {0}', self.link))
-                res = TPlayer.play_item(self, title, icon, thumb)
+                TPlayer.play_item(self, title, icon, thumb)
             except Exception as e:
                 log.e(fmt('play_item error: {0}', e))
                 self.last_error = e
@@ -613,7 +619,6 @@ class AcePlayer(TPlayer):
             log.e(self.last_error)
             self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
         self.stop()
-        return res
 
     def end(self):
         self.link = None
@@ -821,4 +826,4 @@ class NoxPlayer(TPlayer):
 
     def play_item(self, title='', icon='', thumb='', *args, **kwargs):
         self.link = kwargs.get('url')
-        return TPlayer.play_item(self, title=title, icon=icon, thumb=thumb, *args, **kwargs)
+        TPlayer.play_item(self, title=title, icon=icon, thumb=thumb, *args, **kwargs)

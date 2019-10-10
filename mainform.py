@@ -135,10 +135,9 @@ class RotateScreen(threading.Thread):
         while self.active:
             for screen in self.screens:
                 if self.active:
-                    self.img_control.setImage(screen['filename'])
-                    for i in range(16):  # @UnusedVariable
-                        if self.active:
-                            xbmc.sleep(100)
+                    self.img_control.setImage(screen)
+                    if defines.monitor.waitForAbort(2):
+                        return
 
     def stop(self):
         self.active = False
@@ -326,7 +325,7 @@ class WMainForm(xbmcgui.WindowXML):
                 sel_chs = self.get_channel_by_name(selItem.getProperty("name"))
                 if sel_chs:
                     self.getEpg(sel_chs, timeout=0.5, callback=self.showEpg)
-                    self.showScreen(sel_chs, timeout=0.5)
+#                     self.showScreen(sel_chs, timeout=0.5)
 
                 for controlId in (WMainForm.IMG_SCREEN,):
                     self.getControl(controlId).setImage(selItem.getProperty('icon'))
@@ -406,8 +405,10 @@ class WMainForm(xbmcgui.WindowXML):
                     if i == 0:
                         if self.progress:
                             self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
+                        if 'screens' in ep:
+                            self.showScreen(ep['screens'], 0.5)
                         if self.description_label:
-                            self.description_label.setLabel(ep['desc'])
+                            self.description_label.setText(ep['desc'])
 
                 except:
                     break
@@ -430,17 +431,12 @@ class WMainForm(xbmcgui.WindowXML):
         if self.progress:
             self.progress.setPercent(0)
         if self.description_label:
-            self.description_label.setLabel('')
+            self.description_label.setText('')
 
-    def showScreen(self, chs, timeout=0):
+    def showScreen(self, screens, timeout=0):
 
         def show():
             log.d('showScreen')
-            screens = None
-            for ch in chs.itervalues():
-                screens = ch.get_screenshots()
-                if screens is not None:
-                    break
 
             if screens:
                 if self.rotate_screen_thr:
@@ -448,7 +444,8 @@ class WMainForm(xbmcgui.WindowXML):
                     self.rotate_screen_thr.join(0.2)
                     self.rotate_screen_thr = None
 
-                self.rotate_screen_thr = RotateScreen(self.getControl(WMainForm.IMG_SCREEN), screens)
+                img_screen = self.getControl(WMainForm.IMG_SCREEN)
+                self.rotate_screen_thr = RotateScreen(img_screen, screens)
                 self.rotate_screen_thr.start()
 
             self.timers[WMainForm.TIMER_SHOW_SCREEN] = None

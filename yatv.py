@@ -7,6 +7,7 @@ import utils
 import defines
 import logger
 import requests
+import gzip
 from threading import Event, Timer
 
 import os
@@ -41,7 +42,7 @@ class YATV():
         log.d('start initialization')
         self.jdata = []
         self.update_timer = None
-        self.yatv_file_json = os.path.join(defines.CACHE_PATH, 'yatv.json')
+        self.yatv_file_json = os.path.join(defines.CACHE_PATH, 'yatv.json.gz')
         self.yatv_logo_path = os.path.join(defines.CACHE_PATH, 'logo')
         self.sess = requests.Session()
 
@@ -65,7 +66,7 @@ class YATV():
             log.d(fmt("Loading yatv in {t} sec", t=time.time() - bt))
         if not self.jdata:
             bt = time.time()
-            with open(self.yatv_file_json, 'rb') as fp:
+            with gzip.open(self.yatv_file_json, 'rb') as fp:
                 self.jdata = json.load(fp)
             log.d(fmt("Loading yatv from json in {t} sec", t=time.time() - bt))
 
@@ -104,8 +105,7 @@ class YATV():
         https://tv.yandex.ru/ajax/i-tv-region/get?params={"duration":96400,"fields":"schedules,channel,title,id,events,channelId,start,finish,program,availableChannels,availableChannelsIds"}&resource=schedule&lang=ru&userRegion=193
         """
 
-        _yparams = {"fields": "schedules,channel,title,id,events,description,channelId,start,finish,program,logo,sizes,src",
-                    #                     "duration": 96400,
+        _yparams = {"fields": "schedules,channel,title,id,events,description,channelId,start,finish,program,logo,sizes,src,images",
                     "channelLimit": 24,
                     "channelProgramsLimit": self.availableChannels["availableChannels"],
                     "channelOffset": 0,
@@ -117,7 +117,7 @@ class YATV():
                    "params": json.dumps(_yparams),
                    "lang": "ru"
                    }
-        with open(self.yatv_file_json, 'ab+') as fp:
+        with gzip.open(self.yatv_file_json, 'ab+') as fp:
             fp.write('[')
             m = _yparams["channelProgramsLimit"] / _yparams["channelLimit"]
             for p in range(0, m):
@@ -136,8 +136,6 @@ class YATV():
                 except Exception as e:
                     log.error(fmt('update_yatv error: {0}', e))
             fp.write(']')
-            fp.seek(0)
-            self.jdata = json.load(fp)
 
     def get_finish(self):
         m = None
@@ -179,6 +177,8 @@ class YATV():
                         ep['etime'] = time.mktime(et.timetuple())
                         ep['name'] = evt['program']['title']
                         ep['desc'] = evt['program'].get('description', '')
+                        if 'images' in evt['program']:
+                            ep['screens'] = ['http:{src}'.format(src=x['sizes']['200']['src']) for x in evt['program']['images']]
 
                         yield ep
 

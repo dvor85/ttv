@@ -203,9 +203,6 @@ class MyPlayer(xbmcgui.WindowXML):
                 log.d(fmt('Channel source is "{0}"', src))
                 for player in channel.get('players'):
                     try:
-                        #                         if self.Stop():
-                        #                             return
-
                         url = channel.get_url(player)
                         mode = channel.get_mode()
                         logo = channel.get_logo()
