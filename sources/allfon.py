@@ -6,10 +6,7 @@ import defines
 import logger
 import os
 import time
-try:
-    import simplejson as json
-except ImportError:
-    import json
+import json
 from tchannel import TChannel, TChannels
 
 log = logger.Logger(__name__)

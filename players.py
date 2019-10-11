@@ -21,9 +21,31 @@ import time
 log = logger.Logger(__name__)
 fmt = utils.fmt
 sys_platform = defines.platform()['os']
-manual_stopped = threading.Event()
-switch_source = threading.Event()
-channel_stop = threading.Event()
+
+
+class FlagsControl():
+    def __init__(self):
+        self.manual_stopped = threading.Event()
+        self.switch_source = threading.Event()
+        self.channel_stop = threading.Event()
+
+    def clear(self):
+        for f in self.__dict__.itervalues():
+            f.clear()
+
+    def is_any_flag_set(self):
+        for f in self.__dict__.itervalues():
+            if f.is_set():
+                return True
+
+    def log_status(self):
+        log_string = ''
+        for k, f in self.__dict__.iteritems():
+            log_string += fmt('{k}: {v}; ', k=k, v=f.is_set())
+        log.d(log_string)
+
+
+Flags = FlagsControl()
 
 
 class TPlayer(xbmc.Player):
@@ -50,7 +72,6 @@ class TPlayer(xbmc.Player):
 
     def onPlayBackStopped(self):
         log("onPlayBackStopped")
-#         manual_stopped.set()
 
     def onPlayBackEnded(self):
         log('onPlayBackEnded')
@@ -60,15 +81,9 @@ class TPlayer(xbmc.Player):
         log('onPlayBackError')
         self.autoStop()
 
-    def _clear_flags(self):
-        log.d('Clear flags')
-        manual_stopped.clear()
-        switch_source.clear()
-        channel_stop.clear()
-
     def onAVStarted(self):
         log('onAVStarted')
-        self._clear_flags()
+        Flags.clear()
         self.parent.hide_main_window()
         self.parent.player.hideStatus()
 
@@ -77,9 +92,8 @@ class TPlayer(xbmc.Player):
 
     def loop(self):
         log.d('loop')
-        self._clear_flags()
-        while self.isPlaying() and \
-                not (defines.isCancel() or manual_stopped.is_set() or switch_source.is_set() or channel_stop.is_set()):
+        Flags.clear()
+        while self.isPlaying() and not (defines.isCancel() or Flags.is_any_flag_set()):
             try:
                 xbmc.sleep(250)
             except Exception as e:
@@ -100,7 +114,7 @@ class TPlayer(xbmc.Player):
         log.debug(fmt('play_item {title}', title=title))
         self.parent.player.Show()
         self.loop()
-        log.debug(fmt("switch source is {ss}; manual stopped is {ms}", ss=switch_source.is_set(), ms=manual_stopped.is_set()))
+        Flags.log_status()
 
     def end(self):
         log('end player method')
@@ -108,25 +122,25 @@ class TPlayer(xbmc.Player):
         self.onPlayBackEnded()
 
     def stop(self):
-        log.d(fmt('stop player method | manual_stop is: {0}', manual_stopped.is_set()))
+        Flags.log_status()
         xbmc.Player.stop(self)
-        return manual_stopped.is_set()
 
     def autoStop(self):
         log('autoStop')
-        manual_stopped.clear()
-        switch_source.set()
+        Flags.clear()
+        Flags.switch_source.set()
         self.stop()
 
     def manualStop(self):
         log('manualStop')
-        manual_stopped.set()
-        switch_source.clear()
+        Flags.clear()
+        Flags.manual_stopped.set()
         self.stop()
 
     def channelStop(self):
         log('channelStop')
-        channel_stop.set()
+        Flags.clear()
+        Flags.channel_stop.set()
         self.stop()
 
 
@@ -411,7 +425,7 @@ class AcePlayer(TPlayer):
                     except Exception as e:
                         log.e(fmt('_wait_message error: {0}', e))
                         self.waiting.msg = None
-                        if not manual_stopped.is_set():
+                        if not Flags.manual_stopped.is_set():
                             self.autoStop()
                         return
 
@@ -449,7 +463,7 @@ class AcePlayer(TPlayer):
             except Exception as e:
                 log.e(fmt('_wait_message error: {0}', e))
                 self.waiting.msg = None
-                if not manual_stopped.is_set():
+                if not Flags.manual_stopped.is_set():
                     self.autoStop()
 
     def _createThread(self):
@@ -581,7 +595,6 @@ class AcePlayer(TPlayer):
                 log.e(fmt('_stateHandler error: "{0}"', e))
 
     def play_item(self, title='', icon='', thumb='', *args, **kwargs):
-        res = None
         if self.last_error:
             return
         url = kwargs.get('url')
@@ -618,7 +631,6 @@ class AcePlayer(TPlayer):
             self.last_error = 'Incorrect msg from AceEngine'
             log.e(self.last_error)
             self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
-        self.stop()
 
     def end(self):
         self.link = None
@@ -641,7 +653,7 @@ class AcePlayer(TPlayer):
             self.sock_thr.join()
             self.sock_thr = None
         self.last_error = None
-        return TPlayer.stop(self)
+        TPlayer.stop(self)
 
 
 class Waiting():

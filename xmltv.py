@@ -10,10 +10,6 @@ from threading import Event
 
 import os
 import gzip
-try:
-    import simplejson as json
-except ImportError:
-    import json
 
 
 fmt = utils.fmt

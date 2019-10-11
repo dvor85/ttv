@@ -6,10 +6,7 @@ import defines
 import logger
 import xbmc
 import utils
-try:
-    import simplejson as json
-except ImportError:
-    import json
+import json
 
 
 log = logger.Logger(__name__)

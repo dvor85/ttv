@@ -14,10 +14,7 @@ from menu import MenuForm
 from sources.table import ChannelSources
 from sources import grouplang
 import favdb
-try:
-    import simplejson as json
-except ImportError:
-    import json
+import json
 import utils
 from UserDict import UserDict
 import yatv
@@ -137,7 +134,7 @@ class RotateScreen(threading.Thread):
                 if self.active:
                     self.img_control.setImage(screen)
                     if defines.monitor.waitForAbort(2):
-                        return
+                        self.stop()
 
     def stop(self):
         self.active = False
@@ -254,6 +251,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.txt_progress = None
         self.progress = None
         self.list = None
+        self.list_type = ''
         self.player = MyPlayer("player.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
         self.player.parent = self
         self.cur_category = None
@@ -476,7 +474,7 @@ class WMainForm(xbmcgui.WindowXML):
 
         def LoadOther():
             for name, thr in thrs.iteritems():
-                if name not in ('yatv_epg'):
+                if name not in ('yatv_epg',):
                     thr.join(20)
 
 #             dump_channel_groups()
@@ -540,6 +538,8 @@ class WMainForm(xbmcgui.WindowXML):
             self.channel_number_str = ''
             self.timers[WMainForm.TIMER_SEL_CHANNEL] = None
 
+        if not self.list_type == 'channels':
+            return
         if self.channel_number_str == '':
             self.channel_number_str = str(sch) if sch != '' else str(self.selitem_id)
         chnum = utils.str2int(self.channel_number_str)
@@ -704,6 +704,7 @@ class WMainForm(xbmcgui.WindowXML):
             return
         log.d('fillChannels: Clear list')
         self.list.reset()
+        self.list_type = 'channels'
 #         if not self.channel_groups.getChannels(self.cur_category):
 #             self.fillCategory()
 #             self.hideStatus()
@@ -715,6 +716,8 @@ class WMainForm(xbmcgui.WindowXML):
             if chs:
                 for ch in chs.itervalues():
                     try:
+                        if defines.isCancel():
+                            return
                         chname = fmt("{0}. {1}", i + 1, ch.get_name())
                         chli = xbmcgui.ListItem(chname, ch.get_id())
                         self.setLogo(ch, chli, self.set_logo_sema)
@@ -766,7 +769,10 @@ class WMainForm(xbmcgui.WindowXML):
             return
         log.d('fillCategory: Clear list')
         self.list.reset()
+        self.list_type = 'groups'
         for gr in self.channel_groups.getGroups():
+            if defines.isCancel():
+                return
             AddItem(gr)
 
     def close(self):

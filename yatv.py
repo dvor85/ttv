@@ -8,13 +8,11 @@ import defines
 import logger
 import requests
 import gzip
-from threading import Event, Timer
-
 import os
-try:
-    import simplejson as json
-except ImportError:
-    import json
+import json
+from threading import Event, Timer
+from sources.channel_info import CHANNEL_INFO
+
 
 fmt = utils.fmt
 log = logger.Logger(__name__)
@@ -183,10 +181,11 @@ class YATV():
                         yield ep
 
     def get_id_by_name(self, name):
-        name = utils.lower(name, 'utf8')
+        names = [utils.lower(name, 'utf8')]
+        names.extend(CHANNEL_INFO.get(names[0], {}).get("aliases", []))
         for p in self.jdata:
             for sch in p['schedules']:
-                if utils.lower(sch['channel']['title'], 'utf8') == name:
+                if utils.lower(sch['channel']['title'], 'utf8') in names:
                     return sch['channel']['id']
 
     def get_epg_by_name(self, name):

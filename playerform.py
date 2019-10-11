@@ -88,15 +88,15 @@ class MyPlayer(xbmcgui.WindowXML):
 
     @property
     def manual_stop_requested(self):
-        return players.manual_stopped.is_set()
+        return players.Flags.manual_stopped.is_set()
 
     @property
     def switch_source_requested(self):
-        return players.switch_source.is_set()
+        return players.Flags.switch_source.is_set()
 
     @property
     def channel_stop_requested(self):
-        return players.channel_stop.is_set()
+        return players.Flags.channel_stop.is_set()
 
     def init_channel_number(self):
         if self.channel_number != 0:
@@ -185,6 +185,8 @@ class MyPlayer(xbmcgui.WindowXML):
 #         return xbmc.getCondVisibility(fmt("Window.IsVisible({window})", window=MyPlayer.PLAYER_WINDOW_ID))
 
     def Show(self):
+        if self.parent.rotate_screen_thr:
+            self.parent.rotate_screen_thr.stop()
         if self._player:
             self.show()
 

@@ -4,8 +4,8 @@
     
     <control type="group" id="201">
       <control type="videowindow">
-        <posx>0</posx>
-        <posy>0</posy>
+        <left>0</left>
+        <top>0</top>
         <width>1280</width>
         <height>720</height>
         <visible>Player.HasVideo + !Skin.HasSetting(ShowBackgroundVideo)</visible>
@@ -13,15 +13,15 @@
       <control type="group" id="203">
         <animation effect="fade" start="100" end="0" delay="3000" time="4000" reversible="True">Visible</animation>
         <animation effect="fade" start="0" end="100" delay="3000" time="4000" reversible="True">Hide</animation>
-        <posx>0</posx>
-        <posy>0</posy>
+        <left>0</left>
+        <top>0</top>
         <width>1280</width>
         <height>720</height>
         
         <control type="label" id="399">
             <description>Name</description>
-            <posx>10</posx>
-            <posy>10</posy>
+            <left>10</left>
+            <top>10</top>
             <font>font30</font>
             <textcolor>ff00ff7f</textcolor>
             <visible>true</visible>
@@ -30,8 +30,8 @@
         <control type="group">
           <description>Window</description>
           <control type="image">
-            <posx>5</posx>
-            <posy>600</posy>
+            <left>5</left>
+            <top>600</top>
             <width>1270</width>
             <height>210</height>
             <texture border="40">window.png</texture>
@@ -39,19 +39,19 @@
         </control>
         <control type="label">
           <description>Time</description>
-          <posx>1200</posx>
-          <posy>610</posy>
+          <left>1200</left>
+          <top>610</top>
           <font>font13</font>
           <visible>true</visible>
           <label>$INFO[System.Time]</label>
         </control>
         <control type="group">
           
-          <posx>0</posx>
-          <posy>579</posy>
+          <left>0</left>
+          <top>579</top>
           <control type="togglebutton" id="204">
-            <posx>135</posx>
-            <posy>100</posy>
+            <left>135</left>
+            <top>100</top>
             <width>30</width>
             <height>30</height>
             <onleft>208</onleft>
@@ -64,8 +64,8 @@
             <onclick>XBMC.PlayerControl(Play)</onclick>
           </control>
           <control type="button" id="200">
-            <posx>170</posx>
-            <posy>100</posy>
+            <left>170</left>
+            <top>100</top>
             <width>30</width>
             <height>30</height>
             <onleft>204</onleft>
@@ -76,8 +76,8 @@
           </control>
           <control type="button" id="209">
             <description>Следующий источник</description>
-            <posx>205</posx>
-            <posy>100</posy>
+            <left>205</left>
+            <top>100</top>
             <width>30</width>
             <height>30</height>
             <onleft>200</onleft>
@@ -89,8 +89,8 @@
           
           <control type="button" id="205">
             <description>VIDEO SETTINGS</description>
-            <posx>275</posx>
-            <posy>100</posy>
+            <left>275</left>
+            <top>100</top>
             <width>30</width>
             <height>30</height>
             <onleft>209</onleft>
@@ -101,8 +101,8 @@
           </control>
           <control type="button" id="206">
             <description>AUDIO SETTINGS</description>
-            <posx>310</posx>
-            <posy>100</posy>
+            <left>310</left>
+            <top>100</top>
             <width>30</width>
             <height>30</height>
             <onleft>205</onleft>
@@ -113,8 +113,8 @@
           </control>
           <control type="button" id="207">
             <description>CHANNEL LIST</description>
-            <posx>380</posx>
-            <posy>100</posy>
+            <left>380</left>
+            <top>100</top>
             <width>30</width>
             <height>30</height>
             <onleft>206</onleft>
@@ -125,8 +125,8 @@
           </control>
           <control type="button" id="208">
             <description>STANDARDP LAYER</description>
-            <posx>415</posx>
-            <posy>100</posy>
+            <left>415</left>
+            <top>100</top>
             <width>30</width>
             <height>30</height>
             <onleft>207</onleft>
@@ -137,8 +137,8 @@
           </control>
 
           <control type="image" id="202">
-            <posx>20</posx>
-            <posy>30</posy>
+            <left>20</left>
+            <top>30</top>
             <width>100</width>
             <height>100</height>
             <visible>true</visible>
@@ -147,8 +147,8 @@
           <control type="group">
             <control type="label" id = "109">
               <description>Current EPG</description>
-              <posx>135</posx>
-              <posy>30</posy>
+              <left>135</left>
+              <top>30</top>
               <width>1000</width>
               <label>Нет программы</label>
               <font>font13</font>
@@ -158,8 +158,8 @@
             </control>
             <control type="progress" id ="310">
               <description>Progress EGP</description>
-              <posx>130</posx>
-              <posy>60</posy>
+              <left>130</left>
+              <top>60</top>
               <visible>true</visible>
               <colordiffuse>88FFFFFF</colordiffuse>
               <texturebg>progressback.png</texturebg>
@@ -170,8 +170,8 @@
             </control>
             <control type="label" id ="110">
               <description>Next EPG</description>
-              <posx>135</posx>
-              <posy>75</posy>
+              <left>135</left>
+              <top>75</top>
               <align>left</align>
               <aligny>top</aligny>
               <width>1000</width>
@@ -187,8 +187,8 @@
     </control>
     <control type="label">
         <desctiption>Time</desctiption>
-        <posx>1210</posx>
-        <posy>10</posy>        
+        <left>1210</left>
+        <top>10</top>        
         <visible>true</visible>
         <label>$INFO[System.Time]</label>
     </control>
