@@ -181,7 +181,7 @@ class AcePlayer(TPlayer):
         self.aceport = 62062
         self.port_file = ''
         self.sock_thr = None
-        self.prebuf = {"last_update": time.time(), "value": 0}
+        self.msg_params = {"last_update": time.time()}
         self.waiting = Waiting()
 
         log.d(defines.ADDON.getSetting('ip_addr'))
@@ -398,7 +398,7 @@ class AcePlayer(TPlayer):
         """
         try:
             if not (self.sock_thr and self.sock_thr.is_active()):
-                if cmd not in ("STOP", "SHUTDOWN"):
+                if cmd not in (TSMessage.STOP, TSMessage.SHUTDOWN):
                     self._createThread()
                 else:
                     return
@@ -524,17 +524,17 @@ class AcePlayer(TPlayer):
                     _descr = _params['main'].split(';')
 
                     if _descr[0] == 'starting':
-                        self.prebuf['value'] = 0
+                        self.msg_params['prebuf'] = 0
 
                     elif _descr[0] == 'prebuf':
-                        if _descr[1] != self.prebuf['value']:
-                            self.prebuf['last_update'] = state.getTime()
-                            self.prebuf['value'] = _descr[1]
+                        if _descr[1] != self.msg_params.get('prebuf', 0):
+                            self.msg_params['last_update'] = state.getTime()
+                            self.msg_params['prebuf'] = _descr[1]
                             log.d('_stateHandler: Пытаюсь показать состояние')
-                            self.parent.showStatus(fmt('Пребуферизация {0}', self.prebuf['value']))
-                            self.parent.player.showStatus(fmt('Пребуферизация {0}', self.prebuf['value']))
+                            self.parent.showStatus(fmt('Пребуферизация {0}', self.msg_params['prebuf']))
+                            self.parent.player.showStatus(fmt('Пребуферизация {0}', self.msg_params['prebuf']))
 
-                        if time.time() - self.prebuf['last_update'] >= AcePlayer.TIMEOUT_FREEZE:
+                        if time.time() - self.msg_params['last_update'] >= AcePlayer.TIMEOUT_FREEZE:
                             log.w('AceEngine is freeze')
                             self.autoStop()
 
@@ -547,12 +547,19 @@ class AcePlayer(TPlayer):
                         # self.parent.showStatus('Буферизация: %s DL: %s UL: %s' % (_descr[1],
                         # _descr[5], _descr[7])) @IgnorePep8
 
-                        if _descr[1] != self.prebuf['value']:
-                            self.prebuf['last_update'] = state.getTime()
-                            self.prebuf['value'] = _descr[1]
-#                             self.parent.player.showStatus(fmt('Буферизация {0}', self.prebuf['value']))
-                        if time.time() - self.prebuf['last_update'] >= AcePlayer.TIMEOUT_FREEZE:
-                            self.parent.player.showStatus(fmt('Пребуферизация {0}', self.prebuf['value']))
+                        if _descr[1] != self.msg_params.get('buf', 0):
+                            self.msg_params['last_update'] = state.getTime()
+                            self.msg_params['buf'] = _descr[1]
+#                             self.parent.player.showStatus(fmt('Буферизация {0}', self.msg_params['value']))
+                        if time.time() - self.msg_params['last_update'] >= AcePlayer.TIMEOUT_FREEZE:
+                            self.parent.player.showStatus(fmt('Пребуферизация {0}', self.msg_params['buf']))
+                            log.w('AceEngine is freeze')
+                            self.autoStop()
+                    elif _descr[0] == 'dl':
+                        if _descr[8] != self.msg_params.get('downloaded', 0):
+                            self.msg_params['last_update'] = state.getTime()
+                            self.msg_params['downloaded'] = _descr[8]
+                        if time.time() - self.msg_params['last_update'] >= 10:
                             log.w('AceEngine is freeze')
                             self.autoStop()
 
@@ -560,7 +567,8 @@ class AcePlayer(TPlayer):
 #                     else:
 #                         self.parent.showInfoStatus('%s' % _params)
             elif state.getType() in (TSMessage.RESUME, TSMessage.PAUSE, TSMessage.START):
-                self.prebuf['value'] = 0
+                self.msg_params['value'] = 0
+#                 self.msg_params['downloaded'] = 0
 
             elif state.getType() == TSMessage.EVENT:
                 if state.getParams() == 'getuserdata':
@@ -634,8 +642,8 @@ class AcePlayer(TPlayer):
 
     def end(self):
         self.link = None
-        if self._send_command('STOP'):
-            self._send_command('SHUTDOWN')
+        if self._send_command(TSMessage.STOP):
+            self._send_command(TSMessage.SHUTDOWN)
         self.waiting.msg = None
         self.last_error = None
         if self.sock_thr:
@@ -646,7 +654,7 @@ class AcePlayer(TPlayer):
 
     def stop(self):
         self.link = None
-        self._send_command('STOP')
+        self._send_command(TSMessage.STOP)
         self.waiting.msg = None
         if self.sock_thr:
             self.sock_thr.end()
@@ -683,6 +691,7 @@ class TSMessage():
     EVENT = 'EVENT'
     PAUSE = 'PAUSE'
     RESUME = 'RESUME'
+    SHUTDOWN = 'SHUTDOWN'
     NONE = ''
 
     def __init__(self, tstype='', params=''):

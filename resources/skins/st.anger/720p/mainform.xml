@@ -132,7 +132,7 @@
 		<left>5</left>
         <top>525</top>
         <width>635</width>
-        <height>195</height>
+        <height>200</height>
         <description>InfoPanel</description>
         <control type="image">
           <left>0</left>
@@ -303,7 +303,7 @@
 		<left>640</left>
 	    <top>525</top>
 	    <width>635</width>
-	    <height>195</height>
+	    <height>200</height>
         <description>InfoPanel2</description>
         <control type="image">
 
