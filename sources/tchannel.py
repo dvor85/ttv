@@ -33,12 +33,14 @@ class TChannel(UserDict):
 
     def get_group(self):
         name = utils.lower(self.get_name(), 'utf8')
-        if not self.data.get('cat'):
-            try:
-                self.data['cat'] = CHANNEL_INFO[name]['cat']
-            except KeyError:
-                self.data['cat'] = None
-        return self.data['cat']
+        if name in CHANNEL_INFO:
+            self.data['cat'] = CHANNEL_INFO[name].get('cat')
+#         if not self.data.get('cat'):
+#             try:
+#                 self.data['cat'] = CHANNEL_INFO[name]['cat']
+#             except KeyError:
+#                 self.data['cat'] = None
+        return self.data.get('cat')
 
     def get_logo(self):
         name = utils.lower(self.get_name(), 'utf8')

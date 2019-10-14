@@ -555,13 +555,13 @@ class AcePlayer(TPlayer):
                             self.parent.player.showStatus(fmt('Пребуферизация {0}', self.msg_params['buf']))
                             log.w('AceEngine is freeze')
                             self.autoStop()
-                    elif _descr[0] == 'dl':
-                        if _descr[8] != self.msg_params.get('downloaded', 0):
-                            self.msg_params['last_update'] = state.getTime()
-                            self.msg_params['downloaded'] = _descr[8]
-                        if time.time() - self.msg_params['last_update'] >= 10:
-                            log.w('AceEngine is freeze')
-                            self.autoStop()
+#                     elif _descr[0] == 'dl':
+#                         if _descr[8] != self.msg_params.get('downloaded', 0):
+#                             self.msg_params['last_update'] = state.getTime()
+#                             self.msg_params['downloaded'] = _descr[8]
+#                         if time.time() - self.msg_params['last_update'] >= 10:
+#                             log.w('AceEngine is freeze')
+#                             self.autoStop()
 
 #                         self.parent.showInfoStatus('Buf:%s DL:%s UL:%s' % (_descr[1], _descr[5], _descr[7]))
 #                     else:

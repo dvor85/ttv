@@ -326,7 +326,7 @@ class WMainForm(xbmcgui.WindowXML):
 #                     self.showScreen(sel_chs, timeout=0.5)
 
                 for controlId in (WMainForm.IMG_SCREEN,):
-                    self.getControl(controlId).setImage(selItem.getProperty('icon'))
+                    self.getControl(controlId).setImage(selItem.getArt('icon'))
 
     def loadFavourites(self, *args):
         from sources.tchannel import TChannel
@@ -721,8 +721,6 @@ class WMainForm(xbmcgui.WindowXML):
                         chname = fmt("{0}. {1}", i + 1, ch.get_name())
                         chli = xbmcgui.ListItem(chname, ch.get_id())
                         self.setLogo(ch, chli, self.set_logo_sema)
-#                         chli.setArt({"icon": ch.get_logo()})
-#                         chli.setProperty("icon", ch.get_logo())
                         chli.setProperty('type', 'channel')
                         chli.setProperty("id", ch.get_id())
                         chli.setProperty("name", ch.get_name())
@@ -748,7 +746,6 @@ class WMainForm(xbmcgui.WindowXML):
         def set_logo():
             with sema:
                 chli.setArt({"icon": ch.get_logo()})
-                chli.setProperty("icon", ch.get_logo())
 
         if not defines.isCancel():
             slthread = threading.Thread(target=set_logo)
