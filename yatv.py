@@ -12,6 +12,7 @@ import os
 import json
 from threading import Event, Timer
 from sources.channel_info import CHANNEL_INFO
+import re
 
 
 fmt = utils.fmt
@@ -40,6 +41,7 @@ class YATV():
         log.d('start initialization')
         self.jdata = []
         self.update_timer = None
+        self._name_offset_regexp = re.compile('\s*(?P<name>.*?)\s*\((?P<offset>[\-+]+\d)\)\s*')
         self.yatv_file_json = os.path.join(defines.CACHE_PATH, 'yatv.json.gz')
         self.yatv_logo_path = os.path.join(defines.CACHE_PATH, 'logo')
         self.sess = requests.Session()
@@ -155,11 +157,11 @@ class YATV():
         except TypeError:
             return datetime.datetime(*(time.strptime(date_string, "%Y-%m-%dT%H:%M:%S")[0:6]))
 
-    def get_epg_by_id(self, chid):
+    def get_epg_by_id(self, chid, epg_offset=None):
         if chid is None or chid not in self.availableChannels["availableChannelsIds"]:
             return
         ctime = datetime.datetime.now()
-        offset = int(round((ctime - datetime.datetime.utcnow()).total_seconds()) / 3600)
+        offset = epg_offset if epg_offset is not None else int(round((ctime - datetime.datetime.utcnow()).total_seconds()) / 3600)
         for p in self.jdata:
             for sch in p['schedules']:
                 if sch['channel']['id'] == chid:
@@ -180,6 +182,11 @@ class YATV():
 
                         yield ep
 
+    def get_name_offset(self, name):
+        name_offset = self._name_offset_regexp.search(name)
+        if name_offset:
+            return (name_offset.group('name'), utils.str2int(name_offset.group('offset')))
+
     def get_id_by_name(self, name):
         names = [utils.lower(name, 'utf8')]
         names.extend(CHANNEL_INFO.get(names[0], {}).get("aliases", []))
@@ -189,7 +196,11 @@ class YATV():
                     return sch['channel']['id']
 
     def get_epg_by_name(self, name):
-        return self.get_epg_by_id(self.get_id_by_name(name))
+        name_offset = self.get_name_offset(name)
+        if name_offset:
+            return self.get_epg_by_id(self.get_id_by_name(name_offset[0]), name_offset[1])
+        else:
+            return self.get_epg_by_id(self.get_id_by_name(name))
 
     def get_logo_by_id(self, chid):
         if chid is None or chid not in self.availableChannels["availableChannelsIds"]:
@@ -202,7 +213,11 @@ class YATV():
         return ''
 
     def get_logo_by_name(self, name):
-        return self.get_logo_by_id(self.get_id_by_name(name))
+        name_offset = self.get_name_offset(name)
+        if name_offset:
+            return self.get_logo_by_id(self.get_id_by_name(name_offset[0]))
+        else:
+            return self.get_logo_by_id(self.get_id_by_name(name))
 
 
 if __name__ == '__main__':

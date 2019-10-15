@@ -229,7 +229,7 @@ class MyPlayer(xbmcgui.WindowXML):
                     except Exception as e:
                         log.e(fmt("Error play with {0} player: {1}", player, e))
                     finally:
-                        if self._player:
+                        if self._player and self._player.last_error:
                             self._player.last_error = None
                             return True
                         if self.manual_stop_requested or defines.isCancel():
@@ -250,7 +250,7 @@ class MyPlayer(xbmcgui.WindowXML):
         if self.manual_stop_requested or defines.isCancel():
             self.close()
             return
-        if self._player:
+        if self._player and self._player.last_error:
             self._player.last_error = None
             return True
         if self.switch_source_requested or self.channel_stop_requested:

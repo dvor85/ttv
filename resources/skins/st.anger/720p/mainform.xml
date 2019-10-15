@@ -138,37 +138,19 @@
           <left>0</left>
           <top>5</top>
           <texture border="40">window.png</texture>
-        </control>        
-        <control type="togglebutton" id="204">
-          <left>20</left>
-          <top>10</top>
-          <width>26</width>
-          <height>26</height>
-          <onleft>208</onleft>
-          <onright>200</onright>
-          <onup>50</onup>
-          <texturefocus>pausefocus.png</texturefocus>
-          <texturenofocus>pause.png</texturenofocus>
-          <usealttexture>Player.Paused | Player.Forwarding | Player.Rewinding</usealttexture>
-          <alttexturefocus>playfocus.png</alttexturefocus>
-          <alttexturenofocus>play.png</alttexturenofocus>
-          <onclick>XBMC.PlayerControl(Play)</onclick>
-          <visible>Player.HasVideo</visible>
-		  <!-- <visible>true</visible> -->
-        </control>
+        </control>       
         <control type="button" id="200">
           <left>50</left>
           <top>10</top>
           <width>26</width>
           <height>26</height>
-          <onleft>204</onleft>
+          <onleft>208</onleft>
           <onright>208</onright>
           <onup>50</onup>
           <texturefocus>stopfocus.png</texturefocus>
           <texturenofocus>stop.png</texturenofocus>
           <onclick>XBMC.PlayerControl(Stop)</onclick>
           <visible>Player.HasVideo</visible>
-		  <!-- <visible>true</visible> -->
         </control>
         <control type="button" id="208">
           <description>FULL SCREEN</description>
@@ -177,12 +159,11 @@
           <width>26</width>
           <height>26</height>
           <onleft>200</onleft>
-          <onright>204</onright>
+          <onright>200</onright>
           <onup>50</onup>
           <texturefocus>fullscreenfocus.png</texturefocus>
           <texturenofocus>fullscreen.png</texturenofocus>
           <visible>Player.HasVideo</visible>
-		  <!-- <visible>true</visible> -->
         </control>
         <control type="image" id="210">
 		  <description>Logo image</description>

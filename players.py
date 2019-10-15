@@ -122,6 +122,7 @@ class TPlayer(xbmc.Player):
         self.onPlayBackEnded()
 
     def stop(self):
+        log('stop')
         Flags.log_status()
         xbmc.Player.stop(self)
 
@@ -642,6 +643,7 @@ class AcePlayer(TPlayer):
 
     def end(self):
         self.link = None
+        TPlayer.end(self)
         if self._send_command(TSMessage.STOP):
             self._send_command(TSMessage.SHUTDOWN)
         self.waiting.msg = None
@@ -650,10 +652,10 @@ class AcePlayer(TPlayer):
             self.sock_thr.end()
             self.sock_thr = None
         self.sock.close()
-        TPlayer.end(self)
 
     def stop(self):
         self.link = None
+        TPlayer.stop(self)
         self._send_command(TSMessage.STOP)
         self.waiting.msg = None
         if self.sock_thr:
@@ -661,7 +663,6 @@ class AcePlayer(TPlayer):
             self.sock_thr.join()
             self.sock_thr = None
         self.last_error = None
-        TPlayer.stop(self)
 
 
 class Waiting():
