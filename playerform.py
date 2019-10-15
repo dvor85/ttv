@@ -185,6 +185,7 @@ class MyPlayer(xbmcgui.WindowXML):
 #         return xbmc.getCondVisibility(fmt("Window.IsVisible({window})", window=MyPlayer.PLAYER_WINDOW_ID))
 
     def Show(self):
+        log.d('Show')
         if self.parent.rotate_screen_thr:
             self.parent.rotate_screen_thr.stop()
         if self._player:
@@ -336,7 +337,7 @@ class MyPlayer(xbmcgui.WindowXML):
                     self.UpdateEpg(sel_chs)
                 return True
 
-#         log.d(fmt('Action {0} | ButtonCode {1}', action.getId(), action.getButtonCode()))
+        log.d(fmt('Action {0} | ButtonCode {1}', action.getId(), action.getButtonCode()))
         if action in MyPlayer.CANCEL_DIALOG or action.getId() == MyPlayer.ACTION_RBC:
             log.d(fmt('Close player {0} {1}', action.getId(), action.getButtonCode()))
             if self.timers.get(MyPlayer.TIMER_RUN_SEL_CHANNEL):
@@ -352,6 +353,8 @@ class MyPlayer(xbmcgui.WindowXML):
             #             if self._player:
             #                 self._player.next_source()
             self.autoStop()
+        elif action in (xbmcgui.ACTION_STOP, xbmcgui.ACTION_PAUSE):
+            self.manualStop()
 
         elif action in (xbmcgui.ACTION_MOVE_UP, xbmcgui.ACTION_MOVE_DOWN, xbmcgui.ACTION_PAGE_UP, xbmcgui.ACTION_PAGE_DOWN):
             # IF ARROW UP AND DOWN PRESSED - SWITCH CHANNEL ##### @IgnorePep8

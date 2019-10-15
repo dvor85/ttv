@@ -46,11 +46,11 @@ CHANNEL_INFO = {
     },
     "нст": {
         "cat": "Фильмы",
-        "aliases": ["настоящее страшное телевидение"]
+        "aliases": ["нст", "настоящее страшное телевидение"]
     },
     "нст (страшное)": {
         "cat": "Фильмы",
-        "aliases": ["настоящее страшное телевидение"]
+        "aliases": ["нст", "настоящее страшное телевидение"]
     },
     "русский бестселлер": {
         "cat": "Фильмы"
@@ -767,7 +767,7 @@ CHANNEL_INFO = {
     },
     "матч тв hd": {
         "cat": "Спорт",
-        "aliases": ["матч!"]
+        "aliases": ["матч! hd", "матч!"]
     },
     "fap tv older": {
         "cat": "Эротика"
@@ -874,7 +874,7 @@ CHANNEL_INFO = {
     },
     "матч! арена hd": {
         "cat": "Спорт",
-        "aliases": ["матч! арена"]
+        "aliases": ["матч! арена hd", "матч! арена"]
     },
     "fap tv gay": {
         "cat": "Эротика"
@@ -1104,7 +1104,7 @@ CHANNEL_INFO = {
     },
     "eurosport 2 hd": {
         "cat": "Спорт",
-        "aliases": ["eurosport 2"]
+        "aliases": ["eurosport 2 hd", "eurosport 2"]
     },
     "2x2 (+2)": {
         "cat": "Развлекательные"
@@ -1147,7 +1147,7 @@ CHANNEL_INFO = {
     },
     "amedia hit hd": {
         "cat": "Фильмы",
-        "aliases": ['amedia hit']
+        "aliases": ['amedia hit hd', 'amedia hit']
     },
     "outdoor channel": {
         "cat": "Мужские"
@@ -1169,7 +1169,7 @@ CHANNEL_INFO = {
     },
     "amedia 1 hd": {
         "cat": "Фильмы",
-        "aliases": ["a1"]
+        "aliases": ["a1 hd", "a1"]
     },
     "a1": {
         "cat": "Фильмы",
@@ -1255,7 +1255,7 @@ CHANNEL_INFO = {
     },
     "живая природа hd": {
         "cat": "Развлекательные",
-        "aliases": ["живая природа"]
+        "aliases": ["живая природа hd", "живая природа"]
     },
     "nickelodeon": {
         "cat": "Детские"
@@ -1398,7 +1398,7 @@ CHANNEL_INFO = {
     },
     "матч! игра hd": {
         "cat": "Спорт",
-        "aliases": ["матч! игра"]
+        "aliases": ["матч! игра hd", "матч! игра"]
     },
     "ттс": {
         "cat": "Развлекательные"
@@ -1775,7 +1775,7 @@ CHANNEL_INFO = {
     },
     "первый канал hd": {
         "cat": "Общие",
-        "aliases": ["первый"]
+        "aliases": ["первый hd", "первый"]
     },
     "kronehit tv hd": {
         "cat": "Музыка"
@@ -1803,7 +1803,7 @@ CHANNEL_INFO = {
     },
     "amedia premium hd": {
         "cat": "Фильмы",
-        "aliases": ["amedia premium"]
+        "aliases": ["amedia premium hd", "amedia premium"]
     },
     "бобер": {
         "cat": "Познавательные"
@@ -1826,7 +1826,7 @@ CHANNEL_INFO = {
     },
     "дом кино премиум hd": {
         "cat": "Фильмы",
-        "aliases": ["дом кино премиум"]
+        "aliases": ["дом кино премиум hd", "дом кино премиум"]
     },
     "zoom": {
         "cat": "Развлекательные"
@@ -1902,7 +1902,7 @@ CHANNEL_INFO = {
     },
     "кинотв hd": {
         "cat": "Фильмы",
-        "aliases": ["кино тв"]
+        "aliases": ["кино тв hd", "кино тв"]
     },
     "jahonnamo": {
         "cat": "Региональные"
@@ -1996,7 +1996,8 @@ CHANNEL_INFO = {
         "cat": "Новостные"
     },
     "страна": {
-        "cat": "Общие"
+        "cat": "Детские",
+        "aliases": ["мультимузыка"]
     },
     "бокс тв": {
         "cat": "Мужские"
@@ -2031,7 +2032,7 @@ CHANNEL_INFO = {
     },
     "мир hd": {
         "cat": "Общие",
-        "aliases": ["мир"]
+        "aliases": ["мир hd", "мир"]
     },
     "миртв": {
         "cat": "Общие",
@@ -2095,7 +2096,7 @@ CHANNEL_INFO = {
     },
     "нтв hd": {
         "cat": "Общие",
-        "aliases": ["нтв"]
+        "aliases": ["нтв hd", "нтв"]
     },
     "надежда": {
         "cat": "Религиозные"
@@ -2181,7 +2182,7 @@ CHANNEL_INFO = {
     },
     "discovery science hd": {
         "cat": "Познавательные",
-        "aliases": ["discovery science"]
+        "aliases": ["discovery science hd", "discovery science"]
     },
     "set hd": {
         "cat": "Фильмы"

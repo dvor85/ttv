@@ -41,7 +41,7 @@ class YATV():
         log.d('start initialization')
         self.jdata = []
         self.update_timer = None
-        self._name_offset_regexp = re.compile('\s*(?P<name>.*?)\s*\((?P<offset>[\-+]+\d)\)\s*')
+        self._name_offset_regexp = re.compile(r'\s*(?P<name>.*?)\s*\((?P<offset>[\-+]+\d)\)\s*')
         self.yatv_file_json = os.path.join(defines.CACHE_PATH, 'yatv.json.gz')
         self.yatv_logo_path = os.path.join(defines.CACHE_PATH, 'logo')
         self.sess = requests.Session()

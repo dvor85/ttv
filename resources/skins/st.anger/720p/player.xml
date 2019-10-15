@@ -48,27 +48,13 @@
         <control type="group">
           
           <left>0</left>
-          <top>579</top>
-          <control type="togglebutton" id="204">
+          <top>579</top>          
+          <control type="button" id="200">
             <left>135</left>
             <top>100</top>
             <width>30</width>
             <height>30</height>
-            <onleft>208</onleft>
-            <onright>200</onright>
-            <texturefocus>pausefocus.png</texturefocus>
-            <texturenofocus>pause.png</texturenofocus>
-            <usealttexture>Player.Paused | Player.Forwarding | Player.Rewinding</usealttexture>
-            <alttexturefocus>playfocus.png</alttexturefocus>
-            <alttexturenofocus>play.png</alttexturenofocus>
-            <onclick>XBMC.PlayerControl(Play)</onclick>
-          </control>
-          <control type="button" id="200">
-            <left>170</left>
-            <top>100</top>
-            <width>30</width>
-            <height>30</height>
-            <onleft>204</onleft>
+            <onleft>205</onleft>
             <onright>209</onright>
             <texturefocus>stopfocus.png</texturefocus>
             <texturenofocus>stop.png</texturenofocus>
@@ -76,7 +62,7 @@
           </control>
           <control type="button" id="209">
             <description>Следующий источник</description>
-            <left>205</left>
+            <left>170</left>
             <top>100</top>
             <width>30</width>
             <height>30</height>
@@ -89,19 +75,19 @@
           
           <control type="button" id="205">
             <description>VIDEO SETTINGS</description>
-            <left>275</left>
+            <left>235</left>
             <top>100</top>
             <width>30</width>
             <height>30</height>
             <onleft>209</onleft>
-            <onright>206</onright>
+            <onright>200</onright>
             <texturefocus>videosetfocus.png</texturefocus>
             <texturenofocus>videoset.png</texturenofocus>
             <onclick>ActivateWindow(OSDVideoSettings)</onclick>
           </control>
           <control type="button" id="206">
             <description>AUDIO SETTINGS</description>
-            <left>310</left>
+            <left>275</left>
             <top>100</top>
             <width>30</width>
             <height>30</height>
@@ -113,7 +99,7 @@
           </control>
           <control type="button" id="207">
             <description>CHANNEL LIST</description>
-            <left>380</left>
+            <left>345</left>
             <top>100</top>
             <width>30</width>
             <height>30</height>
@@ -125,7 +111,7 @@
           </control>
           <control type="button" id="208">
             <description>STANDARDP LAYER</description>
-            <left>415</left>
+            <left>380</left>
             <top>100</top>
             <width>30</width>
             <height>30</height>

@@ -170,7 +170,6 @@ class LoopPlay(threading.Thread):
 
                     defines.ADDON.setSetting('cur_category', self.parent.cur_category)
                     defines.ADDON.setSetting('cur_channel', self.parent.cur_channel)
-
                     if not self.parent.player.Start(sel_chs):
                         break
                 if not defines.isCancel():
@@ -569,6 +568,7 @@ class WMainForm(xbmcgui.WindowXML):
             log.d(fmt('isPlaying={0}', isPlaying()))
             if isPlaying():
                 log.d('hide main window')
+
                 self.player.Show()
             self.timers[WMainForm.TIMER_HIDE_WINDOW] = None
 
@@ -655,6 +655,8 @@ class WMainForm(xbmcgui.WindowXML):
         if action in WMainForm.CANCEL_DIALOG:
             log.d('ACTION CLOSE FORM')
             self.close()
+        elif action in (xbmcgui.ACTION_STOP, xbmcgui.ACTION_PAUSE):
+            self.player.manualStop()
 
         if not defines.isCancel():
             if action.getButtonCode() == 61513:
@@ -718,7 +720,7 @@ class WMainForm(xbmcgui.WindowXML):
                     try:
                         if defines.isCancel():
                             return
-                        chname = fmt("{0}. {1}", i + 1, ch.get_name())
+                        chname = fmt("{0}. {1}", i + 1, ch.get_title())
                         chli = xbmcgui.ListItem(chname, ch.get_id())
                         self.setLogo(ch, chli, self.set_logo_sema)
                         chli.setProperty('type', 'channel')

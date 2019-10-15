@@ -140,7 +140,7 @@
           <texture border="40">window.png</texture>
         </control>       
         <control type="button" id="200">
-          <left>50</left>
+          <left>20</left>
           <top>10</top>
           <width>26</width>
           <height>26</height>
@@ -154,7 +154,7 @@
         </control>
         <control type="button" id="208">
           <description>FULL SCREEN</description>
-          <left>80</left>
+          <left>50</left>
           <top>10</top>
           <width>26</width>
           <height>26</height>

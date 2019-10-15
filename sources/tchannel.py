@@ -73,6 +73,15 @@ class TChannel(UserDict):
     def get_name(self):
         return utils.utf(self.data.get('name'))
 
+    def get_title(self):
+        if not self.data.get('title'):
+            name = utils.lower(self.get_name(), 'utf8')
+            if name in CHANNEL_INFO:
+                self.data['title'] = utils.uni(CHANNEL_INFO[name].get('aliases', [name])[0], 'utf8').capitalize()
+            else:
+                self.data['title'] = self.get_name()
+        return self.data["title"]
+
     def get_screenshots(self):
         """
         :return [{filename:url},...]
