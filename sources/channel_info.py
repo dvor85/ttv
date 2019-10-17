@@ -190,11 +190,11 @@ CHANNEL_INFO = {
     },
     "history россия hd": {
         "cat": "Познавательные",
-        "aliases": ["history"]
+        "aliases": ["history hd", "history"]
     },
     "history2 hd": {
         "cat": "Познавательные",
-        "aliases": ["h2 hd"]
+        "aliases": ["history2 hd", "h2 hd"]
     },
     "иллюзион+": {
         "cat": "Фильмы"
@@ -227,6 +227,10 @@ CHANNEL_INFO = {
     "bridge hd": {
         "cat": "Музыка",
         "aliases": ["bridge tv"]
+    },
+    "шансон тв": {
+        "cat": "Музыка",
+        "aliases": ["шансон-тв"]
     },
     "тдк": {
         "cat": "Развлекательные"
@@ -274,7 +278,7 @@ CHANNEL_INFO = {
     },
     "vh1 europe": {
         "cat": "Музыка",
-        "aliases": ["vh1 europian"]
+        "aliases": ["vh1 european"]
     },
     "мужское кино hd": {
         "cat": "Фильмы"
@@ -370,11 +374,11 @@ CHANNEL_INFO = {
     },
     "amedia 2": {
         "cat": "Фильмы",
-        "aliases": ["a2"]
+        "aliases": ["amedia 2", "a2"]
     },
     "amedia 1": {
         "cat": "Фильмы",
-        "aliases": ["a1"]
+        "aliases": ["amedia 1", "a1"]
 
     },
     "lifenews": {
@@ -570,6 +574,14 @@ CHANNEL_INFO = {
     "paramount channel": {
         "cat": "Фильмы"
     },
+    "paramount сhannel hd": {
+        "cat": "Фильмы",
+        "aliases": ["paramount channel hd", "paramount channel"]
+    },
+    "paramount channel hd": {
+        "cat": "Фильмы",
+        "aliases": ["paramount channel hd", "paramount channel"]
+    },
     "mcm top": {
         "cat": "Музыка"
     },
@@ -687,7 +699,8 @@ CHANNEL_INFO = {
         "cat": "Общие"
     },
     "mtv россия": {
-        "cat": "Музыка"
+        "cat": "Музыка",
+        "aliases": ["mtv russia"]
     },
     "тнт4 (+4)": {
         "cat": "Развлекательные"
@@ -891,8 +904,9 @@ CHANNEL_INFO = {
     "трофей": {
         "cat": "Мужские"
     },
-    "paramount comedy hd": {
-        "cat": "Развлекательные"
+    "paramount comedy россия": {
+        "cat": "Развлекательные",
+        "aliases": ["paramount comedy"]
     },
     "феникс+ кино": {
         "cat": "Фильмы"
@@ -1025,7 +1039,7 @@ CHANNEL_INFO = {
     },
     "russia today": {
         "cat": "Новостные",
-        "aliases": ["rt"]
+        "aliases": ["russia today", "rt"]
     },
     "телекафе": {
         "cat": "Познавательные"
@@ -1169,13 +1183,15 @@ CHANNEL_INFO = {
     },
     "amedia 1 hd": {
         "cat": "Фильмы",
-        "aliases": ["a1 hd", "a1"]
+        "aliases": ["amedia 1 hd", "a1"]
     },
     "a1": {
         "cat": "Фильмы",
+        "aliases": ["amedia 1"]
     },
     "a2": {
         "cat": "Фильмы",
+        "aliases": ["amedia 2"]
     },
     "черновицкий проминь hd": {
         "cat": "Региональные"
@@ -1810,7 +1826,7 @@ CHANNEL_INFO = {
     },
     "бобёр": {
         "cat": "Познавательные",
-        "aliases": ["бобер"]
+        "aliases": ["бобёр", "бобер"]
     },
     "arirang tv": {
         "cat": "Общие"
@@ -1860,7 +1876,7 @@ CHANNEL_INFO = {
     },
     "mtv dance": {
         "cat": "Музыка",
-        "aliases": ["mtv dance internacional"]
+        "aliases": ["mtv dance international"]
     },
     "tv 1000": {
         "cat": "Фильмы"
@@ -1916,6 +1932,10 @@ CHANNEL_INFO = {
     "tv1000 comedy": {
         "cat": "Фильмы"
     },
+    "tv1000 east": {
+        "cat": "Фильмы",
+        "aliases": ["tv1000"]
+    },
     "eska best music tv hd": {
         "cat": "Музыка"
     },
@@ -1946,10 +1966,29 @@ CHANNEL_INFO = {
     "2x2": {
         "cat": "Развлекательные"
     },
+    "2х2": {
+        "cat": "Развлекательные",
+        "aliases": ["2x2"]
+    },
     "квн тв": {
         "cat": "Развлекательные"
     },
     "томское время": {
+        "cat": "Региональные"
+    },
+    "lnk": {
+        "cat": "Региональные"
+    },
+    "kentron": {
+        "cat": "Региональные"
+    },
+    "ltv1": {
+        "cat": "Региональные"
+    },
+    "shant hd": {
+        "cat": "Региональные"
+    },
+    "tv3": {
         "cat": "Региональные"
     },
     "первый канал (+4) (4:3)": {
@@ -2005,9 +2044,21 @@ CHANNEL_INFO = {
     "стс (+1)": {
         "cat": "Развлекательные"
     },
+    "hd-life": {
+        "cat": "Познавательные",
+        "aliases": ["hdl"]
+    },
+    "rt д hd": {
+        "cat": "Познавательные",
+        "aliases": ["rtд"]
+    },
     "еда hd": {
         "cat": "Познавательные",
-        "aliases": ["еда"]
+        "aliases": ["еда hd", "еда"]
+    },
+    "eureka hd": {
+        "cat": "Познавательные",
+        "aliases": ["эврика"]
     },
     "белсат тв": {
         "cat": "Региональные"
@@ -2041,6 +2092,10 @@ CHANNEL_INFO = {
     "tv1000 premium hd": {
         "cat": "Фильмы"
     },
+    "tv1000 action east": {
+        "cat": "Фильмы",
+        "aliases": ["tv1000 action"]
+    },
     "vip comedy hd": {
         "cat": "Фильмы",
         "aliases": ['vip comedy']
@@ -2061,6 +2116,10 @@ CHANNEL_INFO = {
     "tv1000 megahit hd": {
         "cat": "Фильмы"
     },
+    "vip megahit hd": {
+        "cat": "Фильмы",
+        "aliases": ["vip megahit hd", "vip megahit"]
+    },
     "звезда (+2)": {
         "cat": "Общие"
     },
@@ -2077,6 +2136,21 @@ CHANNEL_INFO = {
         "cat": "Общие"
     },
     "асыл арна": {
+        "cat": "Региональные"
+    },
+    "новый канал": {
+        "cat": "Региональные"
+    },
+    "atv hd": {
+        "cat": "Региональные"
+    },
+    "btv": {
+        "cat": "Региональные"
+    },
+    "armenia 1 tv": {
+        "cat": "Региональные"
+    },
+    "armenia tv": {
         "cat": "Региональные"
     },
     "boomerang": {
@@ -2097,6 +2171,14 @@ CHANNEL_INFO = {
     "нтв hd": {
         "cat": "Общие",
         "aliases": ["нтв hd", "нтв"]
+    },
+    "нтв мир": {
+        "cat": "Общие",
+        "aliases": ["нтв мир", "нтв"]
+    },
+    "ртр-планета": {
+        "cat": "Общие",
+        "aliases": ["ртр-планета", "россия 1"]
     },
     "надежда": {
         "cat": "Религиозные"
@@ -2124,7 +2206,7 @@ CHANNEL_INFO = {
     },
     "наш кинороман hd": {
         "cat": "Фильмы",
-        "aliases": ["наш кинороман"]
+        "aliases": ["наш кинороман hd", "наш кинороман"]
     },
     "пятый канал": {
         "cat": "Общие"
@@ -2198,7 +2280,7 @@ CHANNEL_INFO = {
     },
     "телепутешествия hd": {
         "cat": "Познавательные",
-        "aliases": ["телепутешествия"]
+        "aliases": ["телепутешествия hd", "телепутешествия"]
     },
     "нтв (резерв)": {
         "cat": "Общие"

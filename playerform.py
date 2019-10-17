@@ -253,9 +253,7 @@ class MyPlayer(xbmcgui.WindowXML):
             return
         if self._player and self._player.last_error:
             self._player.last_error = None
-            return True
-        if self.switch_source_requested or self.channel_stop_requested:
-            return True
+        return True
 
     def run_selected_channel(self, timeout=0):
 
