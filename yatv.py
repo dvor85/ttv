@@ -7,13 +7,13 @@ import utils
 import defines
 import logger
 import requests
-from threading import Event, Timer
-
+import gzip
 import os
-try:
-    import simplejson as json
-except ImportError:
-    import json
+import json
+from threading import Event, Timer
+from sources.channel_info import CHANNEL_INFO
+import re
+
 
 fmt = utils.fmt
 log = logger.Logger(__name__)
@@ -41,7 +41,8 @@ class YATV():
         log.d('start initialization')
         self.jdata = []
         self.update_timer = None
-        self.yatv_file_json = os.path.join(defines.CACHE_PATH, 'yatv.json')
+        self._name_offset_regexp = re.compile(r'\s*(?P<name>.*?)\s*\((?P<offset>[\-+]+\d)\)\s*')
+        self.yatv_file_json = os.path.join(defines.CACHE_PATH, 'yatv.json.gz')
         self.yatv_logo_path = os.path.join(defines.CACHE_PATH, 'logo')
         self.sess = requests.Session()
 
@@ -65,7 +66,7 @@ class YATV():
             log.d(fmt("Loading yatv in {t} sec", t=time.time() - bt))
         if not self.jdata:
             bt = time.time()
-            with open(self.yatv_file_json, 'rb') as fp:
+            with gzip.open(self.yatv_file_json, 'rb') as fp:
                 self.jdata = json.load(fp)
             log.d(fmt("Loading yatv from json in {t} sec", t=time.time() - bt))
 
@@ -104,8 +105,7 @@ class YATV():
         https://tv.yandex.ru/ajax/i-tv-region/get?params={"duration":96400,"fields":"schedules,channel,title,id,events,channelId,start,finish,program,availableChannels,availableChannelsIds"}&resource=schedule&lang=ru&userRegion=193
         """
 
-        _yparams = {"fields": "schedules,channel,title,id,events,description,channelId,start,finish,program,logo,sizes,src",
-                    #                     "duration": 96400,
+        _yparams = {"fields": "schedules,channel,title,id,events,description,channelId,start,finish,program,logo,sizes,src,images",
                     "channelLimit": 24,
                     "channelProgramsLimit": self.availableChannels["availableChannels"],
                     "channelOffset": 0,
@@ -117,7 +117,7 @@ class YATV():
                    "params": json.dumps(_yparams),
                    "lang": "ru"
                    }
-        with open(self.yatv_file_json, 'ab+') as fp:
+        with gzip.open(self.yatv_file_json, 'ab+') as fp:
             fp.write('[')
             m = _yparams["channelProgramsLimit"] / _yparams["channelLimit"]
             for p in range(0, m):
@@ -136,8 +136,6 @@ class YATV():
                 except Exception as e:
                     log.error(fmt('update_yatv error: {0}', e))
             fp.write(']')
-            fp.seek(0)
-            self.jdata = json.load(fp)
 
     def get_finish(self):
         m = None
@@ -159,11 +157,11 @@ class YATV():
         except TypeError:
             return datetime.datetime(*(time.strptime(date_string, "%Y-%m-%dT%H:%M:%S")[0:6]))
 
-    def get_epg_by_id(self, chid):
+    def get_epg_by_id(self, chid, epg_offset=None):
         if chid is None or chid not in self.availableChannels["availableChannelsIds"]:
             return
         ctime = datetime.datetime.now()
-        offset = int(round((ctime - datetime.datetime.utcnow()).total_seconds()) / 3600)
+        offset = int(round((ctime - datetime.datetime.utcnow()).total_seconds()) / 3600) if epg_offset is None else epg_offset
         for p in self.jdata:
             for sch in p['schedules']:
                 if sch['channel']['id'] == chid:
@@ -179,18 +177,30 @@ class YATV():
                         ep['etime'] = time.mktime(et.timetuple())
                         ep['name'] = evt['program']['title']
                         ep['desc'] = evt['program'].get('description', '')
+                        if 'images' in evt['program']:
+                            ep['screens'] = ['http:{src}'.format(src=x['sizes']['200']['src']) for x in evt['program']['images']]
 
                         yield ep
 
+    def get_name_offset(self, name):
+        name_offset = self._name_offset_regexp.search(name)
+        if name_offset:
+            return (name_offset.group('name'), utils.str2int(name_offset.group('offset')))
+
     def get_id_by_name(self, name):
-        name = utils.lower(name, 'utf8')
+        names = [utils.lower(name, 'utf8')]
+        names.extend(CHANNEL_INFO.get(names[0], {}).get("aliases", []))
         for p in self.jdata:
             for sch in p['schedules']:
-                if utils.lower(sch['channel']['title'], 'utf8') == name:
+                if utils.lower(sch['channel']['title'], 'utf8') in names:
                     return sch['channel']['id']
 
     def get_epg_by_name(self, name):
-        return self.get_epg_by_id(self.get_id_by_name(name))
+        name_offset = self.get_name_offset(name)
+        if name_offset:
+            return self.get_epg_by_id(self.get_id_by_name(name_offset[0]), name_offset[1])
+        else:
+            return self.get_epg_by_id(self.get_id_by_name(name))
 
     def get_logo_by_id(self, chid):
         if chid is None or chid not in self.availableChannels["availableChannelsIds"]:
@@ -203,7 +213,11 @@ class YATV():
         return ''
 
     def get_logo_by_name(self, name):
-        return self.get_logo_by_id(self.get_id_by_name(name))
+        name_offset = self.get_name_offset(name)
+        if name_offset:
+            return self.get_logo_by_id(self.get_id_by_name(name_offset[0]))
+        else:
+            return self.get_logo_by_id(self.get_id_by_name(name))
 
 
 if __name__ == '__main__':

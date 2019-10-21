@@ -7,7 +7,6 @@
 <pydev_property name="org.python.pydev.PYTHON_PROJECT_INTERPRETER">Default</pydev_property>
 
 <pydev_pathproperty name="org.python.pydev.PROJECT_EXTERNAL_SOURCE_PATH">
-<path>${WORKSPACE_LOC}/Kodistubs</path>
 <path>${ECLIPSE_HOME}/plugins/org.python.pydev.core_7.3.0.201908161924/pysrc</path>
 </pydev_pathproperty>
 </pydev_project>

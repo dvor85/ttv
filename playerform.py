@@ -88,15 +88,15 @@ class MyPlayer(xbmcgui.WindowXML):
 
     @property
     def manual_stop_requested(self):
-        return players.manual_stopped.is_set()
+        return players.Flags.manual_stopped.is_set()
 
     @property
     def switch_source_requested(self):
-        return players.switch_source.is_set()
+        return players.Flags.switch_source.is_set()
 
     @property
     def channel_stop_requested(self):
-        return players.channel_stop.is_set()
+        return players.Flags.channel_stop.is_set()
 
     def init_channel_number(self):
         if self.channel_number != 0:
@@ -185,6 +185,9 @@ class MyPlayer(xbmcgui.WindowXML):
 #         return xbmc.getCondVisibility(fmt("Window.IsVisible({window})", window=MyPlayer.PLAYER_WINDOW_ID))
 
     def Show(self):
+        log.d('Show')
+        if self.parent.rotate_screen_thr:
+            self.parent.rotate_screen_thr.stop()
         if self._player:
             self.show()
 
@@ -203,9 +206,6 @@ class MyPlayer(xbmcgui.WindowXML):
                 log.d(fmt('Channel source is "{0}"', src))
                 for player in channel.get('players'):
                     try:
-                        #                         if self.Stop():
-                        #                             return
-
                         url = channel.get_url(player)
                         mode = channel.get_mode()
                         logo = channel.get_logo()
@@ -230,6 +230,9 @@ class MyPlayer(xbmcgui.WindowXML):
                     except Exception as e:
                         log.e(fmt("Error play with {0} player: {1}", player, e))
                     finally:
+                        if self._player and self._player.last_error:
+                            self._player.last_error = None
+                            return True
                         if self.manual_stop_requested or defines.isCancel():
                             self.close()
                             return
@@ -248,8 +251,9 @@ class MyPlayer(xbmcgui.WindowXML):
         if self.manual_stop_requested or defines.isCancel():
             self.close()
             return
-        if self.switch_source_requested or self.channel_stop_requested:
-            return True
+        if self._player and self._player.last_error:
+            self._player.last_error = None
+        return True
 
     def run_selected_channel(self, timeout=0):
 
@@ -331,7 +335,7 @@ class MyPlayer(xbmcgui.WindowXML):
                     self.UpdateEpg(sel_chs)
                 return True
 
-#         log.d(fmt('Action {0} | ButtonCode {1}', action.getId(), action.getButtonCode()))
+        log.d(fmt('Action {0} | ButtonCode {1}', action.getId(), action.getButtonCode()))
         if action in MyPlayer.CANCEL_DIALOG or action.getId() == MyPlayer.ACTION_RBC:
             log.d(fmt('Close player {0} {1}', action.getId(), action.getButtonCode()))
             if self.timers.get(MyPlayer.TIMER_RUN_SEL_CHANNEL):
@@ -347,6 +351,8 @@ class MyPlayer(xbmcgui.WindowXML):
             #             if self._player:
             #                 self._player.next_source()
             self.autoStop()
+        elif action in (xbmcgui.ACTION_STOP, xbmcgui.ACTION_PAUSE):
+            self.manualStop()
 
         elif action in (xbmcgui.ACTION_MOVE_UP, xbmcgui.ACTION_MOVE_DOWN, xbmcgui.ACTION_PAGE_UP, xbmcgui.ACTION_PAGE_DOWN):
             # IF ARROW UP AND DOWN PRESSED - SWITCH CHANNEL ##### @IgnorePep8

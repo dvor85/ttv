@@ -138,70 +138,55 @@
           <left>0</left>
           <top>5</top>
           <texture border="40">window.png</texture>
-        </control>        
-        <control type="togglebutton" id="204">
+        </control>       
+        <control type="button" id="200">
           <left>20</left>
-          <top>15</top>
+          <top>10</top>
           <width>26</width>
           <height>26</height>
           <onleft>208</onleft>
-          <onright>200</onright>
-          <onup>50</onup>
-          <texturefocus>pausefocus.png</texturefocus>
-          <texturenofocus>pause.png</texturenofocus>
-          <usealttexture>Player.Paused | Player.Forwarding | Player.Rewinding</usealttexture>
-          <alttexturefocus>playfocus.png</alttexturefocus>
-          <alttexturenofocus>play.png</alttexturenofocus>
-          <onclick>XBMC.PlayerControl(Play)</onclick>
-          <visible>Player.HasVideo</visible>
-		  <!-- <visible>true</visible> -->
-        </control>
-        <control type="button" id="200">
-          <left>50</left>
-          <top>15</top>
-          <width>26</width>
-          <height>26</height>
-          <onleft>204</onleft>
           <onright>208</onright>
           <onup>50</onup>
           <texturefocus>stopfocus.png</texturefocus>
           <texturenofocus>stop.png</texturenofocus>
           <onclick>XBMC.PlayerControl(Stop)</onclick>
           <visible>Player.HasVideo</visible>
-		  <!-- <visible>true</visible> -->
         </control>
         <control type="button" id="208">
           <description>FULL SCREEN</description>
-          <left>80</left>
-          <top>15</top>
+          <left>50</left>
+          <top>10</top>
           <width>26</width>
           <height>26</height>
           <onleft>200</onleft>
-          <onright>204</onright>
+          <onright>200</onright>
           <onup>50</onup>
           <texturefocus>fullscreenfocus.png</texturefocus>
           <texturenofocus>fullscreen.png</texturenofocus>
           <visible>Player.HasVideo</visible>
-		  <!-- <visible>true</visible> -->
         </control>
-        <description>Info</description>
         <control type="image" id="210">
+		  <description>Logo image</description>
           <left>10</left>
-          <top>30</top>
+          <top>40</top>
           <width>200</width>
           <height>150</height>
           <visible>true</visible>
           <aspectratio>keep</aspectratio>
+		  <fadetime>500</fadetime>
         </control>
         <control type="label" id = "300">
           <description>Current EPG</description>
           <left>220</left>
           <top>10</top>
-	      <width>430</width>
+	      <width>400</width>
           <label>Нет программы</label>
-          <font>font10</font>
+          <font>
+		  <name>font10</name>
+		  <style>bold</style>
+		  </font>
           <scroll>true</scroll>
-          <textcolor>FFFFFFFF</textcolor>
+          <textcolor>FFFFFF00</textcolor>
           <shadowcolor>FF000000</shadowcolor>
         </control>
         <control type="label" id ="301">
@@ -285,7 +270,7 @@
         <control type="progress" id="110">
           <description>Progress EGP</description>
           <left>215</left>
-          <top>35</top>
+          <top>40</top>
           <visible>true</visible>
           <colordiffuse>88FFFFFF</colordiffuse>
           <texturebg>progressback.png</texturebg>
@@ -302,27 +287,44 @@
 	    <height>200</height>
         <description>InfoPanel2</description>
         <control type="image">
+
 		  <left>5</left>
           <top>5</top>
           <texture border="40">window.png</texture>
-        </control>        
-        <control type="label" id="107">
-          <description>My First label</description>
+        </control>  
+		<control type="label">
+		  <description>Описание</description>
           <left>20</left>
-          <top>15</top>
+          <top>10</top>
+          <width>auto</width>
+          <height>16</height>
+          <visible>true</visible>
+          <align>left</align>
+          <label>Описание:</label>
+          <font>
+		  <name>font10</name>
+		  <style>bold</style>
+		  </font>
+          <textcolor>FFFFFF00</textcolor>
+          <shadowcolor>ff000000</shadowcolor>
+        </control>
+        <control type="label" id="107">
+          <description>Текущий статус</description>
+          <left>20</left>
+          <top>10</top>
           <width min="20" max="560">auto</width>
           <height>16</height>
           <visible>true</visible>
           <align>right</align>
           <label>Текущий статус</label>
           <font>font10</font>
-          <textcolor>FFFFFFFF</textcolor>
+          <textcolor>FFFF55FF</textcolor>
           <shadowcolor>ff000000</shadowcolor>
         </control>
         <control type="image" id="108">
           <description>Busy animation</description>
           <left>600</left>
-          <top>15</top>
+          <top>10</top>
           <width>16</width>
           <height>16</height>
           <texture>busy.png</texture>
@@ -330,16 +332,13 @@
           <animation effect="rotate" start="0" end="360" center="auto" time="1200" loop="true" condition="true">conditional</animation>
         </control>
         
-		<control type="label" id="105">
+		<control type="textbox" id="105">
           <description>description</description>
           <left>20</left>
           <top>30</top>
           <width>600</width>
-          <height>auto</height>
           <visible>true</visible>
           <align>left</align>
-          <label></label>
-		  <wrapmultiline>true</wrapmultiline>
           <font>
 			 <name>font14</name>
 			 <size>14</size>
@@ -349,7 +348,7 @@
 		  </font>
           <textcolor>FFFFFFFF</textcolor>
           <shadowcolor>ff000000</shadowcolor>
-		  <scroll>true</scroll>
+		  <autoscroll delay="10000" time="1000">true</autoscroll>
         </control>
       </control>
     </control>

@@ -14,10 +14,7 @@ from menu import MenuForm
 from sources.table import ChannelSources
 from sources import grouplang
 import favdb
-try:
-    import simplejson as json
-except ImportError:
-    import json
+import json
 import utils
 from UserDict import UserDict
 import yatv
@@ -135,10 +132,9 @@ class RotateScreen(threading.Thread):
         while self.active:
             for screen in self.screens:
                 if self.active:
-                    self.img_control.setImage(screen['filename'])
-                    for i in range(16):  # @UnusedVariable
-                        if self.active:
-                            xbmc.sleep(100)
+                    self.img_control.setImage(screen)
+                    if defines.monitor.waitForAbort(2):
+                        self.stop()
 
     def stop(self):
         self.active = False
@@ -174,7 +170,6 @@ class LoopPlay(threading.Thread):
 
                     defines.ADDON.setSetting('cur_category', self.parent.cur_category)
                     defines.ADDON.setSetting('cur_channel', self.parent.cur_channel)
-
                     if not self.parent.player.Start(sel_chs):
                         break
                 if not defines.isCancel():
@@ -255,6 +250,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.txt_progress = None
         self.progress = None
         self.list = None
+        self.list_type = ''
         self.player = MyPlayer("player.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
         self.player.parent = self
         self.cur_category = None
@@ -326,10 +322,10 @@ class WMainForm(xbmcgui.WindowXML):
                 sel_chs = self.get_channel_by_name(selItem.getProperty("name"))
                 if sel_chs:
                     self.getEpg(sel_chs, timeout=0.5, callback=self.showEpg)
-                    self.showScreen(sel_chs, timeout=0.5)
+#                     self.showScreen(sel_chs, timeout=0.5)
 
                 for controlId in (WMainForm.IMG_SCREEN,):
-                    self.getControl(controlId).setImage(selItem.getProperty('icon'))
+                    self.getControl(controlId).setImage(selItem.getArt('icon'))
 
     def loadFavourites(self, *args):
         from sources.tchannel import TChannel
@@ -406,8 +402,10 @@ class WMainForm(xbmcgui.WindowXML):
                     if i == 0:
                         if self.progress:
                             self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
+                        if 'screens' in ep:
+                            self.showScreen(ep['screens'], 0.5)
                         if self.description_label:
-                            self.description_label.setLabel(ep['desc'])
+                            self.description_label.setText(ep['desc'])
 
                 except:
                     break
@@ -430,17 +428,12 @@ class WMainForm(xbmcgui.WindowXML):
         if self.progress:
             self.progress.setPercent(0)
         if self.description_label:
-            self.description_label.setLabel('')
+            self.description_label.setText('')
 
-    def showScreen(self, chs, timeout=0):
+    def showScreen(self, screens, timeout=0):
 
         def show():
             log.d('showScreen')
-            screens = None
-            for ch in chs.itervalues():
-                screens = ch.get_screenshots()
-                if screens is not None:
-                    break
 
             if screens:
                 if self.rotate_screen_thr:
@@ -448,7 +441,8 @@ class WMainForm(xbmcgui.WindowXML):
                     self.rotate_screen_thr.join(0.2)
                     self.rotate_screen_thr = None
 
-                self.rotate_screen_thr = RotateScreen(self.getControl(WMainForm.IMG_SCREEN), screens)
+                img_screen = self.getControl(WMainForm.IMG_SCREEN)
+                self.rotate_screen_thr = RotateScreen(img_screen, screens)
                 self.rotate_screen_thr.start()
 
             self.timers[WMainForm.TIMER_SHOW_SCREEN] = None
@@ -479,7 +473,7 @@ class WMainForm(xbmcgui.WindowXML):
 
         def LoadOther():
             for name, thr in thrs.iteritems():
-                if name not in ('yatv_epg'):
+                if name not in ('yatv_epg',):
                     thr.join(20)
 
 #             dump_channel_groups()
@@ -543,6 +537,8 @@ class WMainForm(xbmcgui.WindowXML):
             self.channel_number_str = ''
             self.timers[WMainForm.TIMER_SEL_CHANNEL] = None
 
+        if not self.list_type == 'channels':
+            return
         if self.channel_number_str == '':
             self.channel_number_str = str(sch) if sch != '' else str(self.selitem_id)
         chnum = utils.str2int(self.channel_number_str)
@@ -572,6 +568,7 @@ class WMainForm(xbmcgui.WindowXML):
             log.d(fmt('isPlaying={0}', isPlaying()))
             if isPlaying():
                 log.d('hide main window')
+
                 self.player.Show()
             self.timers[WMainForm.TIMER_HIDE_WINDOW] = None
 
@@ -658,6 +655,8 @@ class WMainForm(xbmcgui.WindowXML):
         if action in WMainForm.CANCEL_DIALOG:
             log.d('ACTION CLOSE FORM')
             self.close()
+        elif action in (xbmcgui.ACTION_STOP, xbmcgui.ACTION_PAUSE):
+            self.player.manualStop()
 
         if not defines.isCancel():
             if action.getButtonCode() == 61513:
@@ -707,6 +706,7 @@ class WMainForm(xbmcgui.WindowXML):
             return
         log.d('fillChannels: Clear list')
         self.list.reset()
+        self.list_type = 'channels'
 #         if not self.channel_groups.getChannels(self.cur_category):
 #             self.fillCategory()
 #             self.hideStatus()
@@ -718,11 +718,11 @@ class WMainForm(xbmcgui.WindowXML):
             if chs:
                 for ch in chs.itervalues():
                     try:
-                        chname = fmt("{0}. {1}", i + 1, ch.get_name())
+                        if defines.isCancel():
+                            return
+                        chname = fmt("{0}. {1}", i + 1, ch.get_title())
                         chli = xbmcgui.ListItem(chname, ch.get_id())
                         self.setLogo(ch, chli, self.set_logo_sema)
-#                         chli.setArt({"icon": ch.get_logo()})
-#                         chli.setProperty("icon", ch.get_logo())
                         chli.setProperty('type', 'channel')
                         chli.setProperty("id", ch.get_id())
                         chli.setProperty("name", ch.get_name())
@@ -748,7 +748,6 @@ class WMainForm(xbmcgui.WindowXML):
         def set_logo():
             with sema:
                 chli.setArt({"icon": ch.get_logo()})
-                chli.setProperty("icon", ch.get_logo())
 
         if not defines.isCancel():
             slthread = threading.Thread(target=set_logo)
@@ -769,7 +768,10 @@ class WMainForm(xbmcgui.WindowXML):
             return
         log.d('fillCategory: Clear list')
         self.list.reset()
+        self.list_type = 'groups'
         for gr in self.channel_groups.getGroups():
+            if defines.isCancel():
+                return
             AddItem(gr)
 
     def close(self):

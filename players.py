@@ -21,9 +21,31 @@ import time
 log = logger.Logger(__name__)
 fmt = utils.fmt
 sys_platform = defines.platform()['os']
-manual_stopped = threading.Event()
-switch_source = threading.Event()
-channel_stop = threading.Event()
+
+
+class FlagsControl():
+    def __init__(self):
+        self.manual_stopped = threading.Event()
+        self.switch_source = threading.Event()
+        self.channel_stop = threading.Event()
+
+    def clear(self):
+        for f in self.__dict__.itervalues():
+            f.clear()
+
+    def is_any_flag_set(self):
+        for f in self.__dict__.itervalues():
+            if f.is_set():
+                return True
+
+    def log_status(self):
+        log_string = ''
+        for k, f in self.__dict__.iteritems():
+            log_string += fmt('{k}: {v}; ', k=k, v=f.is_set())
+        log.d(log_string)
+
+
+Flags = FlagsControl()
 
 
 class TPlayer(xbmc.Player):
@@ -50,7 +72,6 @@ class TPlayer(xbmc.Player):
 
     def onPlayBackStopped(self):
         log("onPlayBackStopped")
-#         manual_stopped.set()
 
     def onPlayBackEnded(self):
         log('onPlayBackEnded')
@@ -62,9 +83,7 @@ class TPlayer(xbmc.Player):
 
     def onAVStarted(self):
         log('onAVStarted')
-        manual_stopped.clear()
-        switch_source.clear()
-        channel_stop.clear()
+        Flags.clear()
         self.parent.hide_main_window()
         self.parent.player.hideStatus()
 
@@ -72,7 +91,9 @@ class TPlayer(xbmc.Player):
         log('onAVChange')
 
     def loop(self):
-        while self.isPlaying() and not defines.isCancel():
+        log.d('loop')
+        Flags.clear()
+        while self.isPlaying() and not (defines.isCancel() or Flags.is_any_flag_set()):
             try:
                 xbmc.sleep(250)
             except Exception as e:
@@ -93,8 +114,7 @@ class TPlayer(xbmc.Player):
         log.debug(fmt('play_item {title}', title=title))
         self.parent.player.Show()
         self.loop()
-        log.debug(fmt("switch source is {ss}; manual stopped is {ms}", ss=switch_source.is_set(), ms=manual_stopped.is_set()))
-        return not (manual_stopped.is_set() and defines.MANUAL_STOP) and (switch_source.is_set() or manual_stopped.is_set())
+        Flags.log_status()
 
     def end(self):
         log('end player method')
@@ -102,25 +122,26 @@ class TPlayer(xbmc.Player):
         self.onPlayBackEnded()
 
     def stop(self):
-        log.d(fmt('stop player method | manual_stop is: {0}', manual_stopped.is_set()))
+        log('stop')
+        Flags.log_status()
         xbmc.Player.stop(self)
-        return manual_stopped.is_set()
 
     def autoStop(self):
         log('autoStop')
-        manual_stopped.clear()
-        switch_source.set()
+        Flags.clear()
+        Flags.switch_source.set()
         self.stop()
 
     def manualStop(self):
         log('manualStop')
-        manual_stopped.set()
-        switch_source.clear()
+        Flags.clear()
+        Flags.manual_stopped.set()
         self.stop()
 
     def channelStop(self):
         log('channelStop')
-        channel_stop.set()
+        Flags.clear()
+        Flags.channel_stop.set()
         self.stop()
 
 
@@ -161,7 +182,7 @@ class AcePlayer(TPlayer):
         self.aceport = 62062
         self.port_file = ''
         self.sock_thr = None
-        self.prebuf = {"last_update": time.time(), "value": 0}
+        self.msg_params = {"last_update": time.time()}
         self.waiting = Waiting()
 
         log.d(defines.ADDON.getSetting('ip_addr'))
@@ -378,7 +399,7 @@ class AcePlayer(TPlayer):
         """
         try:
             if not (self.sock_thr and self.sock_thr.is_active()):
-                if cmd not in ("STOP", "SHUTDOWN"):
+                if cmd not in (TSMessage.STOP, TSMessage.SHUTDOWN):
                     self._createThread()
                 else:
                     return
@@ -405,7 +426,7 @@ class AcePlayer(TPlayer):
                     except Exception as e:
                         log.e(fmt('_wait_message error: {0}', e))
                         self.waiting.msg = None
-                        if not manual_stopped.is_set():
+                        if not Flags.manual_stopped.is_set():
                             self.autoStop()
                         return
 
@@ -443,7 +464,7 @@ class AcePlayer(TPlayer):
             except Exception as e:
                 log.e(fmt('_wait_message error: {0}', e))
                 self.waiting.msg = None
-                if not manual_stopped.is_set():
+                if not Flags.manual_stopped.is_set():
                     self.autoStop()
 
     def _createThread(self):
@@ -504,17 +525,17 @@ class AcePlayer(TPlayer):
                     _descr = _params['main'].split(';')
 
                     if _descr[0] == 'starting':
-                        self.prebuf['value'] = 0
+                        self.msg_params['prebuf'] = 0
 
                     elif _descr[0] == 'prebuf':
-                        if _descr[1] != self.prebuf['value']:
-                            self.prebuf['last_update'] = state.getTime()
-                            self.prebuf['value'] = _descr[1]
+                        if _descr[1] != self.msg_params.get('prebuf', 0):
+                            self.msg_params['last_update'] = state.getTime()
+                            self.msg_params['prebuf'] = _descr[1]
                             log.d('_stateHandler: Пытаюсь показать состояние')
-                            self.parent.showStatus(fmt('Пребуферизация {0}', self.prebuf['value']))
-                            self.parent.player.showStatus(fmt('Пребуферизация {0}', self.prebuf['value']))
+                            self.parent.showStatus(fmt('Пребуферизация {0}', self.msg_params['prebuf']))
+                            self.parent.player.showStatus(fmt('Пребуферизация {0}', self.msg_params['prebuf']))
 
-                        if time.time() - self.prebuf['last_update'] >= AcePlayer.TIMEOUT_FREEZE:
+                        if time.time() - self.msg_params['last_update'] >= AcePlayer.TIMEOUT_FREEZE:
                             log.w('AceEngine is freeze')
                             self.autoStop()
 
@@ -527,20 +548,28 @@ class AcePlayer(TPlayer):
                         # self.parent.showStatus('Буферизация: %s DL: %s UL: %s' % (_descr[1],
                         # _descr[5], _descr[7])) @IgnorePep8
 
-                        if _descr[1] != self.prebuf['value']:
-                            self.prebuf['last_update'] = state.getTime()
-                            self.prebuf['value'] = _descr[1]
-#                             self.parent.player.showStatus(fmt('Буферизация {0}', self.prebuf['value']))
-                        if time.time() - self.prebuf['last_update'] >= AcePlayer.TIMEOUT_FREEZE:
-                            self.parent.player.showStatus(fmt('Пребуферизация {0}', self.prebuf['value']))
+                        if _descr[1] != self.msg_params.get('buf', 0):
+                            self.msg_params['last_update'] = state.getTime()
+                            self.msg_params['buf'] = _descr[1]
+#                             self.parent.player.showStatus(fmt('Буферизация {0}', self.msg_params['value']))
+                        if time.time() - self.msg_params['last_update'] >= AcePlayer.TIMEOUT_FREEZE:
+                            self.parent.player.showStatus(fmt('Пребуферизация {0}', self.msg_params['buf']))
                             log.w('AceEngine is freeze')
                             self.autoStop()
+#                     elif _descr[0] == 'dl':
+#                         if _descr[8] != self.msg_params.get('downloaded', 0):
+#                             self.msg_params['last_update'] = state.getTime()
+#                             self.msg_params['downloaded'] = _descr[8]
+#                         if time.time() - self.msg_params['last_update'] >= 10:
+#                             log.w('AceEngine is freeze')
+#                             self.autoStop()
 
 #                         self.parent.showInfoStatus('Buf:%s DL:%s UL:%s' % (_descr[1], _descr[5], _descr[7]))
 #                     else:
 #                         self.parent.showInfoStatus('%s' % _params)
             elif state.getType() in (TSMessage.RESUME, TSMessage.PAUSE, TSMessage.START):
-                self.prebuf['value'] = 0
+                self.msg_params['value'] = 0
+#                 self.msg_params['downloaded'] = 0
 
             elif state.getType() == TSMessage.EVENT:
                 if state.getParams() == 'getuserdata':
@@ -575,7 +604,6 @@ class AcePlayer(TPlayer):
                 log.e(fmt('_stateHandler error: "{0}"', e))
 
     def play_item(self, title='', icon='', thumb='', *args, **kwargs):
-        res = None
         if self.last_error:
             return
         url = kwargs.get('url')
@@ -603,7 +631,7 @@ class AcePlayer(TPlayer):
 
                 self.link = _params['url'].replace('127.0.0.1', self.server_ip).replace('6878', self.webport)
                 log.d(fmt('Преобразование ссылки: {0}', self.link))
-                res = TPlayer.play_item(self, title, icon, thumb)
+                TPlayer.play_item(self, title, icon, thumb)
             except Exception as e:
                 log.e(fmt('play_item error: {0}', e))
                 self.last_error = e
@@ -612,31 +640,29 @@ class AcePlayer(TPlayer):
             self.last_error = 'Incorrect msg from AceEngine'
             log.e(self.last_error)
             self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
-        self.stop()
-        return res
 
     def end(self):
         self.link = None
-        if self._send_command('STOP'):
-            self._send_command('SHUTDOWN')
+        TPlayer.end(self)
+        if self._send_command(TSMessage.STOP):
+            self._send_command(TSMessage.SHUTDOWN)
         self.waiting.msg = None
         self.last_error = None
         if self.sock_thr:
             self.sock_thr.end()
             self.sock_thr = None
         self.sock.close()
-        TPlayer.end(self)
 
     def stop(self):
         self.link = None
-        self._send_command('STOP')
+        TPlayer.stop(self)
+        self._send_command(TSMessage.STOP)
         self.waiting.msg = None
         if self.sock_thr:
             self.sock_thr.end()
             self.sock_thr.join()
             self.sock_thr = None
         self.last_error = None
-        return TPlayer.stop(self)
 
 
 class Waiting():
@@ -666,6 +692,7 @@ class TSMessage():
     EVENT = 'EVENT'
     PAUSE = 'PAUSE'
     RESUME = 'RESUME'
+    SHUTDOWN = 'SHUTDOWN'
     NONE = ''
 
     def __init__(self, tstype='', params=''):
@@ -821,4 +848,4 @@ class NoxPlayer(TPlayer):
 
     def play_item(self, title='', icon='', thumb='', *args, **kwargs):
         self.link = kwargs.get('url')
-        return TPlayer.play_item(self, title=title, icon=icon, thumb=thumb, *args, **kwargs)
+        TPlayer.play_item(self, title=title, icon=icon, thumb=thumb, *args, **kwargs)
