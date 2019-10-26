@@ -239,6 +239,7 @@ class WMainForm(xbmcgui.WindowXML):
     TIMER_SHOW_SCREEN = 'show_screen_timer'
     TIMER_SEL_CHANNEL = 'sel_channel_timer'
     TIMER_HIDE_WINDOW = 'hide_window_timer'
+    TIMER_ADD_RECENT = 'add_recent_timer'
     THREAD_SET_LOGO = 'set_logo_thread'
 
     def __init__(self, *args, **kwargs):
@@ -582,6 +583,26 @@ class WMainForm(xbmcgui.WindowXML):
             self.timers[WMainForm.TIMER_HIDE_WINDOW].daemon = False
             self.timers[WMainForm.TIMER_HIDE_WINDOW].start()
 
+    def add_recent_channel(self, channel, timeout=0):
+        log.d(fmt('add_resent_channel in {0} sec', timeout))
+
+        def add():
+            if self.cur_category not in WMainForm.USER_GROUPS:
+                if favdb.LocalFDB().add_recent(channel):
+                    self.channel_groups.clearGroup(WMainForm.USER_GROUPS[0])
+                    self.loadFavourites()
+            self.timers[WMainForm.TIMER_ADD_RECENT] = None
+
+        if self.timers.get(WMainForm.TIMER_ADD_RECENT):
+            self.timers[WMainForm.TIMER_ADD_RECENT].cancel()
+            self.timers[WMainForm.TIMER_ADD_RECENT] = None
+
+        if not defines.isCancel():
+            self.timers[WMainForm.TIMER_ADD_RECENT] = threading.Timer(timeout, add)
+            self.timers[WMainForm.TIMER_ADD_RECENT].name = WMainForm.TIMER_ADD_RECENT
+            self.timers[WMainForm.TIMER_ADD_RECENT].daemon = False
+            self.timers[WMainForm.TIMER_ADD_RECENT].start()
+
     def onClick(self, controlID):
         log.d(fmt('onClick {0}', controlID))
         if controlID == 200:
@@ -729,11 +750,15 @@ class WMainForm(xbmcgui.WindowXML):
                         if self.cur_category not in WMainForm.USER_GROUPS:
                             chli.setProperty('commands', fmt("{0}", MenuForm.CMD_ADD_FAVOURITE))
                         else:
-                            chli.setProperty('commands', fmt("{0},{1},{2},{3}",
-                                                             MenuForm.CMD_MOVE_FAVOURITE,
-                                                             MenuForm.CMD_DEL_FAVOURITE,
-                                                             MenuForm.CMD_DOWN_FAVOURITE,
-                                                             MenuForm.CMD_UP_FAVOURITE))
+                            cmds = [MenuForm.CMD_MOVE_FAVOURITE,
+                                    MenuForm.CMD_DEL_FAVOURITE,
+                                    MenuForm.CMD_DOWN_FAVOURITE,
+                                    MenuForm.CMD_UP_FAVOURITE]
+                            if ch.get('pin'):
+                                cmds.append(MenuForm.CMD_SET_FALSE_PIN)
+                            else:
+                                cmds.append(MenuForm.CMD_SET_TRUE_PIN)
+                            chli.setProperty('commands', ','.join(cmds))
                         self.list.addItem(chli)
 
                         break

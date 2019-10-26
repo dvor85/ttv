@@ -20,6 +20,8 @@ class MenuForm(xbmcgui.WindowXMLDialog):
     CMD_MOVE_FAVOURITE = 'favourite_move'
     CMD_UP_FAVOURITE = 'favourite_up'
     CMD_DOWN_FAVOURITE = 'favourite_down'
+    CMD_SET_TRUE_PIN = 'set_pin_true'
+    CMD_SET_FALSE_PIN = 'set_pin_false'
     CONTROL_CMD_LIST = 301
 
     def __init__(self, *args, **kwargs):
@@ -49,10 +51,15 @@ class MenuForm(xbmcgui.WindowXMLDialog):
                     title = 'Поднять'
                 elif c == MenuForm.CMD_DOWN_FAVOURITE:
                     title = 'Опустить'
+                elif c == MenuForm.CMD_SET_TRUE_PIN:
+                    title = 'Заблокировать'
+                elif c == MenuForm.CMD_SET_FALSE_PIN:
+                    title = 'Разблокировать'
                 if title:
                     lst.addItem(xbmcgui.ListItem(title, c))
 
             self.getControl(999).setHeight(len(cmds) * 40 + 55)
+            lst.setHeight(len(cmds) * 40 + 55)
             lst.selectItem(0)
             self.setFocusId(MenuForm.CONTROL_CMD_LIST)
             log.d(fmt('Focus ControlId {0}', self.getFocusId()))
@@ -88,6 +95,10 @@ class MenuForm(xbmcgui.WindowXMLDialog):
                 return fdb.down(self.channel.get_name())
             elif cmd == MenuForm.CMD_UP_FAVOURITE:
                 return fdb.up(self.channel.get_name())
+            elif cmd == MenuForm.CMD_SET_TRUE_PIN:
+                return fdb.set_pin(self.channel.get_name(), True)
+            elif cmd == MenuForm.CMD_SET_FALSE_PIN:
+                return fdb.set_pin(self.channel.get_name(), False)
         except Exception as e:
             log.e(fmt('Error: {0} in exec_cmd "{1}"', e, cmd))
             self.close()

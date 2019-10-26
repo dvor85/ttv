@@ -19,6 +19,7 @@ class FDB():
     API_ERROR_ALREADY = 'already'
     API_ERROR_NOPARAM = 'noparam'
     API_ERROR_NOFAVOURITE = 'nofavourite'
+    MAX_CHANNELS = 30
 
     def __init__(self):
         self.channels = []
@@ -126,11 +127,36 @@ class LocalFDB(FDB):
 
     def add(self, ch):
         name = ch.get_name()
-        log.d(fmt('add channels {0}', name))
-        channel = {'name': name}
+        log.d(fmt('add channel {0}', name))
+        channel = {'name': name, 'pin': True}
 
         if self.find(name) is None:
             self.channels.append(channel)
             return self.save()
 
         return FDB.API_ERROR_ALREADY
+
+    def add_recent(self, ch):
+        name = ch.get_name()
+        log.d(fmt('add recent channel {0}', name))
+        channel = {'name': name, 'pin': False}
+
+        if self.find(name) is None:
+            self.channels.insert(0, channel)
+            if len(self.channels) > FDB.MAX_CHANNELS:
+                for i in range(len(self.channels), 0, -1):
+                    if not self.channels[i].get('pin', True):
+                        del self.channels[i]
+                        break
+
+            return self.save()
+
+        return FDB.API_ERROR_ALREADY
+
+    def set_pin(self, name, pin):
+        log.d(fmt('set pin={0} of channel {1}', pin, name))
+
+        ci = self.find(name)
+        if ci is not None:
+            self.channels[ci]['pin'] = pin
+            return self.save()

@@ -221,6 +221,7 @@ class MyPlayer(xbmcgui.WindowXML):
                             self._player = players.TPlayer.get_instance(parent=self.parent)
 
                         if self._player:
+                            self.parent.add_recent_channel(channel, 300)
                             self._player.play_item(index=0, title=self.title,
                                                    iconImage=logo,
                                                    thumbnailImage=logo,
