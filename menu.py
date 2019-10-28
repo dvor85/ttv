@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import, division, unicode_literals
 # Copyright (c) 2013 Torrent-TV.RU
 # Writer (c) 2013, Welicobratov K.A., E-mail: 07pov23@gmail.com
 # Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-import xbmcgui
+from kodi_six import xbmcgui
 import defines
 import utils
 import favdb
@@ -11,7 +12,6 @@ import logger
 from sources import tchannel
 
 log = logger.Logger(__name__)
-fmt = utils.fmt
 
 
 class MenuForm(xbmcgui.WindowXMLDialog):
@@ -35,7 +35,7 @@ class MenuForm(xbmcgui.WindowXMLDialog):
         if not self.li or not self.parent:
             return
         self.channel = tchannel.TChannel({"name": self.li.getProperty("name")})
-        log.d(fmt("li = {0}", self.li.getProperty("commands")))
+        log.d("li = {0}".format(self.li.getProperty("commands")))
         try:
             cmds = self.li.getProperty('commands').split(',')
             lst = self.getControl(MenuForm.CONTROL_CMD_LIST)
@@ -62,9 +62,9 @@ class MenuForm(xbmcgui.WindowXMLDialog):
             lst.setHeight(len(cmds) * 40 + 55)
             lst.selectItem(0)
             self.setFocusId(MenuForm.CONTROL_CMD_LIST)
-            log.d(fmt('Focus ControlId {0}', self.getFocusId()))
+            log.d('Focus ControlId {0}'.format(self.getFocusId()))
         except Exception as e:
-            log.e(fmt("В списке нет комманд {0}", e))
+            log.e("В списке нет комманд {0}".format(e))
             self.close()
 
     def onClick(self, controlId):
@@ -72,7 +72,7 @@ class MenuForm(xbmcgui.WindowXMLDialog):
             lt = self.getControl(MenuForm.CONTROL_CMD_LIST)
             li = lt.getSelectedItem()
             cmd = li.getLabel2()
-            log.d(fmt("cmd={0}", cmd))
+            log.d("cmd={0}".format(cmd))
 
             self.result = self.exec_cmd(cmd)
             self.close()
@@ -100,7 +100,7 @@ class MenuForm(xbmcgui.WindowXMLDialog):
             elif cmd == MenuForm.CMD_SET_FALSE_PIN:
                 return fdb.set_pin(self.channel.get_name(), False)
         except Exception as e:
-            log.e(fmt('Error: {0} in exec_cmd "{1}"', e, cmd))
+            log.e('Error: {0} in exec_cmd "{1}"'.format(e, cmd))
             self.close()
 
     def GetResult(self):

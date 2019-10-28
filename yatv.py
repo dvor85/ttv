@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import, division, unicode_literals
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 import datetime
@@ -15,7 +16,6 @@ from sources.channel_info import CHANNEL_INFO
 import re
 
 
-fmt = utils.fmt
 log = logger.Logger(__name__)
 
 
@@ -31,7 +31,7 @@ class YATV():
                 try:
                     YATV._instance = YATV()
                 except Exception as e:
-                    log.error(fmt("get_instance error: {0}", e))
+                    log.error("get_instance error: {0}".format(e))
                     YATV._instance = None
                 finally:
                     YATV._lock.clear()
@@ -63,12 +63,12 @@ class YATV():
                 os.unlink(self.yatv_file_json)
             bt = time.time()
             self.update_yatv()
-            log.d(fmt("Loading yatv in {t} sec", t=time.time() - bt))
+            log.d("Loading yatv in {t} sec".format(t=time.time() - bt))
         if not self.jdata:
             bt = time.time()
             with gzip.open(self.yatv_file_json, 'rb') as fp:
                 self.jdata = json.load(fp)
-            log.d(fmt("Loading yatv from json in {t} sec", t=time.time() - bt))
+            log.d("Loading yatv from json in {t} sec".format(t=time.time() - bt))
 
         self.update_timer = Timer(interval, self._get_jdata)
         self.update_timer.name = "update_yatv_timer"
@@ -119,7 +119,7 @@ class YATV():
                    }
         with gzip.open(self.yatv_file_json, 'ab+') as fp:
             fp.write('[')
-            m = _yparams["channelProgramsLimit"] / _yparams["channelLimit"]
+            m = int(round(_yparams["channelProgramsLimit"] / _yparams["channelLimit"]))
             for p in range(0, m):
                 _yparams["channelOffset"] = p * _yparams["channelLimit"]
                 _params["params"] = json.dumps(_yparams)
@@ -134,7 +134,7 @@ class YATV():
                     if p < m - 1:
                         fp.write(',')
                 except Exception as e:
-                    log.error(fmt('update_yatv error: {0}', e))
+                    log.error('update_yatv error: {0}'.format(e))
             fp.write(']')
 
     def get_finish(self):
@@ -161,7 +161,7 @@ class YATV():
         if chid is None or chid not in self.availableChannels["availableChannelsIds"]:
             return
         ctime = datetime.datetime.now()
-        offset = int(round((ctime - datetime.datetime.utcnow()).total_seconds()) / 3600) if epg_offset is None else epg_offset
+        offset = (ctime - datetime.datetime.utcnow()).total_seconds() // 3600 if epg_offset is None else epg_offset
         for p in self.jdata:
             for sch in p['schedules']:
                 if sch['channel']['id'] == chid:
@@ -188,11 +188,11 @@ class YATV():
             return (name_offset.group('name'), utils.str2int(name_offset.group('offset')))
 
     def get_id_by_name(self, name):
-        names = [utils.lower(name, 'utf8')]
+        names = [name.lower()]
         names.extend(CHANNEL_INFO.get(names[0], {}).get("aliases", []))
         for p in self.jdata:
             for sch in p['schedules']:
-                if utils.lower(sch['channel']['title'], 'utf8') in names:
+                if sch['channel']['title'].lower() in names:
                     return sch['channel']['id']
 
     def get_epg_by_name(self, name):

@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
+
+from __future__ import absolute_import, division, unicode_literals
 import defines
 import logger
 import os
-from utils import fmt
 
 
 log = logger.Logger('STARTUP')
@@ -20,7 +21,7 @@ def add_skins():
                 # Python 2.5
                 import xml.etree.ElementTree as etree
 
-        log(fmt("{0} v.{1}", defines.ADDON_ID, defines.ADDON.getAddonInfo('version')))
+        log("{0} v.{1}".format(defines.ADDON_ID, defines.ADDON.getAddonInfo('version')))
 
         set_file = os.path.join(defines.ADDON_PATH, 'resources/settings.xml')
         skins_dir = os.path.join(defines.DATA_PATH + 'resources/skins/')
@@ -41,7 +42,7 @@ def add_skins():
             xset.attrib['values'] = "st.anger"
             root.write(set_file, 'utf-8')
     except Exception as e:
-        log.e(fmt('add_skins error: {0}', e))
+        log.e('add_skins error: {0}'.format(e))
 
 
 add_skins()

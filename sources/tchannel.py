@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
+from __future__ import absolute_import, division, unicode_literals
 from UserDict import UserDict
 import datetime
 import utils
@@ -8,9 +9,9 @@ import defines
 import yatv
 import logger
 import os
-from channel_info import CHANNEL_INFO
+from .channel_info import CHANNEL_INFO
 
-fmt = utils.fmt
+# fmt = utils.fmt
 log = logger.Logger(__name__)
 
 
@@ -32,7 +33,7 @@ class TChannel(UserDict):
         return self.data.get('mode')
 
     def get_group(self):
-        name = utils.lower(self.get_name(), 'utf8')
+        name = self.get_name().lower()
         if name in CHANNEL_INFO:
             self.data['cat'] = CHANNEL_INFO[name].get('cat')
 #         if not self.data.get('cat'):
@@ -43,10 +44,10 @@ class TChannel(UserDict):
         return self.data.get('cat')
 
     def get_logo(self):
-        name = utils.lower(self.get_name(), 'utf8')
-        logo = os.path.join(utils.utf(self.yatv_logo_path), fmt("{name}.png", name=name))
+        name = self.get_name().lower()
+        logo = os.path.join(self.yatv_logo_path, "{name}.png".format(name=name))
         if not self.data.get('logo'):
-            if os.path.exists(utils.true_enc(logo, 'utf8')):
+            if os.path.exists(logo):
                 self.data['logo'] = logo
             else:
                 self.data['logo'] = ''
@@ -58,26 +59,26 @@ class TChannel(UserDict):
                     ylogo = epg.get_logo_by_name(name)
                     if ylogo:
                         r = defines.request(ylogo, session=epg.get_yatv_sess(), headers={'Referer': 'https://tv.yandex.ru/'})
-                        with open(utils.true_enc(logo, 'utf8'), 'wb') as fp:
+                        with open(logo, 'wb') as fp:
                             fp.write(r.content)
                         self.data['logo'] = logo
 
         except Exception as e:
-            log.e(fmt('update_logo error {0}', e))
+            log.e('update_logo error {0}'.format(e))
 
         return self.data.get('logo')
 
     def get_id(self):
-        return utils.utf(fmt("{0}", self.data.get('id')))
+        return "{0}".format(self.data.get('id'))
 
     def get_name(self):
-        return utils.utf(self.data.get('name'))
+        return self.data.get('name')
 
     def get_title(self):
         if not self.data.get('title'):
-            name = utils.lower(self.get_name(), 'utf8')
+            name = self.get_name().lower()
             if name in CHANNEL_INFO:
-                self.data['title'] = utils.uni(CHANNEL_INFO[name].get('aliases', [name])[0], 'utf8').capitalize()
+                self.data['title'] = CHANNEL_INFO[name].get('aliases', [name])[0].capitalize()
             else:
                 self.data['title'] = self.get_name()
         return self.data["title"]
@@ -99,7 +100,7 @@ class TChannel(UserDict):
                 for ep in epg.get_epg_by_name(self.get_name()):
                     self.data['epg'].append(ep)
         except Exception as e:
-            log.e(fmt('update_epglist error {0}', e))
+            log.e('update_epglist error {0}'.format(e))
 
     def get_epg(self):
         """
@@ -126,7 +127,7 @@ class TChannel(UserDict):
                     log.error(e)
             self.data['epg'] = curepg
         except Exception as e:
-            log.e(fmt('get_epg error {0}', e))
+            log.e('get_epg error {0}'.format(e))
 
         return self.data.get('epg')
 

@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import, division, unicode_literals
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-import xbmc
+from kodi_six import xbmc
 import utils
+import six
 import defines
 import time
 
 
-fmt = utils.fmt
+# fmt = utils.fmt
 
 
 class Logger():
@@ -22,14 +24,15 @@ class Logger():
     def log(self, msg, level):
         if level >= self.minlevel:
             try:
-                m = fmt("[{id}::{tag}] {msg}", id=defines.ADDON_ID, tag=self.tag, msg=utils.utf(msg)).replace(
-                    defines.ADDON.getSetting('password'), '********')
+                m = "[{id}::{tag}] {msg}".format(id=defines.ADDON_ID, tag=self.tag, msg=six.ensure_text(msg).replace(
+                    defines.ADDON.getSetting('password'), '********'))
+
                 xbmc.log(m, level)
                 if defines.DEBUG:
-                    m = fmt('{0} {1}', time.strftime('%X'), m)
+                    m = '{0} {1}'.format(time.strftime('%X'), m)
                     print m
             except Exception as e:
-                xbmc.log(fmt('ERROR LOG OUT: {0}', e), xbmc.LOGERROR)
+                xbmc.log('ERROR LOG OUT: {0}'.format(e), xbmc.LOGERROR)
 
     def notice(self, msg):
         return self.__call__(msg)
