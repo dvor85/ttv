@@ -2,12 +2,13 @@
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 from __future__ import absolute_import, division, unicode_literals
-import utils
-import defines
-import logger
+
+import json
 import os
 import time
-import json
+
+import defines
+import logger
 from .tchannel import TChannel, TChannels
 
 log = logger.Logger(__name__)
@@ -16,8 +17,10 @@ log = logger.Logger(__name__)
 
 class Channel(TChannel):
 
-    def __init__(self, data={}):
+    def __init__(self, data=None):
         TChannel.__init__(self, data=data)
+        if data is None:
+            data = {}
         self.data['cat'] = None
 
     def get_id(self):
@@ -44,6 +47,7 @@ class Channels(TChannels):
 
     def update_channels(self):
         TChannels.update_channels(self)
+        jdata = dict
         try:
             jdata = self._load_jdata()
             if not jdata:

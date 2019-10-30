@@ -277,7 +277,7 @@
 	      <midtexture>progressfront.png</midtexture>
           <width>405</width>
           <height>9</height>
-          <info></info>
+          <info/>
         </control>
 	</control>
 		<control type="group">

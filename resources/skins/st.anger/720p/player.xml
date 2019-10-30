@@ -152,7 +152,7 @@
 	      	  <midtexture>progressfront.png</midtexture>
               <width>1100</width>
               <height>9</height>
-              <info></info>
+                <info/>
             </control>
             <control type="label" id ="110">
               <description>Next EPG</description>
@@ -164,7 +164,7 @@
               <height>30</height>
               <font>font12</font>
               <visible>true</visible>
-              <label></label>
+                <label/>
               <scroll>true</scroll>
             </control>
           </control>

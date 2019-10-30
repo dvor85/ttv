@@ -1,25 +1,24 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import absolute_import, division, unicode_literals
-import defines
-import logger
+
 import os
 
+import defines
+import logger
 
 log = logger.Logger('STARTUP')
 
 
 def add_skins():
     try:
+
         try:
-            from lxml import etree
+            # Python 2.5
+            import xml.etree.cElementTree as etree
         except ImportError:
-            try:
-                # Python 2.5
-                import xml.etree.cElementTree as etree
-            except ImportError:
-                # Python 2.5
-                import xml.etree.ElementTree as etree
+            # Python 2.5
+            import xml.etree.ElementTree as etree
 
         log("{0} v.{1}".format(defines.ADDON_ID, defines.ADDON.getAddonInfo('version')))
 
@@ -41,12 +40,13 @@ def add_skins():
         elif xset.attrib['values'] != "st.anger":
             xset.attrib['values'] = "st.anger"
             root.write(set_file, 'utf-8')
+
     except Exception as e:
         log.e('add_skins error: {0}'.format(e))
-
 
 add_skins()
 
 if defines.AUTOSTART:
     import xbmc
+
     xbmc.executebuiltin('RunAddon({0})'.format(defines.ADDON_ID))

@@ -1,28 +1,32 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, unicode_literals
-# Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
+
+import datetime
+import json
+import threading
+
+import xbmcgui
+import xbmc
+from six import itervalues, iteritems
+from six.moves import UserDict
+from six import ensure_str as str, ensure_text as uni
 
 # imports
 import defines
-from kodi_six import xbmcgui, xbmc
-
-import datetime
-import threading
-
-from playerform import MyPlayer
-from menu import MenuForm
-from sources.table import ChannelSources
-from sources import grouplang
 import favdb
-import json
-import utils
-from UserDict import UserDict
-import yatv
 # try:
 #     from collections import OrderedDict
 # except ImportError:
 #     from ordereddict import OrderedDict
 import logger
+import utils
+import yatv
+from menu import MenuForm
+from playerform import MyPlayer
+from sources import grouplang
+from sources.table import ChannelSources
+
+# Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 log = logger.Logger(__name__)
 
@@ -37,7 +41,7 @@ class ChannelGroups(UserDict):
     }
     """
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         self.data = {}
 
     def addGroup(self, groupname, title=None):
@@ -75,7 +79,7 @@ class ChannelGroups(UserDict):
                 self.addGroup(groupname)
             chs = self.find_channel_by_name(groupname, ch.get_name())
             if chs:
-                for c in chs.itervalues():
+                for c in itervalues(chs):
                     if c.get('url') and ch.get('url') and c['url'] == ch['url']:
                         return
                 chs[src_name] = ch
@@ -92,7 +96,7 @@ class ChannelGroups(UserDict):
 
     def find_channel_by_id(self, groupname, chid):
         for chs in self.getChannels(groupname):
-            for ch in chs.itervalues():
+            for ch in itervalues(chs):
                 if ch.get_id() == chid:
                     return chs
 
@@ -105,7 +109,7 @@ class ChannelGroups(UserDict):
     def find_channel_by_name(self, groupname, name):
         name = name.lower()
         for chs in self.getChannels(groupname):
-            for ch in chs.itervalues():
+            for ch in itervalues(chs):
                 if ch.get_name().lower() == name:
                     return chs
 
@@ -174,7 +178,7 @@ class LoopPlay(threading.Thread):
                 xbmc.sleep(1000)
 
         self.parent.player.close()
-#         self.parent.show()
+        #         self.parent.show()
 
         if xbmc.getCondVisibility("Window.IsVisible(home)"):
             log.d("Close from HOME Window")
@@ -238,8 +242,8 @@ class WMainForm(xbmcgui.WindowXML):
     def __init__(self, *args, **kwargs):
         log.d('__init__')
         self.channel_groups = ChannelGroups()
-#         self._re_1ttv_epg_text = re.compile('var\s+epg\s*=\s*(?P<e>\[.+?\])\s*;.*?</script>', re.DOTALL)
-#         self._re_1ttv_epg_json = re.compile('(?P<k>\w+)\s*:\s*(?P<v>.+?[,}])')
+        #         self._re_1ttv_epg_text = re.compile('var\s+epg\s*=\s*(?P<e>\[.+?\])\s*;.*?</script>', re.DOTALL)
+        #         self._re_1ttv_epg_json = re.compile('(?P<k>\w+)\s*:\s*(?P<v>.+?[,}])')
         self.img_progress = None
         self.txt_progress = None
         self.progress = None
@@ -263,12 +267,12 @@ class WMainForm(xbmcgui.WindowXML):
     def onInit(self):
         self.cur_category = defines.ADDON.getSetting('cur_category')
         self.cur_channel = defines.ADDON.getSetting('cur_channel')
-        self.img_progress = self.getControl(WMainForm.IMG_PROGRESS)
-        self.txt_progress = self.getControl(WMainForm.TXT_PROGRESS)
-        self.progress = self.getControl(WMainForm.PROGRESS_BAR)
-        self.description_label = self.getControl(WMainForm.DESC_LABEL)
+        self.img_progress = ModuleWrapper(self.getControl(WMainForm.IMG_PROGRESS))
+        self.txt_progress = ModuleWrapper(self.getControl(WMainForm.TXT_PROGRESS))
+        self.progress = ModuleWrapper(self.getControl(WMainForm.PROGRESS_BAR))
+        self.description_label = ModuleWrapper(self.getControl(WMainForm.DESC_LABEL))
 
-        self.list = self.getControl(WMainForm.CONTROL_LIST)
+        self.list = ModuleWrapper(self.getControl(WMainForm.CONTROL_LIST))
         self.init = True
 
         if not self.channel_groups:
@@ -316,7 +320,7 @@ class WMainForm(xbmcgui.WindowXML):
                 sel_chs = self.get_channel_by_name(selItem.getProperty("name"))
                 if sel_chs:
                     self.getEpg(sel_chs, timeout=0.5, callback=self.showEpg)
-#                     self.showScreen(sel_chs, timeout=0.5)
+                #                     self.showScreen(sel_chs, timeout=0.5)
 
                 for controlId in (WMainForm.IMG_SCREEN,):
                     self.getControl(controlId).setImage(selItem.getArt('icon'))
@@ -360,7 +364,7 @@ class WMainForm(xbmcgui.WindowXML):
                 log.d('getEpg->get')
                 self.showStatus('Загрузка программы')
                 if chs:
-                    for ch in chs.itervalues():
+                    for ch in itervalues(chs):
                         epg = ch.get_epg()
                         if epg and callback is not None and chnum == self.player.channel_number:
                             callback(epg)
@@ -457,7 +461,7 @@ class WMainForm(xbmcgui.WindowXML):
             namedb = {}
             for cat, val in self.channel_groups.iteritems():
                 for chs in val['channels']:
-                    for ch in chs.itervalues():
+                    for ch in itervalues(chs):
                         namedb[ch.get_name().lower()] = {'logo': ch.get_logo(), 'cat': cat}
                         break
             import os
@@ -466,11 +470,11 @@ class WMainForm(xbmcgui.WindowXML):
                 fp.write(s)
 
         def LoadOther():
-            for name, thr in thrs.iteritems():
+            for name, thr in iteritems(thrs):
                 if name not in ('yatv_epg',):
                     thr.join(20)
 
-#             dump_channel_groups()
+        #             dump_channel_groups()
 
         self.showStatus("Получение списка каналов")
 
@@ -478,13 +482,12 @@ class WMainForm(xbmcgui.WindowXML):
             title = '[COLOR FFFFFF00][B]' + groupname + '[/B][/COLOR]'
             self.channel_groups.addGroup(groupname, title)
 
-        thrs = {}
-        thrs['favourite'] = defines.MyThread(self.loadFavourites)
-        thrs['yatv_epg'] = defines.MyThread(lambda: setattr(self, '_yatv_instance', yatv.YATV.get_instance()))
-        for src_name in ChannelSources.iterkeys():
+        thrs = {'favourite': defines.MyThread(self.loadFavourites),
+                'yatv_epg': defines.MyThread(lambda: setattr(self, '_yatv_instance', yatv.YATV.get_instance()))}
+        for src_name in ChannelSources:
             thrs[src_name] = defines.MyThread(self.loadChannels, src_name)
 
-        for thr in thrs.itervalues():
+        for thr in itervalues(thrs):
             thr.start()
 
         lo_thr = defines.MyThread(LoadOther)
@@ -507,7 +510,7 @@ class WMainForm(xbmcgui.WindowXML):
             if self.init:
                 self.select_channel()
                 self.init = False
-            if (self.list) and (0 < self.selitem_id < self.list.size()):
+            if self.list and (0 < self.selitem_id < self.list.size()):
                 if self.first_init:  # автостарт канала
                     self.first_init = False
                     self.startChannel()
@@ -602,7 +605,7 @@ class WMainForm(xbmcgui.WindowXML):
             self.setFocusId(WMainForm.CONTROL_LIST)
             self.player.manualStop()
         elif controlID == WMainForm.CONTROL_LIST:
-            selItem = self.list.getSelectedItem()
+            selItem = ModuleWrapper(self.list.getSelectedItem())
 
             if not selItem:
                 return
@@ -683,7 +686,7 @@ class WMainForm(xbmcgui.WindowXML):
                 self.showMenuWindow()
 
             elif action == WMainForm.ACTION_MOUSE:
-                if (self.getFocusId() == WMainForm.CONTROL_LIST):
+                if self.getFocusId() == WMainForm.CONTROL_LIST:
                     self.onFocus(WMainForm.CONTROL_LIST)
             elif action in WMainForm.DIGIT_BUTTONS:
                 # IN PRESSING DIGIT KEYS ############ @IgnorePep8
@@ -721,16 +724,16 @@ class WMainForm(xbmcgui.WindowXML):
         log.d('fillChannels: Clear list')
         self.list.reset()
         self.list_type = 'channels'
-#         if not self.channel_groups.getChannels(self.cur_category):
-#             self.fillCategory()
-#             self.hideStatus()
-#         else:
+        #         if not self.channel_groups.getChannels(self.cur_category):
+        #             self.fillCategory()
+        #             self.hideStatus()
+        #         else:
         li = xbmcgui.ListItem('..')
         self.list.addItem(li)
 
         for i, chs in enumerate(self.channel_groups.getChannels(self.cur_category)):
             if chs:
-                for ch in chs.itervalues():
+                for ch in itervalues(chs):
                     try:
                         if defines.isCancel():
                             return
@@ -799,7 +802,7 @@ class WMainForm(xbmcgui.WindowXML):
             if self.player._player:
                 self.player._player.end()
 
-        for timer in self.timers.itervalues():
+        for timer in itervalues(self.timers):
             if timer:
                 timer.cancel()
 

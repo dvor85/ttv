@@ -1,46 +1,47 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, unicode_literals
-# Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
+
+import json
+import os
+import random
+import socket
+import subprocess
+import threading
+import time
+import urllib
 
 # imports
 from kodi_six import xbmc, xbmcgui
-import six
+from six import iteritems, itervalues
 
-import socket
-import os
-import threading
-import subprocess
-import random
-import urllib
 import defines
 import logger
 import utils
-import json
-import time
 
+# Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 log = logger.Logger(__name__)
 sys_platform = defines.platform()['os']
 
 
-class FlagsControl():
+class FlagsControl:
     def __init__(self):
         self.manual_stopped = threading.Event()
         self.switch_source = threading.Event()
         self.channel_stop = threading.Event()
 
     def clear(self):
-        for f in self.__dict__.itervalues():
+        for f in itervalues(self.__dict__):
             f.clear()
 
     def is_any_flag_set(self):
-        for f in self.__dict__.itervalues():
+        for f in itervalues(self.__dict__):
             if f.is_set():
                 return True
 
     def log_status(self):
         log_string = ''
-        for k, f in self.__dict__.iteritems():
+        for k, f in iteritems(self.__dict__):
             log_string += '{k}: {v}; '.format(k=k, v=f.is_set())
         log.d(log_string)
 
@@ -49,7 +50,6 @@ Flags = FlagsControl()
 
 
 class TPlayer(xbmc.Player):
-
     _instance = None
     _lock = threading.RLock()
 
@@ -269,7 +269,8 @@ class AcePlayer(TPlayer):
                 si.dwFlags = subprocess.STARTF_USESHOWWINDOW
                 si.wShowWindow = subprocess.SW_HIDE
 
-                subprocess.call(["taskkill", "/F", "/IM", os.path.basename(self.ace_engine)], shell=False, startupinfo=si)
+                subprocess.call(["taskkill", "/F", "/IM", os.path.basename(self.ace_engine)], shell=False,
+                                startupinfo=si)
                 log.d('Remove "{0}"'.format(self.port_file))
                 os.remove(self.port_file)
             except Exception as e:
@@ -413,7 +414,7 @@ class AcePlayer(TPlayer):
                         self.waiting.event.clear()
                         self.waiting.abort.clear()
                         self.sock.send(cmd + '\r\n')
-                        for t in xrange(AcePlayer.TIMEOUT_FREEZE * 3):  # @UnusedVariable
+                        for t in range(AcePlayer.TIMEOUT_FREEZE * 3):  # @UnusedVariable
                             log.d("waiting message {msg} ({t})".format(msg=wait_msg, t=t))
                             if not self.waiting.msg or self.sock_thr.error or defines.isCancel():
                                 raise ValueError('Abort waiting message: "{0}"'.format(wait_msg))
@@ -444,14 +445,14 @@ class AcePlayer(TPlayer):
         """
         Wait message
         :msg: Message for wait (START, AUTH, etc)
-        :return: TSMessage object if wait was successfuly, else None
+        :return: TSMessage object if wait was successfully, else None
         """
         with self.waiting.lock:
             log.d('wait message: {0}'.format(msg))
             try:
                 self.waiting.msg = msg
                 self.waiting.event.clear()
-                for t in xrange(AcePlayer.TIMEOUT_FREEZE * 3):  # @UnusedVariable
+                for t in range(AcePlayer.TIMEOUT_FREEZE * 3):  # @UnusedVariable
                     log.d("waiting message {msg} ({t})".format(msg=msg, t=t))
                     if not self.waiting.msg or self.sock_thr.error or defines.isCancel():
                         raise ValueError('Abort waiting message: "{0}"'.format(msg))
@@ -542,8 +543,8 @@ class AcePlayer(TPlayer):
                     elif _descr[0] == 'check':
                         log.d('_stateHandler: Проверка {0}'.format(_descr[1]))
                         self.parent.showStatus('Проверка {0}'.format(_descr[1]))
-#                     elif _descr[0] == 'dl':
-#                         self.parent.showInfoStatus('Total:%s DL:%s UL:%s' % (_descr[1], _descr[3], _descr[5]))
+                    #                     elif _descr[0] == 'dl':
+                    #                         self.parent.showInfoStatus('Total:%s DL:%s UL:%s' % (_descr[1], _descr[3], _descr[5]))
                     elif _descr[0] == 'buf':
                         # self.parent.showStatus('Буферизация: %s DL: %s UL: %s' % (_descr[1],
                         # _descr[5], _descr[7])) @IgnorePep8
@@ -551,25 +552,25 @@ class AcePlayer(TPlayer):
                         if _descr[1] != self.msg_params.get('buf', 0):
                             self.msg_params['last_update'] = state.getTime()
                             self.msg_params['buf'] = _descr[1]
-#                             self.parent.player.showStatus('Буферизация {0}'.format(self.msg_params['value']))
+                        #                             self.parent.player.showStatus('Буферизация {0}'.format(self.msg_params['value']))
                         if time.time() - self.msg_params['last_update'] >= AcePlayer.TIMEOUT_FREEZE:
                             self.parent.player.showStatus('Пребуферизация {0}'.format(self.msg_params['buf']))
                             log.w('AceEngine is freeze')
                             self.autoStop()
-#                     elif _descr[0] == 'dl':
-#                         if _descr[8] != self.msg_params.get('downloaded', 0):
-#                             self.msg_params['last_update'] = state.getTime()
-#                             self.msg_params['downloaded'] = _descr[8]
-#                         if time.time() - self.msg_params['last_update'] >= 10:
-#                             log.w('AceEngine is freeze')
-#                             self.autoStop()
+            #                     elif _descr[0] == 'dl':
+            #                         if _descr[8] != self.msg_params.get('downloaded', 0):
+            #                             self.msg_params['last_update'] = state.getTime()
+            #                             self.msg_params['downloaded'] = _descr[8]
+            #                         if time.time() - self.msg_params['last_update'] >= 10:
+            #                             log.w('AceEngine is freeze')
+            #                             self.autoStop()
 
-#                         self.parent.showInfoStatus('Buf:%s DL:%s UL:%s' % (_descr[1], _descr[5], _descr[7]))
-#                     else:
-#                         self.parent.showInfoStatus('%s' % _params)
+            #                         self.parent.showInfoStatus('Buf:%s DL:%s UL:%s' % (_descr[1], _descr[5], _descr[7]))
+            #                     else:
+            #                         self.parent.showInfoStatus('%s' % _params)
             elif state.getType() in (TSMessage.RESUME, TSMessage.PAUSE, TSMessage.START):
                 self.msg_params['value'] = 0
-#                 self.msg_params['downloaded'] = 0
+            #                 self.msg_params['downloaded'] = 0
 
             elif state.getType() == TSMessage.EVENT:
                 if state.getParams() == 'getuserdata':
@@ -664,7 +665,7 @@ class AcePlayer(TPlayer):
         self.last_error = None
 
 
-class Waiting():
+class Waiting:
 
     def __init__(self):
         self.event = threading.Event()
@@ -679,7 +680,7 @@ class Waiting():
         return self.event.is_set()
 
 
-class TSMessage():
+class TSMessage:
     ERROR = 'ERROR'
     HELLOTS = 'HELLOTS'
     AUTH = 'AUTH'
@@ -813,7 +814,6 @@ class SockThread(threading.Thread):
 
 
 class NoxPlayer(TPlayer):
-
     _instance = None
     _lock = threading.RLock()
 

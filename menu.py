@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, unicode_literals
-# Copyright (c) 2013 Torrent-TV.RU
-# Writer (c) 2013, Welicobratov K.A., E-mail: 07pov23@gmail.com
-# Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 from kodi_six import xbmcgui
-import defines
-import utils
+
 import favdb
 import logger
 from sources import tchannel
+
+# Copyright (c) 2013 Torrent-TV.RU
+# Writer (c) 2013, Welicobratov K.A., E-mail: 07pov23@gmail.com
+# Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 log = logger.Logger(__name__)
 
@@ -40,6 +40,7 @@ class MenuForm(xbmcgui.WindowXMLDialog):
             cmds = self.li.getProperty('commands').split(',')
             lst = self.getControl(MenuForm.CONTROL_CMD_LIST)
             lst.reset()
+            title = None
             for c in cmds:
                 if c == MenuForm.CMD_ADD_FAVOURITE:
                     title = 'Добавить в избранное'

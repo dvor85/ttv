@@ -2,13 +2,14 @@
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 from __future__ import absolute_import, division, unicode_literals
-import utils
+
+import json
+import os
+import time
+
 import defines
 import logger
 from .tchannel import TChannel, TChannels
-import os
-import time
-import json
 
 log = logger.Logger(__name__)
 
@@ -39,6 +40,7 @@ class Channels(TChannels):
 
     def update_channels(self):
         TChannels.update_channels(self)
+        jdata = dict()
         try:
             jdata = self._load_jdata()
             if not jdata:

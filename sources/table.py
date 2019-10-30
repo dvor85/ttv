@@ -3,8 +3,8 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from . import allfon,  acestream
 import defines
+from . import allfon, acestream
 
 ChannelSources = {}
 if defines.ADDON.getSetting('allfon') == 'true':

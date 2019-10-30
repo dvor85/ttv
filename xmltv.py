@@ -1,23 +1,26 @@
 # -*- coding: utf-8 -*-
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
+from __future__ import print_function
+
 import datetime
+import gzip
+import os
 import time
-import utils
-import defines
-import logger
 from threading import Event
 
-import os
-import gzip
+from six import iteritems
 
+import defines
+import logger
+import utils
 
 fmt = utils.fmt
 log = logger.Logger(__name__)
 _servers = ['api.torrent-tv.ru', '1ttvxbmc.top']
 
 
-class XMLTV():
+class XMLTV:
     _instance = None
     _lock = Event()
     _xml_lib = 0
@@ -131,7 +134,7 @@ class XMLTV():
                 yield ep
 
     def yatv(self):
-        ncrd = str(long(time.time()) * 1000 + 1080)
+        ncrd = str(int(time.time()) * 1000 + 1080)
         dtm = time.strftime('%Y-%m-%d')
 
         Lcnl = [1867, 1861, 1856, 1853, 1852, 1845, 1844, 1843, 1842, 1841, 1838, 1834, 1828, 1827, 1821, 1820, 1817, 1816, 1815, 1814, 1810, 1809, 1808, 1807, 1806, 161, 1804, 1803, 1802, 1799, 1798, 1794, 1793, 1790, 1785, 1784, 1783, 1782, 1781, 1780, 1778, 1767, 1773, 1772, 1766, 1765, 1764, 1763, 1762, 1761, 1760, 1759, 1757, 1755, 1754, 1753, 690, 1744, 1743, 1746, 1738, 1737, 1734, 1736, 1732, 1731, 1727, 1728, 1730, 1729, 1726, 1725, 1721, 1723, 1722, 1720, 1716, 1714, 1702, 1719, 1713, 1703, 1698, 1700, 1699, 932, 1666, 363, 248, 180, 509, 730, 1396, 576, 141, 37, 6, 783, 275, 618, 1425, 217, 638, 349, 431, 933, 626, 442, 756, 1672, 1670, 1663, 1657, 1681, 1588, 1586, 423, 1038, 741, 138, 1377, 1395, 389, 1612, 1011, 1012, 331, 1043, 1042, 1034, 1031, 984, 1035, 1372, 1013, 983, 987, 807, 124, 1033, 382, 934, 464, 1030, 560, 990, 930, 415, 121, 801, 631, 312, 1676, 920, 663, 1329, 1026, 925, 165, 412, 777, 1322, 1679, 1662, 1660, 1397, 425, 776, 1571,
@@ -151,7 +154,7 @@ class XMLTV():
             try:
                 E = defines.request(url)
             except:
-                print 'yatv unavailable'
+                print('yatv unavailable')
                 return False
             e = E.replace('\\/', '/').replace('false', 'False').replace('true', 'True').replace('\\"', "'")
             #debug (e)
@@ -230,7 +233,7 @@ class XMLTV():
 
     def get_id_by_name(self, name):
         name = utils.lower(name, 'utf8')
-        for chid, ch in self.get_channels().iteritems():
+        for chid, ch in iteritems(self.get_channels()):
             if utils.lower(ch['name'], 'utf8') == name:
                 return chid
 

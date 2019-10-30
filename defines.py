@@ -2,41 +2,37 @@
 # Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 from __future__ import absolute_import, division, unicode_literals
-from kodi_six import xbmcaddon, xbmc, xbmcgui
-import six
+
+import os
 import sys
 import threading
-import os
-import utils
-import logger
+
 import requests
+import six
+import xbmcaddon
+import xbmc
+import xbmcgui
+from six import iteritems, ensure_text as uni
+
+import logger
 
 log = logger.Logger(__name__)
 
 ADDON = xbmcaddon.Addon()
-ADDON_ID = ADDON.getAddonInfo('id')
-ADDON_ICON = ADDON.getAddonInfo('icon')
-ADDON_PATH = ADDON.getAddonInfo('path')
-DATA_PATH = xbmc.translatePath(os.path.join("special://profile/addon_data", ADDON_ID))
-CACHE_PATH = xbmc.translatePath(os.path.join("special://temp", ADDON_ID))
-PTR_FILE = ADDON.getSetting('port_path')
-# API_MIRROR = ADDON.getSetting('api_mirror')
-# SITE_MIRROR = '1ttv.org' if API_MIRROR == '1ttvxbmc.top' else 'torrent-tv.ru'
-
-# TTV_VERSION = '1.5.3'
-AUTOSTART = ADDON.getSetting('autostart') == 'true'
-AUTOSTART_LASTCH = ADDON.getSetting('autostart_lastch') == 'true'
-GENDER = ADDON.getSetting('gender')
-AGE = ADDON.getSetting('age')
-FAVOURITE = ADDON.getSetting('favourite')
-DEBUG = ADDON.getSetting('debug') == 'true'
-MANUAL_STOP = ADDON.getSetting('manual_stop') == 'true'
-
-skin = ADDON.getSetting('skin')
-if (skin is not None) and (skin != "") and (skin != 'st.anger'):
-    SKIN_PATH = DATA_PATH
-else:
-    SKIN_PATH = ADDON_PATH
+ADDON_ID = uni(ADDON.getAddonInfo('id'))
+ADDON_ICON = uni(ADDON.getAddonInfo('icon'))
+ADDON_PATH = uni(ADDON.getAddonInfo('path'))
+DATA_PATH = uni(xbmc.translatePath(os.path.join("special://profile/addon_data", ADDON_ID)))
+CACHE_PATH = uni(xbmc.translatePath(os.path.join("special://temp", ADDON_ID)))
+PTR_FILE = uni(ADDON.getSetting('port_path'))
+AUTOSTART = uni(ADDON.getSetting('autostart')) == 'true'
+AUTOSTART_LASTCH = uni(ADDON.getSetting('autostart_lastch')) == 'true'
+GENDER = uni(ADDON.getSetting('gender'))
+AGE = uni(ADDON.getSetting('age'))
+FAVOURITE = uni(ADDON.getSetting('favourite'))
+DEBUG = uni(ADDON.getSetting('debug')) == 'true'
+MANUAL_STOP = uni(ADDON.getSetting('manual_stop')) == 'true'
+SKIN_PATH = ADDON_PATH
 if not os.path.exists(CACHE_PATH):
     os.makedirs(CACHE_PATH)
 
@@ -46,7 +42,7 @@ monitor = xbmc.Monitor()
 
 def AutostartViaAutoexec(state):
     autoexec = os.path.join(
-        xbmc.translatePath("special://masterprofile"), 'autoexec.py')
+        uni(xbmc.translatePath("special://masterprofile")), 'autoexec.py')
 
     if os.path.isfile(autoexec):
         mode = 'r+'
@@ -86,21 +82,20 @@ class MyThread(threading.Thread):
 
 def showNotification(msg, icon=ADDON_ICON):
     try:
-        xbmcgui.Dialog().notification(ADDON.getAddonInfo('name'), msg, icon)
+        xbmcgui.Dialog().notification(uni(ADDON.getAddonInfo('name')), uni(msg), icon)
     except Exception as e:
         log.e('showNotification error: "{0}"'.format(e))
 
 
 def isCancel():
     ret = monitor.abortRequested() or closeRequested.isSet()
-#     log.d("isCancel {ret}".format(ret=monitor.abortRequested()))
+    #     log.d("isCancel {ret}".format(ret=monitor.abortRequested()))
     return ret
 
 
 def request(url, method='get', params=None, trys=3, interval=0, session=None, **kwargs):
-
     params_str = "?" + "&".join(("{0}={1}".format(*i)
-                                 for i in params.iteritems())) if params is not None and method == 'get' else ""
+                                 for i in iteritems(params))) if params is not None and method == 'get' else ""
     log.d('try to get: {url}{params}'.format(url=url, params=params_str))
     if not url:
         return

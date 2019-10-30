@@ -1,25 +1,35 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, unicode_literals
-# Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 import datetime
+import gzip
+import json
+import os
+import re
 import time
-import utils
+from threading import Event, Timer
+
+import requests
+
 import defines
 import logger
-import requests
-import gzip
-import os
-import json
-from threading import Event, Timer
+import utils
 from sources.channel_info import CHANNEL_INFO
-import re
+
+# Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 
 log = logger.Logger(__name__)
 
 
-class YATV():
+def strptime(date_string):
+    try:
+        return datetime.datetime.strptime(date_string, "%Y-%m-%dT%H:%M:%S")
+    except TypeError:
+        return datetime.datetime(*(time.strptime(date_string, "%Y-%m-%dT%H:%M:%S")[0:6]))
+
+
+class YATV:
     _instance = None
     _lock = Event()
 
@@ -84,7 +94,7 @@ class YATV():
         return self.sess
 
     def get_availible_channels(self):
-        ncrd = str(long(time.time()) * 1000 + 1080)
+        ncrd = str(int(time.time()) * 1000 + 1080)
         url = 'https://m.tv.yandex.ru/ajax/i-tv-region/get'
         _yparams = {"fields": "availableChannels,availableChannelsIds"}
         _params = {"userRegion": 193,
@@ -97,7 +107,7 @@ class YATV():
         return r.json()
 
     def update_yatv(self):
-        ncrd = str(long(time.time()) * 1000 + 1080)
+        ncrd = str(int(time.time()) * 1000 + 1080)
         dtm = time.strftime('%Y-%m-%d')
 
         url = 'https://m.tv.yandex.ru/ajax/i-tv-region/get'
@@ -142,7 +152,7 @@ class YATV():
         for p in self.jdata:
             for sch in p['schedules']:
                 try:
-                    cm = self.strptime(sch['finish'].split('+')[0])
+                    cm = strptime(sch['finish'].split('+')[0])
                     if not m or m > cm:
                         m = cm
                 except Exception as e:
@@ -150,12 +160,6 @@ class YATV():
         if not m:
             return datetime.datetime.now()
         return m
-
-    def strptime(self, date_string):
-        try:
-            return datetime.datetime.strptime(date_string, "%Y-%m-%dT%H:%M:%S")
-        except TypeError:
-            return datetime.datetime(*(time.strptime(date_string, "%Y-%m-%dT%H:%M:%S")[0:6]))
 
     def get_epg_by_id(self, chid, epg_offset=None):
         if chid is None or chid not in self.availableChannels["availableChannelsIds"]:
@@ -168,11 +172,11 @@ class YATV():
                     for evt in sch['events']:
                         ep = {}
                         bt = evt['start'].split('+')
-                        bt = self.strptime(bt[0]) + datetime.timedelta(hours=-3 + offset)
+                        bt = strptime(bt[0]) + datetime.timedelta(hours=-3 + offset)
 #                         bt = self.strptime(bt[0])
                         ep['btime'] = time.mktime(bt.timetuple())
                         et = evt['finish'].split('+')
-                        et = self.strptime(et[0]) + datetime.timedelta(hours=-3 + offset)
+                        et = strptime(et[0]) + datetime.timedelta(hours=-3 + offset)
 #                         et = self.strptime(et[0])
                         ep['etime'] = time.mktime(et.timetuple())
                         ep['name'] = evt['program']['title']
@@ -185,7 +189,7 @@ class YATV():
     def get_name_offset(self, name):
         name_offset = self._name_offset_regexp.search(name)
         if name_offset:
-            return (name_offset.group('name'), utils.str2int(name_offset.group('offset')))
+            return name_offset.group('name'), utils.str2int(name_offset.group('offset'))
 
     def get_id_by_name(self, name):
         names = [name.lower()]

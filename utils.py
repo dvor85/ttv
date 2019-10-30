@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, unicode_literals
-import six
-# Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 import os
-import sys
-import string
+
+
+# Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 
 # fmt = string.Formatter().format

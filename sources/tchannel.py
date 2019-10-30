@@ -2,13 +2,15 @@
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 from __future__ import absolute_import, division, unicode_literals
-from UserDict import UserDict
+
 import datetime
-import utils
-import defines
-import yatv
-import logger
 import os
+
+from six.moves import UserDict
+
+import defines
+import logger
+import yatv
 from .channel_info import CHANNEL_INFO
 
 # fmt = utils.fmt
@@ -17,10 +19,10 @@ log = logger.Logger(__name__)
 
 class TChannel(UserDict):
 
-    def __init__(self, data={}):
-        self.data = {}
-        self.data['mode'] = "PID"
-        self.data['players'] = ['ace']
+    def __init__(self, data=None):
+        if data is None:
+            data = {}
+        self.data = {'mode': "PID", 'players': ['ace']}
         self.data.update(data)
         self.yatv_logo_path = os.path.join(defines.CACHE_PATH, 'logo')
         if not os.path.exists(self.yatv_logo_path):
@@ -132,7 +134,7 @@ class TChannel(UserDict):
         return self.data.get('epg')
 
 
-class TChannels():
+class TChannels:
 
     def __init__(self, reload_interval=-1):
         self.channels = []

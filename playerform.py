@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, unicode_literals
-# Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
+
+import datetime
+import re
+import threading
 
 from kodi_six import xbmcgui, xbmc
-import threading
-import datetime
+from six import itervalues, iteritems
+
 import defines
-import re
-import utils
 import logger
 import players
+import utils
+
+# Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 log = logger.Logger(__name__)
 
@@ -62,7 +66,8 @@ class MyPlayer(xbmcgui.WindowXML):
         self.progress = self.getControl(MyPlayer.CONTROL_PROGRESS_ID)
         self.cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
         self.cicon.setVisible(False)
-        for ch in self.channels.itervalues():
+        logo = ''
+        for ch in itervalues(self.channels):
             logo = ch.get_logo()
             if logo:
                 self.cicon.setVisible(True)
@@ -124,19 +129,19 @@ class MyPlayer(xbmcgui.WindowXML):
     def UpdateEpg(self, chs):
         try:
             log.d('UpdateEpg')
-
-            for ch in chs.itervalues():
+            logo = ''
+            for ch in itervalues(chs):
                 logo = ch.get_logo()
                 if logo:
                     break
 
-#             for ch in self.channels.itervalues():
-#                 try:
-#                     if ch.get_name() != name:
-#                         self.showNoEpg()
-#                     break
-#                 except Exception as e:
-#                     log.d("UpdateEpg error: {0}".format(e))
+            #             for ch in self.channels.itervalues():
+            #                 try:
+            #                     if ch.get_name() != name:
+            #                         self.showNoEpg()
+            #                     break
+            #                 except Exception as e:
+            #                     log.d("UpdateEpg error: {0}".format(e))
             if self.cicon:
                 self.cicon.setImage(logo)
             self.parent.getEpg(chs, callback=self.showEpg, timeout=0.5)
@@ -180,8 +185,8 @@ class MyPlayer(xbmcgui.WindowXML):
         if self.progress:
             self.progress.setPercent(0)
 
-#     def isVisible(self):
-#         return xbmc.getCondVisibility("Window.IsVisible({window})".format(window=MyPlayer.PLAYER_WINDOW_ID))
+    #     def isVisible(self):
+    #         return xbmc.getCondVisibility("Window.IsVisible({window})".format(window=MyPlayer.PLAYER_WINDOW_ID))
 
     def Show(self):
         log.d('Show')
@@ -199,7 +204,7 @@ class MyPlayer(xbmcgui.WindowXML):
         log("Start play")
         self.channels = channels
         self.channel_number = self.parent.selitem_id
-        for src, channel in self.channels.iteritems():
+        for src, channel in iteritems(self.channels):
             try:
                 self.title = "{0}. {1}".format(self.channel_number, channel.get_name())
                 log.d('Channel source is "{0}"'.format(src))
@@ -240,14 +245,14 @@ class MyPlayer(xbmcgui.WindowXML):
                             return True
                         if self.switch_source_requested:
                             break
-#                 else:
-#                     raise Exception('There are no availible players for "{0}" in source "{1}"'.format(channel.get_name(), src))
-#
+            #                 else:
+            #                     raise Exception('There are no availible players for "{0}" in source "{1}"'.format(channel.get_name(), src))
+            #
 
             except Exception as e:
                 log.e('Start error: {0}'.format(e))
 
-#         self.close()
+        #         self.close()
         if self.manual_stop_requested or defines.isCancel():
             self.close()
             return
@@ -345,7 +350,7 @@ class MyPlayer(xbmcgui.WindowXML):
             else:
                 #                 self.setVisible(False)
                 self.close()
-#                 self.parent.show()
+        #                 self.parent.show()
 
         elif action in (xbmcgui.ACTION_NEXT_ITEM, xbmcgui.ACTION_PREV_ITEM):
             #             if self._player:
@@ -354,7 +359,8 @@ class MyPlayer(xbmcgui.WindowXML):
         elif action in (xbmcgui.ACTION_STOP, xbmcgui.ACTION_PAUSE):
             self.manualStop()
 
-        elif action in (xbmcgui.ACTION_MOVE_UP, xbmcgui.ACTION_MOVE_DOWN, xbmcgui.ACTION_PAGE_UP, xbmcgui.ACTION_PAGE_DOWN):
+        elif action in (
+                xbmcgui.ACTION_MOVE_UP, xbmcgui.ACTION_MOVE_DOWN, xbmcgui.ACTION_PAGE_UP, xbmcgui.ACTION_PAGE_DOWN):
             # IF ARROW UP AND DOWN PRESSED - SWITCH CHANNEL ##### @IgnorePep8
             if action in (xbmcgui.ACTION_MOVE_UP, xbmcgui.ACTION_PAGE_DOWN):
                 self.inc_channel_number()
@@ -403,7 +409,7 @@ class MyPlayer(xbmcgui.WindowXML):
             self.autoStop()
 
     def close(self):
-        for timer in self.timers.itervalues():
+        for timer in itervalues(self.timers):
             if timer:
                 timer.cancel()
         if self.visible.is_set():

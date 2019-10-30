@@ -1,18 +1,22 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, unicode_literals
-# Writer (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
+import json
 import os
+
 import defines
 import logger
-import utils
-import json
 
+# Writer (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 log = logger.Logger(__name__)
 
 
-class FDB():
+def cmp(a, b):
+    return (a > b) - (a < b)
+
+
+class FDB:
     API_ERROR_INCORRECT = 'incorrect'
     API_ERROR_NOCONNECT = 'noconnect'
     API_ERROR_ALREADY = 'already'
@@ -42,7 +46,7 @@ class FDB():
             if not self.channels:
                 self.get()
             if self.channels:
-                del(self.channels[k])
+                del (self.channels[k])
                 return self.save()
         return FDB.API_ERROR_NOFAVOURITE
 
@@ -68,7 +72,7 @@ class FDB():
                     return i
 
     def swap(self, i1, i2):
-        log.d('swap channels with indexes={0}.format({1}', i1, i2)
+        log.d('swap channels with indexes={0}, {1}'.format(i1, i2))
         try:
             ch = self.channels[i1]
             self.channels[i1] = self.channels[i2]
