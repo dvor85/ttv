@@ -6,6 +6,7 @@ from __future__ import absolute_import, division, unicode_literals
 import json
 import os
 import time
+from utils import uni, str2
 
 import defines
 import logger
@@ -23,7 +24,7 @@ class Channel(TChannel):
 class Channels(TChannels):
 
     def __init__(self):
-        self.url = 'http://{pomoyka}/trash/ttv-list/ace.json'.format(pomoyka=defines.ADDON.getSetting('pomoyka_domain'))
+        self.url = 'http://{pomoyka}/trash/ttv-list/ace.json'.format(pomoyka=uni(defines.ADDON.getSetting('pomoyka_domain')))
         self._temp = os.path.join(defines.CACHE_PATH, "ace.json")
         TChannels.__init__(self, reload_interval=1800)
 
@@ -47,13 +48,13 @@ class Channels(TChannels):
                 raise Exception("{temp} is empty".format(temp=self._temp))
 
         except Exception as e:
-            log.debug("load_json_temp error: {0}".format(e))
+            log.debug("load_json_temp error: {0}".format(uni(e)))
             try:
                 r = defines.request(self.url, interval=3000)
                 jdata = r.json()
                 self._save_jdata(jdata)
             except Exception as e:
-                log.error("get_channels error: {0}".format(e))
+                log.error("get_channels error: {0}".format(uni(e)))
 
         chs = jdata.get('channels', [])
         for ch in chs:

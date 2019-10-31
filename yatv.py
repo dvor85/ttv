@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
+
 from __future__ import absolute_import, division, unicode_literals
 
 import datetime
@@ -8,15 +10,12 @@ import os
 import re
 import time
 from threading import Event, Timer
-
 import requests
-
 import defines
 import logger
 import utils
 from sources.channel_info import CHANNEL_INFO
-
-# Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
+from utils import uni, str2
 
 
 log = logger.Logger(__name__)
@@ -24,9 +23,9 @@ log = logger.Logger(__name__)
 
 def strptime(date_string):
     try:
-        return datetime.datetime.strptime(date_string, "%Y-%m-%dT%H:%M:%S")
+        return datetime.datetime.strptime(uni(date_string), "%Y-%m-%dT%H:%M:%S")
     except TypeError:
-        return datetime.datetime(*(time.strptime(date_string, "%Y-%m-%dT%H:%M:%S")[0:6]))
+        return datetime.datetime(*(time.strptime(uni(date_string), "%Y-%m-%dT%H:%M:%S")[0:6]))
 
 
 class YATV:
@@ -94,7 +93,7 @@ class YATV:
         return self.sess
 
     def get_availible_channels(self):
-        ncrd = str(int(time.time()) * 1000 + 1080)
+        ncrd = uni(int(time.time()) * 1000 + 1080)
         url = 'https://m.tv.yandex.ru/ajax/i-tv-region/get'
         _yparams = {"fields": "availableChannels,availableChannelsIds"}
         _params = {"userRegion": 193,
@@ -107,8 +106,8 @@ class YATV:
         return r.json()
 
     def update_yatv(self):
-        ncrd = str(int(time.time()) * 1000 + 1080)
-        dtm = time.strftime('%Y-%m-%d')
+        ncrd = uni(int(time.time()) * 1000 + 1080)
+        dtm = uni(time.strftime('%Y-%m-%d'))
 
         url = 'https://m.tv.yandex.ru/ajax/i-tv-region/get'
         """

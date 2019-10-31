@@ -17,8 +17,7 @@ elif platform.system() == 'Windows':
     print("Append pydevd for Windows")
     sys.path.insert(0, 'd:\\python\\eclipse\\plugins\\org.python.pydev.core_7.4.0.201910251334\\pysrc')
 
-import pydevd
-
+import pydevd  # @UnresolvedImport
 pydevd.settrace('localhost', stdoutToServer=True, stderrToServer=True, suspend=False)
 
 
@@ -31,7 +30,5 @@ elif platform.system() == 'Windows':
     sys.path.insert(0, 'c:\\Program Files\\JetBrains\\PyCharm 2019.2\\debug-eggs\\pydevd-pycharm.egg')
 
 import pydevd_pycharm
-
-pydevd_pycharm.settrace('127.0.0.1', port=12345, stdoutToServer=True,
-                        stderrToServer=True, suspend=False)
+pydevd_pycharm.settrace('127.0.0.1', port=12345, stdoutToServer=True, stderrToServer=True, suspend=False)
 """

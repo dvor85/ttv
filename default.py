@@ -5,7 +5,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 import defines
-from six import ensure_text as uni
 
 
 try:
@@ -18,7 +17,7 @@ except Exception as e:
 def main():
     import mainform
 
-    w = mainform.WMainForm("mainform.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
+    w = mainform.WMainForm("mainform.xml", defines.SKIN_PATH, "st.anger")
     w.doModal()
     defines.log('Close plugin')
     del w

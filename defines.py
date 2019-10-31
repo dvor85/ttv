@@ -12,7 +12,8 @@ import six
 import xbmcaddon
 import xbmc
 import xbmcgui
-from six import iteritems, ensure_text as uni
+from six import iteritems
+from utils import uni, str2
 
 import logger
 
@@ -22,8 +23,8 @@ ADDON = xbmcaddon.Addon()
 ADDON_ID = uni(ADDON.getAddonInfo('id'))
 ADDON_ICON = uni(ADDON.getAddonInfo('icon'))
 ADDON_PATH = uni(ADDON.getAddonInfo('path'))
-DATA_PATH = uni(xbmc.translatePath(os.path.join("special://profile/addon_data", ADDON_ID)))
-CACHE_PATH = uni(xbmc.translatePath(os.path.join("special://temp", ADDON_ID)))
+DATA_PATH = uni(xbmc.translatePath(str2(os.path.join("special://profile/addon_data", ADDON_ID))))
+CACHE_PATH = uni(xbmc.translatePath(str2(os.path.join("special://temp", ADDON_ID))))
 PTR_FILE = uni(ADDON.getSetting('port_path'))
 AUTOSTART = uni(ADDON.getSetting('autostart')) == 'true'
 AUTOSTART_LASTCH = uni(ADDON.getSetting('autostart_lastch')) == 'true'
@@ -82,9 +83,9 @@ class MyThread(threading.Thread):
 
 def showNotification(msg, icon=ADDON_ICON):
     try:
-        xbmcgui.Dialog().notification(uni(ADDON.getAddonInfo('name')), uni(msg), icon)
+        xbmcgui.Dialog().notification(str2(ADDON.getAddonInfo('name')), str2(msg), str2(icon))
     except Exception as e:
-        log.e('showNotification error: "{0}"'.format(e))
+        log.e('showNotification error: "{0}"'.format(uni(e)))
 
 
 def isCancel():

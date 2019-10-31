@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, unicode_literals
 
-from kodi_six import xbmcgui
+import xbmcgui
+from utils import uni, str2
 
 
 # Copyright (c) 2010-2011 Torrent-TV.RU
@@ -19,12 +20,12 @@ class OkDialog(xbmcgui.WindowXMLDialog):
     TEXT_NOPORT = "Закрыт"
     TEXT_YESPORT = "Открыт"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, xmlFilename, scriptPath, *args, **kwargs):
+        super(OkDialog, self).__init__(xmlFilename, scriptPath)
         self.text = ""
-        pass
 
     def onInit(self):
-        self.getControl(1).setText(self.text)
+        self.getControl(1).setText(str2(self.text))
 
     def setText(self, text):
         self.text = text

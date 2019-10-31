@@ -7,6 +7,7 @@ import datetime
 import os
 
 from six.moves import UserDict
+from utils import uni, str2
 
 import defines
 import logger
@@ -19,7 +20,8 @@ log = logger.Logger(__name__)
 
 class TChannel(UserDict):
 
-    def __init__(self, data=None):
+    def __init__(self, data=None, *args, **kwargs):
+        UserDict.__init__(self, *args, **kwargs)
         if data is None:
             data = {}
         self.data = {'mode': "PID", 'players': ['ace']}
@@ -29,10 +31,10 @@ class TChannel(UserDict):
             os.mkdir(self.yatv_logo_path)
 
     def get_url(self, player=None):
-        return self.data.get('url')
+        return uni(self.data.get('url'))
 
     def get_mode(self):
-        return self.data.get('mode')
+        return uni(self.data.get('mode'))
 
     def get_group(self):
         name = self.get_name().lower()
@@ -43,7 +45,7 @@ class TChannel(UserDict):
 #                 self.data['cat'] = CHANNEL_INFO[name]['cat']
 #             except KeyError:
 #                 self.data['cat'] = None
-        return self.data.get('cat')
+        return uni(self.data.get('cat'))
 
     def get_logo(self):
         name = self.get_name().lower()
@@ -68,13 +70,13 @@ class TChannel(UserDict):
         except Exception as e:
             log.e('update_logo error {0}'.format(e))
 
-        return self.data.get('logo')
+        return uni(self.data.get('logo'))
 
     def get_id(self):
-        return "{0}".format(self.data.get('id'))
+        return uni(self.data.get('id'))
 
     def get_name(self):
-        return self.data.get('name')
+        return uni(self.data.get('name'))
 
     def get_title(self):
         if not self.data.get('title'):
@@ -82,8 +84,8 @@ class TChannel(UserDict):
             if name in CHANNEL_INFO:
                 self.data['title'] = CHANNEL_INFO[name].get('aliases', [name])[0].capitalize()
             else:
-                self.data['title'] = self.get_name()
-        return self.data["title"]
+                self.data['title'] = name.capitalize()
+        return uni(self.data["title"])
 
     def get_screenshots(self):
         """

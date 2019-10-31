@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2013 Torrent-TV.RU
+# Writer (c) 2013, Welicobratov K.A., E-mail: 07pov23@gmail.com
+# Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
+
 from __future__ import absolute_import, division, unicode_literals
 
-from kodi_six import xbmcgui
+import xbmcgui
+from utils import uni, str2
 
 import favdb
 import logger
 from sources import tchannel
 
-# Copyright (c) 2013 Torrent-TV.RU
-# Writer (c) 2013, Welicobratov K.A., E-mail: 07pov23@gmail.com
-# Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 log = logger.Logger(__name__)
 
@@ -24,7 +26,8 @@ class MenuForm(xbmcgui.WindowXMLDialog):
     CMD_SET_FALSE_PIN = 'set_pin_false'
     CONTROL_CMD_LIST = 301
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, xmlFilename, scriptPath, *args, **kwargs):
+        super(MenuForm, self).__init__(xmlFilename, scriptPath)
         self.li = None
         self.channel = None
         self.result = None
@@ -34,10 +37,10 @@ class MenuForm(xbmcgui.WindowXMLDialog):
         log.d('OnInit')
         if not self.li or not self.parent:
             return
-        self.channel = tchannel.TChannel({"name": self.li.getProperty("name")})
-        log.d("li = {0}".format(self.li.getProperty("commands")))
+        self.channel = tchannel.TChannel({"name": uni(self.li.getProperty("name"))})
+        log.d("li = {0}".format(uni(self.li.getProperty("commands"))))
         try:
-            cmds = self.li.getProperty('commands').split(',')
+            cmds = uni(self.li.getProperty('commands')).split(',')
             lst = self.getControl(MenuForm.CONTROL_CMD_LIST)
             lst.reset()
             title = None
@@ -57,22 +60,22 @@ class MenuForm(xbmcgui.WindowXMLDialog):
                 elif c == MenuForm.CMD_SET_FALSE_PIN:
                     title = 'Разблокировать'
                 if title:
-                    lst.addItem(xbmcgui.ListItem(title, c))
+                    lst.addItem(xbmcgui.ListItem(str2(title), str2(c)))
 
             self.getControl(999).setHeight(len(cmds) * 40 + 55)
             lst.setHeight(len(cmds) * 40 + 55)
             lst.selectItem(0)
             self.setFocusId(MenuForm.CONTROL_CMD_LIST)
-            log.d('Focus ControlId {0}'.format(self.getFocusId()))
+            log.d('Focus ControlId {0}'.format(uni(self.getFocusId())))
         except Exception as e:
-            log.e("В списке нет комманд {0}".format(e))
+            log.e("В списке нет комманд {0}".format(uni(e)))
             self.close()
 
     def onClick(self, controlId):
         if controlId == MenuForm.CONTROL_CMD_LIST:
             lt = self.getControl(MenuForm.CONTROL_CMD_LIST)
             li = lt.getSelectedItem()
-            cmd = li.getLabel2()
+            cmd = uni(li.getLabel2())
             log.d("cmd={0}".format(cmd))
 
             self.result = self.exec_cmd(cmd)
@@ -90,7 +93,7 @@ class MenuForm(xbmcgui.WindowXMLDialog):
             elif cmd == MenuForm.CMD_DEL_FAVOURITE:
                 return fdb.delete(self.channel.get_name())
             elif cmd == MenuForm.CMD_MOVE_FAVOURITE:
-                to_num = int(xbmcgui.Dialog().numeric(0, heading='Введите позицию'))
+                to_num = int(xbmcgui.Dialog().numeric(0, heading=str2('Введите позицию')))
                 return fdb.moveTo(self.channel.get_name(), to_num)
             elif cmd == MenuForm.CMD_DOWN_FAVOURITE:
                 return fdb.down(self.channel.get_name())
@@ -101,7 +104,7 @@ class MenuForm(xbmcgui.WindowXMLDialog):
             elif cmd == MenuForm.CMD_SET_FALSE_PIN:
                 return fdb.set_pin(self.channel.get_name(), False)
         except Exception as e:
-            log.e('Error: {0} in exec_cmd "{1}"'.format(e, cmd))
+            log.e('Error: {0} in exec_cmd "{1}"'.format(uni(e), cmd))
             self.close()
 
     def GetResult(self):
