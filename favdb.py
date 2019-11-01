@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Writer (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
+
 from __future__ import absolute_import, division, unicode_literals
 
 import json
@@ -7,12 +9,11 @@ import os
 import defines
 import logger
 
-# Writer (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 log = logger.Logger(__name__)
 
 
-def cmp(a, b):
+def cmp(a, b):  # @ReservedAssignment
     return (a > b) - (a < b)
 
 

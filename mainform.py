@@ -60,7 +60,7 @@ class ChannelGroups(UserDict):
         del self.data[groupname]
 
     def getGroups(self):
-        return self.data.keys()
+        return list(self.data)
 
     def addChannels(self, channels, src_name):
         for ch in channels:
@@ -76,13 +76,15 @@ class ChannelGroups(UserDict):
             groupname = grouplang.translate.get(groupname, groupname)
             if groupname.lower() in ("эротика", "18+") and utils.str2int(defines.AGE) < 2:
                 return
-            if not self.data.get(groupname):
+            if groupname not in self.data:
                 self.addGroup(groupname)
-            chs = self.find_channel_by_name(groupname, ch.get_name())
-            if chs:
+            chs = self.find_channel_by_title(groupname, ch.get_title())
+            if chs and 'url' in ch:
                 for c in itervalues(chs):
-                    if c.get('url') and ch.get('url') and c['url'] == ch['url']:
-                        return
+                    for u in ch.get_url():
+                        if u not in c.get_url():
+                            c['url'].append(u)
+                    return
                 chs[src_name] = ch
             else:
                 self.getChannels(groupname).append({src_name: ch})
@@ -101,10 +103,14 @@ class ChannelGroups(UserDict):
                 if ch.get_id() == chid:
                     return chs
 
-    def find_group_by_chname(self, chname):
-
+    def find_group_by_name(self, name):
         for groupname in (x for x in self.getGroups() if x not in WMainForm.USER_GROUPS):
-            if self.find_channel_by_name(groupname, chname):
+            if self.find_channel_by_name(groupname, name):
+                return groupname
+
+    def find_group_by_chtitle(self, chtitle):
+        for groupname in (x for x in self.getGroups() if x not in WMainForm.USER_GROUPS):
+            if self.find_channel_by_name(groupname, chtitle):
                 return groupname
 
     def find_channel_by_name(self, groupname, name):
@@ -112,6 +118,12 @@ class ChannelGroups(UserDict):
         for chs in self.getChannels(groupname):
             for ch in itervalues(chs):
                 if ch.get_name().lower() == name:
+                    return chs
+
+    def find_channel_by_title(self, groupname, title):
+        for chs in self.getChannels(groupname):
+            for ch in itervalues(chs):
+                if ch.get_title() == title:
                     return chs
 
 
@@ -159,8 +171,8 @@ class LoopPlay(threading.Thread):
             try:
                 selItem = self.parent.list.getListItem(self.parent.selitem_id)
                 if selItem and selItem.getProperty('type') == "channel":
-                    self.parent.cur_channel = uni(selItem.getProperty('name'))
-                    sel_chs = self.parent.get_channel_by_name(self.parent.cur_channel)
+                    self.parent.cur_channel = uni(selItem.getProperty('title'))
+                    sel_chs = self.parent.get_channel_by_title(self.parent.cur_channel)
                     if not sel_chs:
                         msg = "Канал временно не доступен"
                         self.parent.showStatus(msg)
@@ -208,7 +220,7 @@ class WMainForm(xbmcgui.WindowXML):
     CANCEL_DIALOG = (9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448,)
     CONTEXT_MENU_IDS = (117, 101)
     ARROW_ACTIONS = (1, 2, 3, 4)
-    DIGIT_BUTTONS = range(58, 68)
+    DIGIT_BUTTONS = list(range(58, 68))
     ACTION_MOUSE = 107
     BTN_VOD_ID = 113
     BTN_CLOSE = 101
@@ -283,20 +295,19 @@ class WMainForm(xbmcgui.WindowXML):
 
         self.hide_main_window(timeout=10)
 
-    def get_selitem_id(self, name):
-        name = name.lower()
+    def get_selitem_id(self, title):
         for index in range(1, self.list.size()):
             li = self.list.getListItem(index)
-            if uni(li.getProperty('name')).lower() == name:
+            if uni(li.getProperty('title')) == title:
                 return index
         else:
             return -1
 
-    def get_channel_by_name(self, name):
+    def get_channel_by_title(self, chtitle):
         categ = self.cur_category
         if self.cur_category in WMainForm.USER_GROUPS:
-            categ = self.channel_groups.find_group_by_chname(name)
-        return self.channel_groups.find_channel_by_name(categ, name)
+            categ = self.channel_groups.find_group_by_chtitle(chtitle)
+        return self.channel_groups.find_channel_by_title(categ, chtitle)
 
     def showDialog(self, msg):
         from okdialog import OkDialog
@@ -318,7 +329,7 @@ class WMainForm(xbmcgui.WindowXML):
             selItem = self.list.getSelectedItem()
             if selItem and selItem.getProperty('type') == 'channel':
 
-                sel_chs = self.get_channel_by_name(uni(selItem.getProperty("name")))
+                sel_chs = self.get_channel_by_title(uni(selItem.getProperty("title")))
                 if sel_chs:
                     self.getEpg(sel_chs, timeout=0.5, callback=self.showEpg)
                 #                     self.showScreen(sel_chs, timeout=0.5)
@@ -461,7 +472,7 @@ class WMainForm(xbmcgui.WindowXML):
 
         def dump_channel_groups():
             namedb = {}
-            for cat, val in self.channel_groups.iteritems():
+            for cat, val in iteritems(self.channel_groups):
                 for chs in val['channels']:
                     for ch in itervalues(chs):
                         namedb[ch.get_name().lower()] = {'logo': ch.get_logo(), 'cat': cat}
@@ -746,6 +757,7 @@ class WMainForm(xbmcgui.WindowXML):
                         chli.setProperty('type', 'channel')
                         chli.setProperty("id", str2(ch.get_id()))
                         chli.setProperty("name", str2(ch.get_name()))
+                        chli.setProperty("title", str2(ch.get_title()))
                         if self.cur_category not in WMainForm.USER_GROUPS:
                             chli.setProperty('commands', str2("{0}".format(MenuForm.CMD_ADD_FAVOURITE)))
                         else:

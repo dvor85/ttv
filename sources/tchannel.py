@@ -31,7 +31,9 @@ class TChannel(UserDict):
             os.mkdir(self.yatv_logo_path)
 
     def get_url(self, player=None):
-        return uni(self.data.get('url'))
+        if not isinstance(self.data.get('url'), list):
+            self.data['url'] = [uni(self.data.get('url'))]
+        return self.data.get('url')
 
     def get_mode(self):
         return uni(self.data.get('mode'))
@@ -73,7 +75,7 @@ class TChannel(UserDict):
         return uni(self.data.get('logo'))
 
     def get_id(self):
-        return uni(self.data.get('id'))
+        return uni(self.data.get('id', self.get_name()))
 
     def get_name(self):
         return uni(self.data.get('name'))

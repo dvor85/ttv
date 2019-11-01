@@ -24,9 +24,6 @@ class Channel(TChannel):
             data = {}
         self.data['cat'] = None
 
-    def get_id(self):
-        return TChannel.get_name(self)
-
 
 class Channels(TChannels):
 

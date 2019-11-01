@@ -41,39 +41,6 @@ closeRequested = threading.Event()
 monitor = xbmc.Monitor()
 
 
-def AutostartViaAutoexec(state):
-    autoexec = os.path.join(
-        uni(xbmc.translatePath("special://masterprofile")), 'autoexec.py')
-
-    if os.path.isfile(autoexec):
-        mode = 'r+'
-    elif state:
-        mode = 'w+'
-    else:
-        return
-
-    try:
-        found = False
-        with open(autoexec, mode) as autoexec_file:
-            for line in autoexec_file:
-                if ADDON_ID in line:
-                    found = True
-                    break
-
-            if not found and state:
-                autoexec_file.seek(0)
-                autoexec_file.write('import xbmc\n')
-                autoexec_file.write("xbmc.executebuiltin('RunAddon(%s)')\n" % ADDON_ID)
-                autoexec_file.truncate()
-
-        if not state and found:
-            os.unlink(autoexec)
-    except:
-        t, v, tb = sys.exc_info()
-        log.w("Error while write autoexec.py: {0}:{1}.".format(t, v))
-        del tb
-
-
 class MyThread(threading.Thread):
 
     def __init__(self, func, *args, **kwargs):
@@ -90,7 +57,6 @@ def showNotification(msg, icon=ADDON_ICON):
 
 def isCancel():
     ret = monitor.abortRequested() or closeRequested.isSet()
-    #     log.d("isCancel {ret}".format(ret=monitor.abortRequested()))
     return ret
 
 

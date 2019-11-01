@@ -3,12 +3,11 @@ from __future__ import absolute_import, division, unicode_literals
 
 import json
 import os
-import random
 import socket
 import subprocess
 import threading
 import time
-import urllib
+from requests.utils import unquote
 
 # imports
 import xbmc
@@ -477,45 +476,6 @@ class AcePlayer(TPlayer):
         self.sock_thr.owner = self
         self.sock_thr.start()
 
-    def _load_torrent(self, torrent, mode):
-        log("Load Torrent: {0} mode: {1}".format(torrent, mode))
-        cmdparam = ''
-        if mode != AcePlayer.MODE_PID:
-            cmdparam = ' 0 0 0'
-        self.quid = str2(random.randint(0, 0x7fffffff))
-        comm = 'LOADASYNC ' + self.quid + ' ' + mode + ' ' + torrent + cmdparam
-        self.parent.showStatus("Загрузка торрента")
-        self.stop()
-
-        if self._send_command(comm):
-            msg = self._send_command(comm, TSMessage.LOADRESP)
-            if msg:
-                try:
-                    log.d('_load_torrent - {0}'.format(msg.getType()))
-                    log.d('Compile file list')
-                    jsonfile = msg.getParams()['json']
-                    if 'files' not in jsonfile:
-                        self.parent.showStatus(jsonfile['message'])
-                        self.last_error = Exception(jsonfile['message'])
-                        log.e('Compile file list {0}'.format(self.last_error))
-                        return
-                    self.count = len(jsonfile['files'])
-                    self.files = {}
-                    for f in jsonfile['files']:
-                        self.files[f[1]] = urllib.unquote_plus(urllib.quote(f[0]))
-                    log.d('End Compile file list')
-                except Exception as e:
-                    log.e('_load_torrent error: {0}'.format(uni(e)))
-                    self.last_error = e
-                    self.end()
-            else:
-                self.last_error = 'Incorrect msg from AceEngine'
-                self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
-                self.stop()
-                return
-
-            self.parent.hideStatus()
-
     def _stateHandler(self, state):
         """
         Run when a TSMessage are received.
@@ -582,8 +542,8 @@ class AcePlayer(TPlayer):
                         utils.str2int(defines.AGE) + 1))
                 elif state.getParams().startswith('showdialog'):
                     _parts = state.getParams().split()
-                    self.parent.showStatus('{0}: {1}'.format(urllib.unquote(_parts[2].split('=')[1]),
-                                                             urllib.unquote(_parts[1].split('=')[1])))
+                    self.parent.showStatus('{0}: {1}'.format(unquote(_parts[2].split('=')[1]),
+                                                             unquote(_parts[1].split('=')[1])))
             elif state.getType() == TSMessage.ERROR:
                 self.parent.showStatus(state.getParams())
 

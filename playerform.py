@@ -4,7 +4,6 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import datetime
-import re
 import threading
 
 import xbmcgui
@@ -33,7 +32,7 @@ class MyPlayer(xbmcgui.WindowXML):
     ACTION_RBC = 101
     ARROW_ACTIONS = (1, 2, 3, 4)
     PAGE_UP_DOWN = (5, 6)
-    DIGIT_BUTTONS = range(58, 68)
+    DIGIT_BUTTONS = list(range(58, 68))
     CH_NAME_ID = 399
     DLG_SWITCH_ID = 299
     PLAYER_WINDOW_ID = 12346
@@ -202,11 +201,11 @@ class MyPlayer(xbmcgui.WindowXML):
         self.channel_number = self.parent.selitem_id
         for src, channel in iteritems(self.channels):
             try:
-                self.title = "{0}. {1}".format(self.channel_number, channel.get_name())
+                self.title = "{0}. {1}".format(self.channel_number, channel.get_title())
                 log.d('Channel source is "{0}"'.format(src))
                 for player in channel.get('players'):
                     try:
-                        url = channel.get_url(player)
+                        #                         url = channel.get_url(player)
                         mode = channel.get_mode()
                         logo = channel.get_logo()
                         if self.cicon:
@@ -222,10 +221,24 @@ class MyPlayer(xbmcgui.WindowXML):
 
                         if self._player:
                             self.parent.add_recent_channel(channel, 300)
-                            self._player.play_item(index=0, title=self.title,
-                                                   iconImage=logo,
-                                                   thumbnailImage=logo,
-                                                   url=url, mode=mode)
+                            for url in channel.get_url(player):
+                                try:
+                                    log.d('play {0}'.format(url))
+                                    self._player.play_item(index=0, title=self.title,
+                                                           iconImage=logo,
+                                                           thumbnailImage=logo,
+                                                           url=url, mode=mode)
+                                except Exception as e:
+                                    log.e("Error play {0}: {1}".format(url, e))
+                                finally:
+                                    if self._player and self._player.last_error:
+                                        self._player.last_error = None
+                                        return True
+                                    if self.manual_stop_requested or defines.isCancel():
+                                        self.close()
+                                        return
+                                    if self.channel_stop_requested:
+                                        return True
                             log.d('End playing')
 
                     except Exception as e:
@@ -327,11 +340,11 @@ class MyPlayer(xbmcgui.WindowXML):
 
         def viewEPG():
             selItem = self.parent.list.getListItem(self.channel_number)
-            if selItem and selItem.getProperty("type") == 'channel':
+            if selItem and uni(selItem.getProperty("type")) == 'channel':
                 self.chinfo.setLabel(selItem.getLabel())
                 self.showStatus('Переключение...')
 
-                sel_chs = self.parent.get_channel_by_name(uni(selItem.getProperty("name")))
+                sel_chs = self.parent.get_channel_by_title(uni(selItem.getProperty("title")))
                 if sel_chs:
                     self.UpdateEpg(sel_chs)
                 return True

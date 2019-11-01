@@ -15,12 +15,6 @@ from .tchannel import TChannel, TChannels
 log = logger.Logger(__name__)
 
 
-class Channel(TChannel):
-
-    def get_id(self):
-        return TChannel.get_name(self)
-
-
 class Channels(TChannels):
 
     def __init__(self):
@@ -58,4 +52,4 @@ class Channels(TChannels):
 
         chs = jdata.get('channels', [])
         for ch in chs:
-            self.channels.append(Channel(ch))
+            self.channels.append(TChannel(ch))

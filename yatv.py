@@ -13,12 +13,12 @@ from threading import Event, Timer
 import requests
 import defines
 import logger
-import utils
 from sources.channel_info import CHANNEL_INFO
-from utils import uni, str2
+from utils import uni, str2, str2int
 
 
 log = logger.Logger(__name__)
+_name_offset_regexp = re.compile(r'\s*(?P<name>.*?)\s*\((?P<offset>[\-+]+\d)\)\s*')
 
 
 def strptime(date_string):
@@ -26,6 +26,12 @@ def strptime(date_string):
         return datetime.datetime.strptime(uni(date_string), "%Y-%m-%dT%H:%M:%S")
     except TypeError:
         return datetime.datetime(*(time.strptime(uni(date_string), "%Y-%m-%dT%H:%M:%S")[0:6]))
+
+
+def get_name_offset(name):
+    name_offset = _name_offset_regexp.search(name)
+    if name_offset:
+        return name_offset.group('name'), str2int(name_offset.group('offset'))
 
 
 class YATV:
@@ -50,7 +56,6 @@ class YATV:
         log.d('start initialization')
         self.jdata = []
         self.update_timer = None
-        self._name_offset_regexp = re.compile(r'\s*(?P<name>.*?)\s*\((?P<offset>[\-+]+\d)\)\s*')
         self.yatv_file_json = os.path.join(defines.CACHE_PATH, 'yatv.json.gz')
         self.yatv_logo_path = os.path.join(defines.CACHE_PATH, 'logo')
         self.sess = requests.Session()
@@ -74,10 +79,16 @@ class YATV:
             self.update_yatv()
             log.d("Loading yatv in {t} sec".format(t=time.time() - bt))
         if not self.jdata:
-            bt = time.time()
-            with gzip.open(self.yatv_file_json, 'rb') as fp:
-                self.jdata = json.load(fp)
-            log.d("Loading yatv from json in {t} sec".format(t=time.time() - bt))
+            try:
+                bt = time.time()
+                with gzip.open(self.yatv_file_json, 'rb') as fp:
+                    self.jdata = json.load(fp)
+                log.d("Loading yatv from json in {t} sec".format(t=time.time() - bt))
+            except Exception as e:
+                log.e("Error while loading json: {0}".format(uni(e)))
+                if os.path.exists(self.yatv_file_json):
+                    os.unlink(self.yatv_file_json)
+                raise e
 
         self.update_timer = Timer(interval, self._get_jdata)
         self.update_timer.name = "update_yatv_timer"
@@ -185,11 +196,6 @@ class YATV:
 
                         yield ep
 
-    def get_name_offset(self, name):
-        name_offset = self._name_offset_regexp.search(name)
-        if name_offset:
-            return name_offset.group('name'), utils.str2int(name_offset.group('offset'))
-
     def get_id_by_name(self, name):
         names = [name.lower()]
         names.extend(CHANNEL_INFO.get(names[0], {}).get("aliases", []))
@@ -199,7 +205,7 @@ class YATV:
                     return sch['channel']['id']
 
     def get_epg_by_name(self, name):
-        name_offset = self.get_name_offset(name)
+        name_offset = get_name_offset(name)
         if name_offset:
             return self.get_epg_by_id(self.get_id_by_name(name_offset[0]), name_offset[1])
         else:
@@ -216,7 +222,7 @@ class YATV:
         return ''
 
     def get_logo_by_name(self, name):
-        name_offset = self.get_name_offset(name)
+        name_offset = get_name_offset(name)
         if name_offset:
             return self.get_logo_by_id(self.get_id_by_name(name_offset[0]))
         else:
