@@ -32,8 +32,6 @@ GENDER = uni(ADDON.getSetting('gender'))
 AGE = uni(ADDON.getSetting('age'))
 FAVOURITE = uni(ADDON.getSetting('favourite'))
 DEBUG = uni(ADDON.getSetting('debug')) == 'true'
-MANUAL_STOP = uni(ADDON.getSetting('manual_stop')) == 'true'
-SKIN_PATH = ADDON_PATH
 if not os.path.exists(CACHE_PATH):
     os.makedirs(CACHE_PATH)
 

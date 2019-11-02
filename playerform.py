@@ -233,7 +233,6 @@ class MyPlayer(xbmcgui.WindowXML):
                                 finally:
                                     if self._player and self._player.last_error:
                                         self._player.last_error = None
-                                        return True
                                     if self.manual_stop_requested or defines.isCancel():
                                         self.close()
                                         return
@@ -246,17 +245,13 @@ class MyPlayer(xbmcgui.WindowXML):
                     finally:
                         if self._player and self._player.last_error:
                             self._player.last_error = None
-                            return True
                         if self.manual_stop_requested or defines.isCancel():
                             self.close()
                             return
                         if self.channel_stop_requested:
                             return True
-                        if self.switch_source_requested:
-                            break
-            #                 else:
-            #                     raise Exception('There are no availible players for "{0}" in source "{1}"'.format(channel.get_name(), src))
-            #
+#                         if self.switch_source_requested:
+#                             break
 
             except Exception as e:
                 log.e('Start error: {0}'.format(uni(e)))
@@ -349,7 +344,7 @@ class MyPlayer(xbmcgui.WindowXML):
                     self.UpdateEpg(sel_chs)
                 return True
 
-        log.d('Action {0} | ButtonCode {1}'.format(action.getId(), action.getButtonCode()))
+#         log.d('Action {0} | ButtonCode {1}'.format(action.getId(), action.getButtonCode()))
         if action in MyPlayer.CANCEL_DIALOG or action.getId() == MyPlayer.ACTION_RBC:
             log.d('Close player {0} {1}'.format(action.getId(), action.getButtonCode()))
             if self.timers.get(MyPlayer.TIMER_RUN_SEL_CHANNEL):
@@ -357,13 +352,9 @@ class MyPlayer(xbmcgui.WindowXML):
                 self.run_selected_channel()
                 self.UpdateEpg(self.channels)
             else:
-                #                 self.setVisible(False)
                 self.close()
-        #                 self.parent.show()
 
         elif action in (xbmcgui.ACTION_NEXT_ITEM, xbmcgui.ACTION_PREV_ITEM):
-            #             if self._player:
-            #                 self._player.next_source()
             self.autoStop()
         elif action in (xbmcgui.ACTION_STOP, xbmcgui.ACTION_PAUSE):
             self.manualStop()

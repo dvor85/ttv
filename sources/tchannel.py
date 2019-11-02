@@ -13,6 +13,7 @@ import defines
 import logger
 import yatv
 from .channel_info import CHANNEL_INFO
+from .grouplang import translate
 
 # fmt = utils.fmt
 log = logger.Logger(__name__)
@@ -40,13 +41,11 @@ class TChannel(UserDict):
 
     def get_group(self):
         name = self.get_name().lower()
+        gr = self.data.get('cat')
         if name in CHANNEL_INFO:
-            self.data['cat'] = CHANNEL_INFO[name].get('cat')
-#         if not self.data.get('cat'):
-#             try:
-#                 self.data['cat'] = CHANNEL_INFO[name]['cat']
-#             except KeyError:
-#                 self.data['cat'] = None
+            gr = CHANNEL_INFO[name].get('cat')
+        if gr:
+            self.data['cat'] = translate.get(gr.lower(), gr)
         return uni(self.data.get('cat'))
 
     def get_logo(self):

@@ -17,7 +17,7 @@ except Exception as e:
 def main():
     import mainform
 
-    w = mainform.WMainForm("mainform.xml", defines.SKIN_PATH, "st.anger")
+    w = mainform.WMainForm("mainform.xml", defines.ADDON_PATH, "st.anger")
     w.doModal()
     defines.log('Close plugin')
     del w

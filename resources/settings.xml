@@ -5,21 +5,19 @@
 		<setting default="false" id="autostart_lastch" label="Автозапуск последнего канала" type="bool" />
 		<setting default="0" id="favourite" label="База избранных" type="enum" values="Auto|Локальная" visible="false" />
 		<setting default="false" id="debug" label="Debug" type="bool" visible="false" />	
-		<setting default="true" id="manual_stop" label="Manual stop playback alghoritm" type="bool" visible="false" />	
-		
+		<setting id="gender" label="Пол" type="enum" values="Мужской|Женский" />
+		<setting id="age" label="Возраст" type="enum" values="Младше 13|13-17|18-24|25-34|35-44|45-54|55-64|Старше 64" />
 	</category>
 	<category label="Источники">
 		<setting default="pomoyka.win" id="pomoyka_domain" label="IP адрес или доменное имя помойки" type="text" />
-		<setting default="https://iptvx.one/epg/epg.xml.gz" id="epg_url" label="Ссылка EPG (xmltv)" type="text" />
+		<setting default="https://iptvx.one/epg/epg.xml.gz" id="epg_url" label="Ссылка EPG (xmltv)" type="text" visible="false" />
 		<setting id="allfon" label="Allfon" type="bool" default="true" />
 		<setting id="acestream" label="Acestream" type="bool" default="true" />
 	</category>
 	<category label="AceStream">
 		<setting default="true" id="use_ace" label="Использовать Acestream, если доступно" type="bool" />
-		<setting id="gender" label="Пол" type="enum" values="Мужской|Женский" />
-		<setting id="age" label="Возраст" type="enum" values="Младше 13|13-17|18-24|25-34|35-44|45-54|55-64|Старше 64" />
 		<setting default="" id="ace_path" label="Путь до AceEngine" type="text" visible="true" />
-		<setting default="127.0.0.1" id="ip_addr" label="IP-адрес acestreamengine" type="text" visible="false" />
+		<setting default="127.0.0.1" id="ip_addr" label="IP-адрес acestreamengine" type="text" />
 		<setting default="8621" id="outport" label="Внеший порт AceStream" type="number" />
 		<setting default="20" id="freeze_timeout" label="Таймаут ожидания, сек." type="number" />
 	</category>

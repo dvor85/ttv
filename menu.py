@@ -37,7 +37,7 @@ class MenuForm(xbmcgui.WindowXMLDialog):
         log.d('OnInit')
         if not self.li or not self.parent:
             return
-        self.channel = tchannel.TChannel({"name": uni(self.li.getProperty("name"))})
+        self.channel = tchannel.TChannel({"name": uni(self.li.getProperty("title"))})
         log.d("li = {0}".format(uni(self.li.getProperty("commands"))))
         try:
             cmds = uni(self.li.getProperty('commands')).split(',')
@@ -89,20 +89,20 @@ class MenuForm(xbmcgui.WindowXMLDialog):
             fdb = favdb.LocalFDB()
 
             if cmd == MenuForm.CMD_ADD_FAVOURITE:
-                return fdb.add(self.channel)
+                return fdb.add(self.channel.get_title())
             elif cmd == MenuForm.CMD_DEL_FAVOURITE:
-                return fdb.delete(self.channel.get_name())
+                return fdb.delete(self.channel.get_title())
             elif cmd == MenuForm.CMD_MOVE_FAVOURITE:
                 to_num = int(xbmcgui.Dialog().numeric(0, heading=str2('Введите позицию')))
-                return fdb.moveTo(self.channel.get_name(), to_num)
+                return fdb.moveTo(self.channel.get_title(), to_num)
             elif cmd == MenuForm.CMD_DOWN_FAVOURITE:
-                return fdb.down(self.channel.get_name())
+                return fdb.down(self.channel.get_title())
             elif cmd == MenuForm.CMD_UP_FAVOURITE:
-                return fdb.up(self.channel.get_name())
+                return fdb.up(self.channel.get_title())
             elif cmd == MenuForm.CMD_SET_TRUE_PIN:
-                return fdb.set_pin(self.channel.get_name(), True)
+                return fdb.set_pin(self.channel.get_title(), True)
             elif cmd == MenuForm.CMD_SET_FALSE_PIN:
-                return fdb.set_pin(self.channel.get_name(), False)
+                return fdb.set_pin(self.channel.get_title(), False)
         except Exception as e:
             log.e('Error: {0} in exec_cmd "{1}"'.format(uni(e), cmd))
             self.close()

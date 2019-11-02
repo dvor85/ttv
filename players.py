@@ -784,7 +784,7 @@ class NoxPlayer(TPlayer):
     def __init__(self, parent=None, *args):
         TPlayer.__init__(self, parent=parent, *args)
         log('Init noxbit player')
-        if defines.ADDON.getSetting('use_nox') == "false":
+        if uni(defines.ADDON.getSetting('use_nox')) == "false":
             raise Exception("Noxbit player is disabled")
         self.ip = uni(defines.ADDON.getSetting('nox_ip'))
         self.port = utils.str2int(defines.ADDON.getSetting('nox_port'))

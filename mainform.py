@@ -13,19 +13,13 @@ from six import itervalues, iteritems
 from six.moves import UserDict
 from utils import uni, str2
 
-# imports
 import defines
 import favdb
-# try:
-#     from collections import OrderedDict
-# except ImportError:
-#     from ordereddict import OrderedDict
 import logger
 import utils
 import yatv
 from menu import MenuForm
 from playerform import MyPlayer
-from sources import grouplang
 from sources.table import ChannelSources
 
 
@@ -46,7 +40,6 @@ class ChannelGroups(UserDict):
         self.data = {}
 
     def addGroup(self, groupname, title=None):
-        groupname = grouplang.translate.get(groupname, groupname)
         self.data[groupname] = {}
         if not title:
             title = groupname
@@ -73,13 +66,12 @@ class ChannelGroups(UserDict):
                 groupname = ch.get_group()
             if groupname is None:
                 groupname = src_name
-            groupname = grouplang.translate.get(groupname, groupname)
-            if groupname.lower() in ("эротика", "18+") and utils.str2int(defines.AGE) < 2:
+            if groupname.lower() in ["18+"] and utils.str2int(defines.AGE) < 2:
                 return
             if groupname not in self.data:
                 self.addGroup(groupname)
             chs = self.find_channel_by_title(groupname, ch.get_title())
-            if chs and 'url' in ch:
+            if chs and ch.get('url'):
                 for c in itervalues(chs):
                     for u in ch.get_url():
                         if u not in c.get_url():
@@ -262,7 +254,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.progress = None
         self.list = None
         self.list_type = ''
-        self.player = MyPlayer("player.xml", defines.SKIN_PATH, "st.anger")
+        self.player = MyPlayer("player.xml", defines.ADDON_PATH, "st.anger")
         self.player.parent = self
         self.cur_category = None
         self.cur_channel = None
@@ -311,7 +303,7 @@ class WMainForm(xbmcgui.WindowXML):
 
     def showDialog(self, msg):
         from okdialog import OkDialog
-        dialog = OkDialog("dialog.xml", defines.SKIN_PATH, "st.anger")
+        dialog = OkDialog("dialog.xml", defines.ADDON_PATH, "st.anger")
         dialog.setText(str2(msg))
         dialog.doModal()
 
@@ -598,7 +590,7 @@ class WMainForm(xbmcgui.WindowXML):
 
         def add():
             if self.cur_category not in WMainForm.USER_GROUPS:
-                if favdb.LocalFDB().add_recent(channel):
+                if favdb.LocalFDB().add_recent(channel.get_title()):
                     self.channel_groups.clearGroup(WMainForm.USER_GROUPS[0])
                     self.loadFavourites()
             self.timers[WMainForm.TIMER_ADD_RECENT] = None
@@ -645,7 +637,7 @@ class WMainForm(xbmcgui.WindowXML):
             return
 
     def showMenuWindow(self):
-        mnu = MenuForm("menu.xml", defines.SKIN_PATH, "st.anger")
+        mnu = MenuForm("menu.xml", defines.ADDON_PATH, "st.anger")
         mnu.li = self.getFocus().getSelectedItem()
         mnu.parent = self
 

@@ -8,6 +8,7 @@ import os
 
 import defines
 import logger
+from utils import uni
 
 
 log = logger.Logger(__name__)
@@ -23,6 +24,7 @@ class FDB:
     API_ERROR_ALREADY = 'already'
     API_ERROR_NOPARAM = 'noparam'
     API_ERROR_NOFAVOURITE = 'nofavourite'
+    API_NO_REFRESH = 0
     MAX_CHANNELS = 30
 
     def __init__(self):
@@ -63,13 +65,12 @@ class FDB:
         return FDB.API_ERROR_NOPARAM
 
     def find(self, name):
-        name = name.lower()
         log.d('find channel by name={0}'.format(name))
         if not self.channels:
             self.get()
         if self.channels:
             for i, ch in enumerate(self.channels):
-                if ch['name'].lower() == name:
+                if ch['name'] == name:
                     return i
 
     def swap(self, i1, i2):
@@ -113,7 +114,7 @@ class LocalFDB(FDB):
                 try:
                     self.channels = json.load(fp)
                 except Exception as e:
-                    log.w('get error: {0}'.format(e))
+                    log.w('get error: {0}'.format(uni(e)))
         return self.channels
 
     def save(self, obj=None):
@@ -126,11 +127,10 @@ class LocalFDB(FDB):
                 self.channels = obj
                 return True
         except Exception as e:
-            log.w('save error: {0}'.format(e))
+            log.w('save error: {0}'.format(uni(e)))
             return FDB.API_ERROR_NOCONNECT
 
-    def add(self, ch):
-        name = ch.get_name()
+    def add(self, name):
         log.d('add channel {0}'.format(name))
         channel = {'name': name, 'pin': True}
 
@@ -140,8 +140,7 @@ class LocalFDB(FDB):
 
         return FDB.API_ERROR_ALREADY
 
-    def add_recent(self, ch):
-        name = ch.get_name()
+    def add_recent(self, name):
         log.d('add recent channel {0}'.format(name))
         channel = {'name': name, 'pin': False}
 
@@ -163,4 +162,5 @@ class LocalFDB(FDB):
         ci = self.find(name)
         if ci is not None:
             self.channels[ci]['pin'] = pin
-            return self.save()
+            self.save()
+            return FDB.API_NO_REFRESH
