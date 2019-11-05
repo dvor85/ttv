@@ -25,19 +25,26 @@ class TChannel(UserDict):
         UserDict.__init__(self, *args, **kwargs)
         if data is None:
             data = {}
-        self.data = {'mode': "PID", 'players': ['ace']}
         self.data.update(data)
+        self.data.update(kwargs)
         self.yatv_logo_path = os.path.join(defines.CACHE_PATH, 'logo')
         if not os.path.exists(self.yatv_logo_path):
             os.mkdir(self.yatv_logo_path)
 
-    def get_url(self, player=None):
-        if not isinstance(self.data.get('url'), list):
-            self.data['url'] = [uni(self.data.get('url'))]
-        return self.data.get('url')
+    def get_src(self):
+        return self.data.get('src', 'undefined')
 
-    def get_mode(self):
-        return uni(self.data.get('mode'))
+    def get_player(self):
+        return self.data.get('player')
+
+    def get_url(self, player=None):
+        if self.data.get('url') and not isinstance(self.data.get('url'), dict):
+            self.data['url'] = {
+                self.data.get('player', 'undefined'): {
+                    self.data.get('src', 'undefined'): uni(self.data.get('url'))
+                }
+            }
+        return self.data.get('url')
 
     def get_group(self):
         name = self.get_name().lower()

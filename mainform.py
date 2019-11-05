@@ -31,7 +31,7 @@ class ChannelGroups(UserDict):
     :return {
             groupname: {
                 title=str,
-                channels=[{src_name = {}...}...]
+                channels=[tchannel,...]
             }
     }
     """
@@ -70,18 +70,19 @@ class ChannelGroups(UserDict):
                 return
             if groupname not in self.data:
                 self.addGroup(groupname)
-            chs = self.find_channel_by_title(groupname, ch.get_title())
-            if chs and ch.get('url'):
-                for c in itervalues(chs):
-                    for u in ch.get_url():
-                        if u not in c.get_url():
-                            c['url'].append(u)
-                    return
-                chs[src_name] = ch
+            c = self.find_channel_by_title(groupname, ch.get_title())
+            if c:
+                if ch.get_url():
+                    if ch.get_player() not in c.get_url():
+                        c['url'][ch.get_player()] = {}
+                    c['url'][ch.get_player()][ch.get_src()] = ch.get_url()[ch.get_player()][ch.get_src()]
+
+                if not c.get('logo') and ch.get('logo'):
+                    c['logo'] = ch['logo']
             else:
-                self.getChannels(groupname).append({src_name: ch})
+                self.getChannels(groupname).append(ch)
         except Exception as e:
-            log.error("addChannel error: {0}".format(uni(e)))
+            log.error("addChannel from source:{0} error: {1}".format(src_name, uni(e)))
 
     def getChannels(self, groupname):
         try:
@@ -90,10 +91,9 @@ class ChannelGroups(UserDict):
             return []
 
     def find_channel_by_id(self, groupname, chid):
-        for chs in self.getChannels(groupname):
-            for ch in itervalues(chs):
-                if ch.get_id() == chid:
-                    return chs
+        for ch in self.getChannels(groupname):
+            if ch.get_id() == chid:
+                return ch
 
     def find_group_by_name(self, name):
         for groupname in (x for x in self.getGroups() if x not in WMainForm.USER_GROUPS):
@@ -107,16 +107,14 @@ class ChannelGroups(UserDict):
 
     def find_channel_by_name(self, groupname, name):
         name = name.lower()
-        for chs in self.getChannels(groupname):
-            for ch in itervalues(chs):
-                if ch.get_name().lower() == name:
-                    return chs
+        for ch in self.getChannels(groupname):
+            if ch.get_name().lower() == name:
+                return ch
 
     def find_channel_by_title(self, groupname, title):
-        for chs in self.getChannels(groupname):
-            for ch in itervalues(chs):
-                if ch.get_title() == title:
-                    return chs
+        for ch in self.getChannels(groupname):
+            if ch.get_title() == title:
+                return ch
 
 
 class RotateScreen(threading.Thread):
@@ -164,15 +162,15 @@ class LoopPlay(threading.Thread):
                 selItem = self.parent.list.getListItem(self.parent.selitem_id)
                 if selItem and selItem.getProperty('type') == "channel":
                     self.parent.cur_channel = uni(selItem.getProperty('title'))
-                    sel_chs = self.parent.get_channel_by_title(self.parent.cur_channel)
-                    if not sel_chs:
+                    sel_ch = self.parent.get_channel_by_title(self.parent.cur_channel)
+                    if not sel_ch:
                         msg = "Канал временно не доступен"
                         self.parent.showStatus(msg)
                         raise Exception("{msg}. Возможно не все каналы загрузились...".format(msg=msg))
 
                     defines.ADDON.setSetting('cur_category', str2(self.parent.cur_category))
                     defines.ADDON.setSetting('cur_channel', str2(self.parent.cur_channel))
-                    if not self.parent.player.Start(sel_chs):
+                    if not self.parent.player.Start(sel_ch):
                         break
                 if not defines.isCancel():
                     xbmc.sleep(223)
@@ -321,9 +319,9 @@ class WMainForm(xbmcgui.WindowXML):
             selItem = self.list.getSelectedItem()
             if selItem and selItem.getProperty('type') == 'channel':
 
-                sel_chs = self.get_channel_by_title(uni(selItem.getProperty("title")))
-                if sel_chs:
-                    self.getEpg(sel_chs, timeout=0.5, callback=self.showEpg)
+                sel_ch = self.get_channel_by_title(uni(selItem.getProperty("title")))
+                if sel_ch:
+                    self.getEpg(sel_ch, timeout=0.5, callback=self.showEpg)
                 #                     self.showScreen(sel_chs, timeout=0.5)
 
                 for controlId in (WMainForm.IMG_SCREEN,):
@@ -359,7 +357,7 @@ class WMainForm(xbmcgui.WindowXML):
             except Exception as e:
                 log.d('loadChannels {0} error: {1}'.format(src_name, e))
 
-    def getEpg(self, chs, timeout=0, callback=None):
+    def getEpg(self, ch, timeout=0, callback=None):
 
         def get():
             chnum = self.player.channel_number
@@ -367,13 +365,9 @@ class WMainForm(xbmcgui.WindowXML):
                 epg = None
                 log.d('getEpg->get')
                 self.showStatus('Загрузка программы')
-                if chs:
-                    for ch in itervalues(chs):
-                        epg = ch.get_epg()
-                        if epg and callback is not None and chnum == self.player.channel_number:
-                            callback(epg)
-                            break
-                    if callback is not None:
+                if ch:
+                    epg = ch.get_epg()
+                    if epg and callback is not None and chnum == self.player.channel_number:
                         callback(epg)
             except Exception as e:
                 log.d('getEpg->get error: {0}'.format(uni(e)))
@@ -465,10 +459,9 @@ class WMainForm(xbmcgui.WindowXML):
         def dump_channel_groups():
             namedb = {}
             for cat, val in iteritems(self.channel_groups):
-                for chs in val['channels']:
-                    for ch in itervalues(chs):
-                        namedb[ch.get_name().lower()] = {'logo': ch.get_logo(), 'cat': cat}
-                        break
+                for ch in val['channels']:
+                    namedb[ch.get_name().lower()] = {'logo': ch.get_logo(), 'cat': cat}
+                    break
             import os
             s = json.dumps(namedb, indent=4, ensure_ascii=False)
             with open(os.path.join(defines.DATA_PATH, 'namedb.json'), 'wb') as fp:
@@ -737,36 +730,34 @@ class WMainForm(xbmcgui.WindowXML):
         li = xbmcgui.ListItem('..')
         self.list.addItem(li)
 
-        for i, chs in enumerate(self.channel_groups.getChannels(self.cur_category)):
-            if chs:
-                for ch in itervalues(chs):
-                    try:
-                        if defines.isCancel():
-                            return
-                        chname = "{0}. {1}".format(i + 1, ch.get_title())
-                        chli = xbmcgui.ListItem(str2(chname), str2(ch.get_id()))
-                        self.setLogo(ch, chli, self.set_logo_sema)
-                        chli.setProperty('type', 'channel')
-                        chli.setProperty("id", str2(ch.get_id()))
-                        chli.setProperty("name", str2(ch.get_name()))
-                        chli.setProperty("title", str2(ch.get_title()))
-                        if self.cur_category not in WMainForm.USER_GROUPS:
-                            chli.setProperty('commands', str2("{0}".format(MenuForm.CMD_ADD_FAVOURITE)))
+        for i, ch in enumerate(self.channel_groups.getChannels(self.cur_category)):
+            if ch:
+                try:
+                    if defines.isCancel():
+                        return
+                    chname = "{0}. {1}".format(i + 1, ch.get_title())
+                    chli = xbmcgui.ListItem(str2(chname), str2(ch.get_id()))
+                    self.setLogo(ch, chli, self.set_logo_sema)
+                    chli.setProperty('type', 'channel')
+                    chli.setProperty("id", str2(ch.get_id()))
+                    chli.setProperty("name", str2(ch.get_name()))
+                    chli.setProperty("title", str2(ch.get_title()))
+                    if self.cur_category not in WMainForm.USER_GROUPS:
+                        chli.setProperty('commands', str2("{0}".format(MenuForm.CMD_ADD_FAVOURITE)))
+                    else:
+                        cmds = [MenuForm.CMD_MOVE_FAVOURITE,
+                                MenuForm.CMD_DEL_FAVOURITE,
+                                MenuForm.CMD_DOWN_FAVOURITE,
+                                MenuForm.CMD_UP_FAVOURITE]
+                        if ch.get('pin'):
+                            cmds.append(MenuForm.CMD_SET_FALSE_PIN)
                         else:
-                            cmds = [MenuForm.CMD_MOVE_FAVOURITE,
-                                    MenuForm.CMD_DEL_FAVOURITE,
-                                    MenuForm.CMD_DOWN_FAVOURITE,
-                                    MenuForm.CMD_UP_FAVOURITE]
-                            if ch.get('pin'):
-                                cmds.append(MenuForm.CMD_SET_FALSE_PIN)
-                            else:
-                                cmds.append(MenuForm.CMD_SET_TRUE_PIN)
-                            chli.setProperty('commands', str2(','.join(cmds)))
-                        self.list.addItem(chli)
+                            cmds.append(MenuForm.CMD_SET_TRUE_PIN)
+                        chli.setProperty('commands', str2(','.join(cmds)))
+                    self.list.addItem(chli)
 
-                        break
-                    except Exception as e:
-                        log.e("fillChannels error: {0}".format(uni(e)))
+                except Exception as e:
+                    log.e("fillChannels error: {0}".format(uni(e)))
         self.hideStatus()
         if self.selitem_id < 1:
             self.selitem_id = self.get_selitem_id(self.cur_channel)

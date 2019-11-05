@@ -52,4 +52,4 @@ class Channels(TChannels):
 
         chs = jdata.get('channels', [])
         for ch in chs:
-            self.channels.append(TChannel(ch))
+            self.channels.append(TChannel(ch, src='acestream', player='ace'))

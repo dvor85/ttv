@@ -19,7 +19,7 @@ log = logger.Logger(__name__)
 class Channel(TChannel):
 
     def __init__(self, data=None):
-        TChannel.__init__(self, data=data)
+        TChannel.__init__(self, data=data, src='allfon', player='ace')
         if data is None:
             data = {}
         self.data['cat'] = None
