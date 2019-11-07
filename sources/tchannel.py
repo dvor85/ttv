@@ -31,13 +31,13 @@ class TChannel(UserDict):
         if not os.path.exists(self.yatv_logo_path):
             os.mkdir(self.yatv_logo_path)
 
-    def get_src(self):
+    def src(self):
         return self.data.get('src', 'undefined')
 
-    def get_player(self):
+    def player(self):
         return self.data.get('player')
 
-    def get_url(self, player=None):
+    def xurl(self, player=None):
         if self.data.get('url') and not isinstance(self.data.get('url'), dict):
             self.data['url'] = {
                 self.data.get('player', 'undefined'): {
@@ -46,8 +46,8 @@ class TChannel(UserDict):
             }
         return self.data.get('url')
 
-    def get_group(self):
-        name = self.get_name().lower()
+    def group(self):
+        name = self.name().lower()
         gr = self.data.get('cat')
         if name in CHANNEL_INFO:
             gr = CHANNEL_INFO[name].get('cat')
@@ -55,8 +55,8 @@ class TChannel(UserDict):
             self.data['cat'] = translate.get(gr.lower(), gr)
         return uni(self.data.get('cat'))
 
-    def get_logo(self):
-        name = self.get_name().lower()
+    def logo(self):
+        name = self.name().lower()
         logo = os.path.join(self.yatv_logo_path, "{name}.png".format(name=name))
         if not self.data.get('logo'):
             if os.path.exists(logo):
@@ -80,22 +80,22 @@ class TChannel(UserDict):
 
         return uni(self.data.get('logo'))
 
-    def get_id(self):
-        return uni(self.data.get('id', self.get_name()))
+    def id(self):
+        return uni(self.data.get('id', self.name()))
 
-    def get_name(self):
+    def name(self):
         return uni(self.data.get('name'))
 
-    def get_title(self):
+    def title(self):
         if not self.data.get('title'):
-            name = self.get_name().lower()
+            name = self.name().lower()
             if name in CHANNEL_INFO:
                 self.data['title'] = CHANNEL_INFO[name].get('aliases', [name])[0].capitalize()
             else:
                 self.data['title'] = name.capitalize()
         return uni(self.data["title"])
 
-    def get_screenshots(self):
+    def screenshots(self):
         """
         :return [{filename:url},...]
         """
@@ -109,12 +109,12 @@ class TChannel(UserDict):
             epg = yatv.YATV.get_instance()
             if not self.data.get('epg') and epg is not None:
                 self.data['epg'] = []
-                for ep in epg.get_epg_by_name(self.get_name()):
+                for ep in epg.get_epg_by_name(self.name()):
                     self.data['epg'].append(ep)
         except Exception as e:
             log.e('update_epglist error {0}'.format(e))
 
-    def get_epg(self):
+    def epg(self):
         """
         :return [{name, btime, etime},]
         """
@@ -139,7 +139,7 @@ class TChannel(UserDict):
                     log.error(e)
             self.data['epg'] = curepg
         except Exception as e:
-            log.e('get_epg error {0}'.format(e))
+            log.e('epg error {0}'.format(e))
 
         return self.data.get('epg')
 

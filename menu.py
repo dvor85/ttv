@@ -83,26 +83,23 @@ class MenuForm(xbmcgui.WindowXMLDialog):
 
     def exec_cmd(self, cmd):
         try:
-            #             if utils.str2int(defines.FAVOURITE) == 0 and self.parent.user["vip"]:
-            #                 fdb = favdb.RemoteFDB(self.parent.session)
-            #             else:
             fdb = favdb.LocalFDB()
 
             if cmd == MenuForm.CMD_ADD_FAVOURITE:
-                return fdb.add(self.channel.get_title())
+                return fdb.add(self.channel.title())
             elif cmd == MenuForm.CMD_DEL_FAVOURITE:
-                return fdb.delete(self.channel.get_title())
+                return fdb.delete(self.title())
             elif cmd == MenuForm.CMD_MOVE_FAVOURITE:
                 to_num = int(xbmcgui.Dialog().numeric(0, heading=str2('Введите позицию')))
-                return fdb.moveTo(self.channel.get_title(), to_num)
+                return fdb.moveTo(self.channel.title(), to_num)
             elif cmd == MenuForm.CMD_DOWN_FAVOURITE:
-                return fdb.down(self.channel.get_title())
+                return fdb.down(self.channel.title())
             elif cmd == MenuForm.CMD_UP_FAVOURITE:
-                return fdb.up(self.channel.get_title())
+                return fdb.up(self.channel.title())
             elif cmd == MenuForm.CMD_SET_TRUE_PIN:
-                return fdb.set_pin(self.channel.get_title(), True)
+                return fdb.set_pin(self.channel.title())
             elif cmd == MenuForm.CMD_SET_FALSE_PIN:
-                return fdb.set_pin(self.channel.get_title(), False)
+                return fdb.set_pin(self.channel.title(), False)
         except Exception as e:
             log.e('Error: {0} in exec_cmd "{1}"'.format(uni(e), cmd))
             self.close()

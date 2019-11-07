@@ -68,7 +68,7 @@ class MyPlayer(xbmcgui.WindowXML):
         self.progress = self.getControl(MyPlayer.CONTROL_PROGRESS_ID)
         self.cicon = self.getControl(MyPlayer.CONTROL_ICON_ID)
         self.cicon.setVisible(False)
-        logo = self.channel.get_logo()
+        logo = self.channel.logo()
         if logo:
             self.cicon.setVisible(True)
 
@@ -128,7 +128,7 @@ class MyPlayer(xbmcgui.WindowXML):
     def UpdateEpg(self, ch):
         try:
             log.d('UpdateEpg')
-            logo = ch.get_logo()
+            logo = ch.logo()
             if self.cicon:
                 self.cicon.setImage(str2(logo))
             self.parent.getEpg(ch, callback=self.showEpg, timeout=0.5)
@@ -186,73 +186,67 @@ class MyPlayer(xbmcgui.WindowXML):
     def Start(self, channel):
         """
         Start play. Try all availible channel sources and players
-        :channel: <dict> Channel sources
-        :return: If play was successful, then return True, else None
+        :channel: <dict> TChannel sources
+        :return: If channel stop requested, then return True, else None
         """
         log("Start play")
         self.channel = channel
         self.channel_number = self.parent.selitem_id
-#         for src, channel in iteritems(self.channel):
         try:
-            self.title = "{0}. {1}".format(self.channel_number, channel.get_title())
-#                 log.d('Channel source is "{0}"'.format(src))
-            for player, src in iteritems(channel.get_url()):
-                for src_name, url in iteritems(src):
-                    try:
-                        #                         url = channel.get_url(player)
-                        log.d('Channel source is "{0}"'.format(src_name))
-                        mode = None
-                        logo = channel.get_logo()
-                        if self.cicon:
-                            self.cicon.setImage(str2(logo))
-                        log.d('Try to play with {0} player'.format(player))
-                        self._player = None
-                        if player == 'ace':
-                            self._player = players.AcePlayer.get_instance(parent=self.parent)
-                            mode = 'PID'
-                        elif player == 'nox':
-                            self._player = players.NoxPlayer.get_instance(parent=self.parent)
-                        else:
-                            self._player = players.TPlayer.get_instance(parent=self.parent)
+            self.title = "{0}. {1}".format(self.channel_number, channel.title())
+            for player, src in iteritems(channel.xurl()):
+                try:
+                    log.d('Try to play with {0} player'.format(player))
+                    mode = None
+                    logo = channel.logo()
+                    if self.cicon:
+                        self.cicon.setImage(str2(logo))
+#                     if self._player:
+#                         self._player._instance = None
+                    self._player = None
+                    if player == 'ace':
+                        self._player = players.AcePlayer.get_instance(parent=self.parent)
+                        mode = 'PID'
+                    elif player == 'nox':
+                        self._player = players.NoxPlayer.get_instance(parent=self.parent)
+                    else:
+                        self._player = players.TPlayer.get_instance(parent=self.parent)
 
-                        if self._player:
-                            self.parent.add_recent_channel(channel, 300)
+                    if self._player:
+                        self.parent.add_recent_channel(channel, 300)
+                        for src_name, url in iteritems(src):
+                            try:
+                                log.d('play "{0}" from source "{1}"'.format(url, src_name))
+                                self._player.play_item(index=0, title=self.title,
+                                                       iconImage=logo,
+                                                       thumbnailImage=logo,
+                                                       url=url, mode=mode)
+                            except Exception as e:
+                                log.e("Error play {0}: {1}".format(url, e))
+                            finally:
+                                if self._player and self._player.last_error:
+                                    self._player.last_error = None
+                                if self.manual_stop_requested or defines.isCancel():
+                                    self.close()
+                                    return
+                                if self.channel_stop_requested:
+                                    return True
+                            log.d('End playing url "{0}"'.format(url))
 
-#                             try:
-                            log.d('play {0}'.format(url))
-                            self._player.play_item(index=0, title=self.title,
-                                                   iconImage=logo,
-                                                   thumbnailImage=logo,
-                                                   url=url, mode=mode)
-#                             except Exception as e:
-#                                 log.e("Error play {0}: {1}".format(url, e))
-#                             finally:
-#                                 if self._player and self._player.last_error:
-#                                     self._player.last_error = None
-#                                 if self.manual_stop_requested or defines.isCancel():
-#                                     self.close()
-#                                     return
-#                                 if self.channel_stop_requested:
-#                                     return True
-#                             log.d('End playing')
-
-                    except Exception as e:
-                        log.e("Error play with {0} player: {1}".format(player, e))
-                    finally:
-                        if self._player and self._player.last_error:
-                            self._player.last_error = None
-                        if self.manual_stop_requested or defines.isCancel():
-                            self.close()
-                            return
-                        if self.channel_stop_requested:
-                            return True
-    #                         if self.switch_source_requested:
-    #                             break
+                except Exception as e:
+                    log.e("Error play with {0} player: {1}".format(player, e))
+                finally:
+                    if self._player and self._player.last_error:
+                        self._player.last_error = None
+                    if self.manual_stop_requested or defines.isCancel():
+                        self.close()
+                        return
+                    if self.channel_stop_requested:
+                        return True
 
         except Exception as e:
             log.e('Start error: {0}'.format(uni(e)))
 
-        #         self.close()
         if self.manual_stop_requested or defines.isCancel():
             self.close()
             return

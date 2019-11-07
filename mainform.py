@@ -63,19 +63,18 @@ class ChannelGroups(UserDict):
     def addChannel(self, ch, src_name, groupname=None):
         try:
             if groupname is None:
-                groupname = ch.get_group()
+                groupname = ch.group()
             if groupname is None:
                 groupname = src_name
             if groupname.lower() in ["18+"] and utils.str2int(defines.AGE) < 2:
                 return
             if groupname not in self.data:
                 self.addGroup(groupname)
-            c = self.find_channel_by_title(groupname, ch.get_title())
-            if c:
-                if ch.get_url():
-                    if ch.get_player() not in c.get_url():
-                        c['url'][ch.get_player()] = {}
-                    c['url'][ch.get_player()][ch.get_src()] = ch.get_url()[ch.get_player()][ch.get_src()]
+            c = self.find_channel_by_title(groupname, ch.title())
+            if c and ch.xurl():
+                if ch.player() not in c.xurl():
+                    c['url'][ch.player()] = {}
+                c['url'][ch.player()][ch.src()] = ch.xurl()[ch.player()][ch.src()]
 
                 if not c.get('logo') and ch.get('logo'):
                     c['logo'] = ch['logo']
@@ -92,7 +91,7 @@ class ChannelGroups(UserDict):
 
     def find_channel_by_id(self, groupname, chid):
         for ch in self.getChannels(groupname):
-            if ch.get_id() == chid:
+            if ch.id() == chid:
                 return ch
 
     def find_group_by_name(self, name):
@@ -108,12 +107,12 @@ class ChannelGroups(UserDict):
     def find_channel_by_name(self, groupname, name):
         name = name.lower()
         for ch in self.getChannels(groupname):
-            if ch.get_name().lower() == name:
+            if ch.name().lower() == name:
                 return ch
 
     def find_channel_by_title(self, groupname, title):
         for ch in self.getChannels(groupname):
-            if ch.get_title() == title:
+            if ch.title() == title:
                 return ch
 
 
@@ -366,7 +365,7 @@ class WMainForm(xbmcgui.WindowXML):
                 log.d('getEpg->get')
                 self.showStatus('Загрузка программы')
                 if ch:
-                    epg = ch.get_epg()
+                    epg = ch.epg()
                     if epg and callback is not None and chnum == self.player.channel_number:
                         callback(epg)
             except Exception as e:
@@ -460,7 +459,7 @@ class WMainForm(xbmcgui.WindowXML):
             namedb = {}
             for cat, val in iteritems(self.channel_groups):
                 for ch in val['channels']:
-                    namedb[ch.get_name().lower()] = {'logo': ch.get_logo(), 'cat': cat}
+                    namedb[ch.name().lower()] = {'logo': ch.logo(), 'cat': cat}
                     break
             import os
             s = json.dumps(namedb, indent=4, ensure_ascii=False)
@@ -583,7 +582,7 @@ class WMainForm(xbmcgui.WindowXML):
 
         def add():
             if self.cur_category not in WMainForm.USER_GROUPS:
-                if favdb.LocalFDB().add_recent(channel.get_title()):
+                if favdb.LocalFDB().add_recent(channel.title()):
                     self.channel_groups.clearGroup(WMainForm.USER_GROUPS[0])
                     self.loadFavourites()
             self.timers[WMainForm.TIMER_ADD_RECENT] = None
@@ -735,13 +734,13 @@ class WMainForm(xbmcgui.WindowXML):
                 try:
                     if defines.isCancel():
                         return
-                    chname = "{0}. {1}".format(i + 1, ch.get_title())
-                    chli = xbmcgui.ListItem(str2(chname), str2(ch.get_id()))
+                    chname = "{0}. {1}".format(i + 1, ch.title())
+                    chli = xbmcgui.ListItem(str2(chname), str2(ch.id()))
                     self.setLogo(ch, chli, self.set_logo_sema)
                     chli.setProperty('type', 'channel')
-                    chli.setProperty("id", str2(ch.get_id()))
-                    chli.setProperty("name", str2(ch.get_name()))
-                    chli.setProperty("title", str2(ch.get_title()))
+                    chli.setProperty("id", str2(ch.id()))
+                    chli.setProperty("name", str2(ch.name()))
+                    chli.setProperty("title", str2(ch.title()))
                     if self.cur_category not in WMainForm.USER_GROUPS:
                         chli.setProperty('commands', str2("{0}".format(MenuForm.CMD_ADD_FAVOURITE)))
                     else:
@@ -766,7 +765,7 @@ class WMainForm(xbmcgui.WindowXML):
 
         def set_logo():
             with sema:
-                chli.setArt({"icon": str2(ch.get_logo())})
+                chli.setArt({"icon": str2(ch.logo())})
 
         if not defines.isCancel():
             slthread = threading.Thread(target=set_logo)
