@@ -6,7 +6,7 @@ from __future__ import absolute_import, division, unicode_literals
 import json
 import os
 import time
-from utils import uni, str2
+from utils import uni, str2, str2int
 
 import defines
 import logger
@@ -17,10 +17,10 @@ log = logger.Logger(__name__)
 
 class Channels(TChannels):
 
-    def __init__(self):
+    def __init__(self, prior=0):
         self.url = 'http://{pomoyka}/trash/ttv-list/ace.json'.format(pomoyka=uni(defines.ADDON.getSetting('pomoyka_domain')))
         self._temp = os.path.join(defines.CACHE_PATH, "ace.json")
-        TChannels.__init__(self, reload_interval=1800)
+        TChannels.__init__(self, reload_interval=1800, prior=prior)
 
     def _load_jdata(self):
         log.d('get {temp}'.format(temp=self._temp))

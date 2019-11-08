@@ -5,9 +5,10 @@ from __future__ import absolute_import, division, unicode_literals
 
 import defines
 from . import allfon, acestream
+from utils import str2int
 
 ChannelSources = {}
-if defines.ADDON.getSetting('allfon') == 'true':
-    ChannelSources['allfon'] = allfon.Channels()
-if defines.ADDON.getSetting('acestream') == 'true':
-    ChannelSources['acestream'] = acestream.Channels()
+if str2int(defines.ADDON.getSetting('allfon')) > 0:
+    ChannelSources['allfon'] = allfon.Channels(str2int(defines.ADDON.getSetting('allfon')))
+if str2int(defines.ADDON.getSetting('acestream')) > 0:
+    ChannelSources['acestream'] = acestream.Channels(str2int(defines.ADDON.getSetting('acestream')))

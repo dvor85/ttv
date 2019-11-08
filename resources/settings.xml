@@ -11,8 +11,8 @@
 	<category label="Источники">
 		<setting default="pomoyka.win" id="pomoyka_domain" label="IP адрес или доменное имя помойки" type="text" />
 		<setting default="https://iptvx.one/epg/epg.xml.gz" id="epg_url" label="Ссылка EPG (xmltv)" type="text" visible="false" />
-		<setting id="allfon" label="Allfon" type="bool" default="true" />
-		<setting id="acestream" label="Acestream" type="bool" default="true" />
+		<setting id="allfon" label="Allfon (Приоритет. Если <= 0, то выключен)" type="number" default="1" />
+		<setting id="acestream" label="Acestream (Приоритет. Если <= 0, то выключен)" type="number" default="2" />
 	</category>
 	<category label="AceStream">
 		<setting default="true" id="use_ace" label="Использовать Acestream, если доступно" type="bool" />

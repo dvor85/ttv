@@ -15,6 +15,7 @@ import defines
 import logger
 import players
 import utils
+from sources.table import ChannelSources
 
 
 log = logger.Logger(__name__)
@@ -189,6 +190,13 @@ class MyPlayer(xbmcgui.WindowXML):
         :channel: <dict> TChannel sources
         :return: If channel stop requested, then return True, else None
         """
+
+        def src_cmp(src):
+            """
+            Функция сортировки источников по приоритету
+            """
+            return ChannelSources[src[0]].prior
+
         log("Start play")
         self.channel = channel
         self.channel_number = self.parent.selitem_id
@@ -201,20 +209,26 @@ class MyPlayer(xbmcgui.WindowXML):
                     logo = channel.logo()
                     if self.cicon:
                         self.cicon.setImage(str2(logo))
-#                     if self._player:
-#                         self._player._instance = None
-                    self._player = None
                     if player == 'ace':
+                        if self._player and self._player.last_error:
+                            players.AcePlayer.clear_instance()
+                            self._player = None
                         self._player = players.AcePlayer.get_instance(parent=self.parent)
                         mode = 'PID'
                     elif player == 'nox':
+                        if self._player and self._player.last_error:
+                            players.NoxPlayer.clear_instance()
+                            self._player = None
                         self._player = players.NoxPlayer.get_instance(parent=self.parent)
                     else:
+                        if self._player and self._player.last_error:
+                            players.TPlayer.clear_instance()
+                            self._player = None
                         self._player = players.TPlayer.get_instance(parent=self.parent)
 
                     if self._player:
                         self.parent.add_recent_channel(channel, 300)
-                        for src_name, url in iteritems(src):
+                        for src_name, url in sorted(iteritems(src), key=src_cmp, reverse=True):
                             try:
                                 log.d('play "{0}" from source "{1}"'.format(url, src_name))
                                 self._player.play_item(index=0, title=self.title,
@@ -224,8 +238,6 @@ class MyPlayer(xbmcgui.WindowXML):
                             except Exception as e:
                                 log.e("Error play {0}: {1}".format(url, e))
                             finally:
-                                if self._player and self._player.last_error:
-                                    self._player.last_error = None
                                 if self.manual_stop_requested or defines.isCancel():
                                     self.close()
                                     return
@@ -236,8 +248,6 @@ class MyPlayer(xbmcgui.WindowXML):
                 except Exception as e:
                     log.e("Error play with {0} player: {1}".format(player, e))
                 finally:
-                    if self._player and self._player.last_error:
-                        self._player.last_error = None
                     if self.manual_stop_requested or defines.isCancel():
                         self.close()
                         return
@@ -250,8 +260,7 @@ class MyPlayer(xbmcgui.WindowXML):
         if self.manual_stop_requested or defines.isCancel():
             self.close()
             return
-        if self._player and self._player.last_error:
-            self._player.last_error = None
+
         return True
 
     def run_selected_channel(self, timeout=0):

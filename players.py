@@ -54,23 +54,30 @@ class TPlayer(xbmc.Player):
     _instance = None
     _lock = threading.RLock()
 
-    @staticmethod
-    def get_instance(parent=None, *args):
+    @classmethod
+    def get_instance(cls, parent=None, *args):
         try:
-            if TPlayer._instance is None:
-                with TPlayer._lock:
-                    if TPlayer._instance is None:
-                        TPlayer._instance = TPlayer(parent=parent, *args)
+            if cls._instance is None:
+                with cls._lock:
+                    if cls._instance is None:
+                        cls._instance = cls(parent=parent, *args)
         except Exception as e:
             log.e('get_instance error: {0}'.format(uni(e)))
-            TPlayer._instance = None
+            cls._instance = None
         finally:
-            return TPlayer._instance
+            return cls._instance
+
+    @classmethod
+    def clear_instance(cls):
+        if cls._instance is not None:
+            with cls._lock:
+                cls._instance = None
 
     def __init__(self, parent=None, *args):
         super(TPlayer, self).__init__()
         self.parent = parent
         self.link = None  # Для передачи ссылки плееру
+        self.last_error = None
 
     def onPlayBackStopped(self):
         log("onPlayBackStopped")
@@ -160,25 +167,24 @@ class AcePlayer(TPlayer):
     _instance = None
     _lock = threading.RLock()
 
-    @staticmethod
-    def get_instance(parent=None, ipaddr='127.0.0.1', *args):
-        try:
-            if AcePlayer._instance is None:
-                with AcePlayer._lock:
-                    if AcePlayer._instance is None:
-                        AcePlayer._instance = AcePlayer(parent=parent, ipaddr=ipaddr, *args)
-        except Exception as e:
-            log.e('get_instance error: {0}'.format(uni(e)))
-            AcePlayer._instance = False
-        finally:
-            return AcePlayer._instance
+#     @staticmethod
+#     def get_instance(parent=None, ipaddr='127.0.0.1', *args):
+#         try:
+#             if AcePlayer._instance is None:
+#                 with AcePlayer._lock:
+#                     if AcePlayer._instance is None:
+#                         AcePlayer._instance = AcePlayer(parent=parent, ipaddr=ipaddr, *args)
+#         except Exception as e:
+#             log.e('get_instance error: {0}'.format(uni(e)))
+#             AcePlayer._instance = False
+#         finally:
+#             return AcePlayer._instance
 
-    def __init__(self, parent=None, ipaddr='127.0.0.1', *args):
+    def __init__(self, parent=None, *args):
         TPlayer.__init__(self, parent=parent, *args)
         log("Init AceEngine")
         if uni(defines.ADDON.getSetting('use_ace')) == "false":
             raise Exception("Acestream player is disabled")
-        self.last_error = None
         self.quid = 0
         self.ace_engine = ''
         self.aceport = 62062
@@ -191,8 +197,7 @@ class AcePlayer(TPlayer):
         if defines.ADDON.getSetting('ip_addr'):
             self.server_ip = uni(defines.ADDON.getSetting('ip_addr'))
         else:
-            self.server_ip = ipaddr
-            defines.ADDON.setSetting('ip_addr', str2(ipaddr))
+            self.server_ip = '127.0.0.1'
         if defines.ADDON.getSetting('web_port'):
             self.webport = uni(defines.ADDON.getSetting('webport'))
         else:
@@ -790,18 +795,18 @@ class NoxPlayer(TPlayer):
         self.port = utils.str2int(defines.ADDON.getSetting('nox_port'))
         self._checkNox()
 
-    @staticmethod
-    def get_instance(parent=None, *args):
-        try:
-            if NoxPlayer._instance is None:
-                with NoxPlayer._lock:
-                    if NoxPlayer._instance is None:
-                        NoxPlayer._instance = NoxPlayer(parent=parent, *args)
-        except Exception as e:
-            log.e('get_instance error: {0}'.format(uni(e)))
-            NoxPlayer._instance = False
-        finally:
-            return NoxPlayer._instance
+#     @staticmethod
+#     def get_instance(parent=None, *args):
+#         try:
+#             if NoxPlayer._instance is None:
+#                 with NoxPlayer._lock:
+#                     if NoxPlayer._instance is None:
+#                         NoxPlayer._instance = NoxPlayer(parent=parent, *args)
+#         except Exception as e:
+#             log.e('get_instance error: {0}'.format(uni(e)))
+#             NoxPlayer._instance = False
+#         finally:
+#             return NoxPlayer._instance
 
     def _checkNox(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
