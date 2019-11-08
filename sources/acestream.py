@@ -6,7 +6,7 @@ from __future__ import absolute_import, division, unicode_literals
 import json
 import os
 import time
-from utils import uni, str2, str2int
+from utils import uni
 
 import defines
 import logger

@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
+
 from __future__ import absolute_import, division, unicode_literals
 
 import json
@@ -19,7 +21,6 @@ import defines
 import logger
 import utils
 
-# Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 log = logger.Logger(__name__)
 sys_platform = defines.platform()['os']

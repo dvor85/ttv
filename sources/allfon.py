@@ -10,10 +10,9 @@ import time
 import defines
 import logger
 from .tchannel import TChannel, TChannels
-from utils import uni, str2, str2int
+from utils import uni
 
 log = logger.Logger(__name__)
-# fmt = utils.fmt
 
 
 class Channel(TChannel):

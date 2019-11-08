@@ -59,6 +59,10 @@ def rListFiles(path):
     return files
 
 
+def cmp(a, b):  # @ReservedAssignment
+    return (a > b) - (a < b)
+
+
 def uni(s, from_encoding='utf8'):
     """
     Декодирует строку из кодировки encoding

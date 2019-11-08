@@ -173,7 +173,7 @@
     </control>
     <control type="label">
         <desctiption>Time</desctiption>
-        <left>1210</left>
+        <left>70r</left>
         <top>10</top>        
         <visible>true</visible>
         <label>$INFO[System.Time]</label>

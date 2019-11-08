@@ -15,7 +15,6 @@ import yatv
 from .channel_info import CHANNEL_INFO
 from .grouplang import translate
 
-# fmt = utils.fmt
 log = logger.Logger(__name__)
 
 
@@ -35,13 +34,13 @@ class TChannel(UserDict):
         return self.data.get('src', 'undefined')
 
     def player(self):
-        return self.data.get('player')
+        return self.data.get('player', 'undefined')
 
-    def xurl(self, player=None):
+    def xurl(self):
         if self.data.get('url') and not isinstance(self.data.get('url'), dict):
             self.data['url'] = {
-                self.data.get('player', 'undefined'): {
-                    self.data.get('src', 'undefined'): uni(self.data.get('url'))
+                self.player(): {
+                    self.src(): uni(self.data.get('url'))
                 }
             }
         return self.data.get('url')

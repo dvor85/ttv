@@ -11,8 +11,7 @@ from threading import Event
 from six import iteritems
 import defines
 import logger
-import utils
-from utils import uni, str2
+from utils import uni
 
 log = logger.Logger(__name__)
 

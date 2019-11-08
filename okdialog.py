@@ -2,7 +2,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import xbmcgui
-from utils import uni, str2
+from utils import str2
 
 
 # Copyright (c) 2010-2011 Torrent-TV.RU

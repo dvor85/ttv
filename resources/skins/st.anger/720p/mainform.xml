@@ -25,8 +25,9 @@
         <description>Window</description>
         <control type="label">
 	        <desctiption>Time</desctiption>
-	        <left>1210</left>
+	        <left>70r</left>
 	        <top>10</top>
+	        <align>left</align>
 	        <visible>true</visible>
 	        <label>$INFO[System.Time]</label>
         </control>

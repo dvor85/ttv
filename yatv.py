@@ -14,7 +14,7 @@ import requests
 import defines
 import logger
 from sources.channel_info import CHANNEL_INFO
-from utils import uni, str2, str2int
+from utils import uni, str2int
 
 
 log = logger.Logger(__name__)

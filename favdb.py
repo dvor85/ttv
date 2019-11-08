@@ -8,14 +8,10 @@ import os
 
 import defines
 import logger
-from utils import uni
+from utils import uni, cmp
 
 
 log = logger.Logger(__name__)
-
-
-def cmp(a, b):  # @ReservedAssignment
-    return (a > b) - (a < b)
 
 
 class FDB:

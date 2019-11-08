@@ -8,9 +8,6 @@ import time
 import defines
 
 
-# fmt = utils.fmt
-
-
 class Logger:
 
     def __init__(self, tag, minlevel=xbmc.LOGDEBUG):
@@ -23,8 +20,7 @@ class Logger:
     def log(self, msg, level):
         if level >= self.minlevel:
             try:
-                m = "[{id}::{tag}] {msg}".format(id=defines.ADDON_ID, tag=self.tag, msg=uni(msg).replace(
-                    uni(defines.ADDON.getSetting('password')), '********'))
+                m = "[{id}::{tag}] {msg}".format(id=defines.ADDON_ID, tag=self.tag, msg=uni(msg))
                 xbmc.log(str2(m), level)
                 if defines.DEBUG:
                     m = '{0} {1}'.format(uni(time.strftime('%X')), m)
