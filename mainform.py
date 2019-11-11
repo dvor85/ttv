@@ -1,31 +1,29 @@
 # -*- coding: utf-8 -*-
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-# imports
-import defines
-import xbmcgui
-import xbmc
+from __future__ import absolute_import, division, unicode_literals
 
 import datetime
+import json
 import threading
 
-from playerform import MyPlayer
-from menu import MenuForm
-from sources.table import ChannelSources
-from sources import grouplang
+import xbmcgui
+import xbmc
+from six import itervalues, iteritems
+from six.moves import UserDict
+from utils import uni, str2
+
+import defines
 import favdb
-import json
-import utils
-from UserDict import UserDict
-import yatv
-# try:
-#     from collections import OrderedDict
-# except ImportError:
-#     from ordereddict import OrderedDict
 import logger
+import utils
+import yatv
+from menu import MenuForm
+from playerform import MyPlayer
+from sources.table import ChannelSources
+
 
 log = logger.Logger(__name__)
-fmt = utils.fmt
 
 
 class ChannelGroups(UserDict):
@@ -33,35 +31,29 @@ class ChannelGroups(UserDict):
     :return {
             groupname: {
                 title=str,
-                channels=[{src_name = {}...}...]
+                channels=[tchannel,...]
             }
     }
     """
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         self.data = {}
 
     def addGroup(self, groupname, title=None):
-        groupname = utils.utf(groupname)
-        groupname = grouplang.translate.get(groupname, groupname)
         self.data[groupname] = {}
-        if title:
-            title = utils.utf(title)
-        else:
+        if not title:
             title = groupname
         self.data[groupname]['title'] = title
         self.clearGroup(groupname)
 
     def clearGroup(self, groupname):
-        groupname = utils.utf(groupname)
         self.data[groupname]['channels'] = []
 
     def delGroup(self, groupname):
-        groupname = utils.utf(groupname)
         del self.data[groupname]
 
     def getGroups(self):
-        return self.data.keys()
+        return list(self.data)
 
     def addChannels(self, channels, src_name):
         for ch in channels:
@@ -71,50 +63,57 @@ class ChannelGroups(UserDict):
     def addChannel(self, ch, src_name, groupname=None):
         try:
             if groupname is None:
-                groupname = utils.utf(ch.get_group())
+                groupname = ch.group()
             if groupname is None:
                 groupname = src_name
-            groupname = grouplang.translate.get(groupname, groupname)
-            if utils.lower(groupname, 'utf8') in ("эротика", "18+") and utils.str2int(defines.AGE) < 2:
+            if groupname.lower() in ["18+"] and utils.str2int(defines.AGE) < 2:
                 return
-            if not self.data.get(groupname):
+            if groupname not in self.data:
                 self.addGroup(groupname)
-            chs = self.find_channel_by_name(groupname, ch.get_name())
-            if chs:
-                for c in chs.itervalues():
-                    if c.get('url') and ch.get('url') and c['url'] == ch['url']:
-                        return
-                chs[src_name] = ch
+            c = self.find_channel_by_title(groupname, ch.title())
+            if c and ch.xurl():
+                if ch.player() not in c.xurl():
+                    c['url'][ch.player()] = {}
+                c['url'][ch.player()][ch.src()] = ch.xurl()[ch.player()][ch.src()]
+
+                if not c.get('logo') and ch.get('logo'):
+                    c['logo'] = ch['logo']
             else:
-                self.getChannels(groupname).append({src_name: ch})
+                self.getChannels(groupname).append(ch)
         except Exception as e:
-            log.error(fmt("addChannel error: {0}", e))
+            log.error("addChannel from source:{0} error: {1}".format(src_name, uni(e)))
 
     def getChannels(self, groupname):
-        groupname = utils.utf(groupname)
         try:
             return self.data[groupname]["channels"]
         except KeyError:
             return []
 
     def find_channel_by_id(self, groupname, chid):
-        for chs in self.getChannels(groupname):
-            for ch in chs.itervalues():
-                if ch.get_id() == utils.utf(chid):
-                    return chs
+        for ch in self.getChannels(groupname):
+            if ch.id() == chid:
+                return ch
 
-    def find_group_by_chname(self, chname):
-
+    def find_group_by_name(self, name):
         for groupname in (x for x in self.getGroups() if x not in WMainForm.USER_GROUPS):
-            if self.find_channel_by_name(groupname, chname):
+            if self.find_channel_by_name(groupname, name):
+                return groupname
+
+    def find_group_by_chtitle(self, chtitle):
+        for groupname in (x for x in self.getGroups() if x not in WMainForm.USER_GROUPS):
+            if self.find_channel_by_name(groupname, chtitle):
                 return groupname
 
     def find_channel_by_name(self, groupname, name):
-        name = utils.lower(name, 'utf8')
-        for chs in self.getChannels(groupname):
-            for ch in chs.itervalues():
-                if utils.lower(ch.get_name(), 'utf8') == name:
-                    return chs
+        name = name.lower()
+        for ch in self.getChannels(groupname):
+            if ch.name().lower() == name:
+                return ch
+
+    def find_channel_by_title(self, groupname, title):
+        for ch in self.getChannels(groupname):
+            if ch.title() == title:
+                return ch
 
 
 class RotateScreen(threading.Thread):
@@ -132,7 +131,7 @@ class RotateScreen(threading.Thread):
         while self.active:
             for screen in self.screens:
                 if self.active:
-                    self.img_control.setImage(screen)
+                    self.img_control.setImage(str2(screen))
                     if defines.monitor.waitForAbort(2):
                         self.stop()
 
@@ -151,7 +150,7 @@ class LoopPlay(threading.Thread):
         self.name = 'LoopPlay'
 
     def stop(self):
-        log.d(fmt("stop from {0}", self.name))
+        log.d("stop from {0}".format(self.name))
         self.active = False
         self.parent.player.channelStop()
 
@@ -161,27 +160,27 @@ class LoopPlay(threading.Thread):
             try:
                 selItem = self.parent.list.getListItem(self.parent.selitem_id)
                 if selItem and selItem.getProperty('type') == "channel":
-                    self.parent.cur_channel = selItem.getProperty('name')
-                    sel_chs = self.parent.get_channel_by_name(self.parent.cur_channel)
-                    if not sel_chs:
+                    self.parent.cur_channel = uni(selItem.getProperty('title'))
+                    sel_ch = self.parent.get_channel_by_title(self.parent.cur_channel)
+                    if not sel_ch:
                         msg = "Канал временно не доступен"
                         self.parent.showStatus(msg)
-                        raise Exception(fmt("{msg}. Возможно не все каналы загрузились...", msg=msg))
+                        raise Exception("{msg}. Возможно не все каналы загрузились...".format(msg=msg))
 
-                    defines.ADDON.setSetting('cur_category', self.parent.cur_category)
-                    defines.ADDON.setSetting('cur_channel', self.parent.cur_channel)
-                    if not self.parent.player.Start(sel_chs):
+                    defines.ADDON.setSetting('cur_category', str2(self.parent.cur_category))
+                    defines.ADDON.setSetting('cur_channel', str2(self.parent.cur_channel))
+                    if not self.parent.player.Start(sel_ch):
                         break
                 if not defines.isCancel():
                     xbmc.sleep(223)
                     self.parent.select_channel()
 
             except Exception as e:
-                log.e(fmt('LoopPlay error: {0}', e))
+                log.e('LoopPlay error: {0}'.format(uni(e)))
                 xbmc.sleep(1000)
 
         self.parent.player.close()
-#         self.parent.show()
+        #         self.parent.show()
 
         if xbmc.getCondVisibility("Window.IsVisible(home)"):
             log.d("Close from HOME Window")
@@ -210,7 +209,7 @@ class WMainForm(xbmcgui.WindowXML):
     CANCEL_DIALOG = (9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448,)
     CONTEXT_MENU_IDS = (117, 101)
     ARROW_ACTIONS = (1, 2, 3, 4)
-    DIGIT_BUTTONS = range(58, 68)
+    DIGIT_BUTTONS = list(range(58, 68))
     ACTION_MOUSE = 107
     BTN_VOD_ID = 113
     BTN_CLOSE = 101
@@ -239,19 +238,20 @@ class WMainForm(xbmcgui.WindowXML):
     TIMER_SHOW_SCREEN = 'show_screen_timer'
     TIMER_SEL_CHANNEL = 'sel_channel_timer'
     TIMER_HIDE_WINDOW = 'hide_window_timer'
+    TIMER_ADD_RECENT = 'add_recent_timer'
     THREAD_SET_LOGO = 'set_logo_thread'
 
     def __init__(self, *args, **kwargs):
         log.d('__init__')
         self.channel_groups = ChannelGroups()
-#         self._re_1ttv_epg_text = re.compile('var\s+epg\s*=\s*(?P<e>\[.+?\])\s*;.*?</script>', re.DOTALL)
-#         self._re_1ttv_epg_json = re.compile('(?P<k>\w+)\s*:\s*(?P<v>.+?[,}])')
+        #         self._re_1ttv_epg_text = re.compile('var\s+epg\s*=\s*(?P<e>\[.+?\])\s*;.*?</script>', re.DOTALL)
+        #         self._re_1ttv_epg_json = re.compile('(?P<k>\w+)\s*:\s*(?P<v>.+?[,}])')
         self.img_progress = None
         self.txt_progress = None
         self.progress = None
         self.list = None
         self.list_type = ''
-        self.player = MyPlayer("player.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
+        self.player = MyPlayer("player.xml", defines.ADDON_PATH, "st.anger")
         self.player.parent = self
         self.cur_category = None
         self.cur_channel = None
@@ -267,8 +267,8 @@ class WMainForm(xbmcgui.WindowXML):
         self._yatv_instance = None
 
     def onInit(self):
-        self.cur_category = defines.ADDON.getSetting('cur_category')
-        self.cur_channel = defines.ADDON.getSetting('cur_channel')
+        self.cur_category = uni(defines.ADDON.getSetting('cur_category'))
+        self.cur_channel = uni(defines.ADDON.getSetting('cur_channel'))
         self.img_progress = self.getControl(WMainForm.IMG_PROGRESS)
         self.txt_progress = self.getControl(WMainForm.TXT_PROGRESS)
         self.progress = self.getControl(WMainForm.PROGRESS_BAR)
@@ -284,25 +284,24 @@ class WMainForm(xbmcgui.WindowXML):
 
         self.hide_main_window(timeout=10)
 
-    def get_selitem_id(self, name):
-        name = utils.lower(name, 'utf8')
-        for index in xrange(1, self.list.size()):
+    def get_selitem_id(self, title):
+        for index in range(1, self.list.size()):
             li = self.list.getListItem(index)
-            if utils.lower(li.getProperty('name'), 'utf8') == name:
+            if uni(li.getProperty('title')) == title:
                 return index
         else:
             return -1
 
-    def get_channel_by_name(self, name):
+    def get_channel_by_title(self, chtitle):
         categ = self.cur_category
         if self.cur_category in WMainForm.USER_GROUPS:
-            categ = self.channel_groups.find_group_by_chname(name)
-        return self.channel_groups.find_channel_by_name(categ, name)
+            categ = self.channel_groups.find_group_by_chtitle(chtitle)
+        return self.channel_groups.find_channel_by_title(categ, chtitle)
 
     def showDialog(self, msg):
         from okdialog import OkDialog
-        dialog = OkDialog("dialog.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
-        dialog.setText(msg)
+        dialog = OkDialog("dialog.xml", defines.ADDON_PATH, "st.anger")
+        dialog.setText(str2(msg))
         dialog.doModal()
 
     def onFocus(self, ControlID):
@@ -319,10 +318,10 @@ class WMainForm(xbmcgui.WindowXML):
             selItem = self.list.getSelectedItem()
             if selItem and selItem.getProperty('type') == 'channel':
 
-                sel_chs = self.get_channel_by_name(selItem.getProperty("name"))
-                if sel_chs:
-                    self.getEpg(sel_chs, timeout=0.5, callback=self.showEpg)
-#                     self.showScreen(sel_chs, timeout=0.5)
+                sel_ch = self.get_channel_by_title(uni(selItem.getProperty("title")))
+                if sel_ch:
+                    self.getEpg(sel_ch, timeout=0.5, callback=self.showEpg)
+                #                     self.showScreen(sel_chs, timeout=0.5)
 
                 for controlId in (WMainForm.IMG_SCREEN,):
                     self.getControl(controlId).setImage(selItem.getArt('icon'))
@@ -333,11 +332,11 @@ class WMainForm(xbmcgui.WindowXML):
             try:
                 self.channel_groups.addChannel(TChannel(ch), src_name='fav', groupname=WMainForm.USER_GROUPS[0])
             except Exception as e:
-                log.d(fmt('loadFavourites error: {0}', e))
+                log.d('loadFavourites error: {0}'.format(uni(e)))
 
     def loadChannels(self, *args):
         src_name = args[0]
-        log.d(fmt('loadChannels {0}', src_name))
+        log.d('loadChannels {0}'.format(src_name))
 
         if src_name in ChannelSources:
             try:
@@ -345,7 +344,7 @@ class WMainForm(xbmcgui.WindowXML):
                 res = self.channel_groups.addChannels(src.get_channels(), src_name=src_name)
                 timeout = src.reload_interval if res else 60
                 if timeout > 0:
-                    name = fmt('reload_channels_{0}', src_name)
+                    name = 'reload_channels_{0}'.format(src_name)
                     if self.timers.get(name):
                         self.timers[name].cancel()
                         self.timers[name] = None
@@ -355,9 +354,9 @@ class WMainForm(xbmcgui.WindowXML):
                     self.timers[name].start()
 
             except Exception as e:
-                log.d(fmt('loadChannels {0} error: {1}', src_name, e))
+                log.d('loadChannels {0} error: {1}'.format(src_name, e))
 
-    def getEpg(self, chs, timeout=0, callback=None):
+    def getEpg(self, ch, timeout=0, callback=None):
 
         def get():
             chnum = self.player.channel_number
@@ -365,16 +364,12 @@ class WMainForm(xbmcgui.WindowXML):
                 epg = None
                 log.d('getEpg->get')
                 self.showStatus('Загрузка программы')
-                if chs:
-                    for ch in chs.itervalues():
-                        epg = ch.get_epg()
-                        if epg and callback is not None and chnum == self.player.channel_number:
-                            callback(epg)
-                            break
-                    if callback is not None:
+                if ch:
+                    epg = ch.epg()
+                    if epg and callback is not None and chnum == self.player.channel_number:
                         callback(epg)
             except Exception as e:
-                log.d(fmt('getEpg->get error: {0}', e))
+                log.d('getEpg->get error: {0}'.format(uni(e)))
             finally:
                 #                     self.get_epg_lock.clear()
                 self.hideStatus()
@@ -397,15 +392,16 @@ class WMainForm(xbmcgui.WindowXML):
                     ce = self.getControl(WMainForm.LBL_FIRST_EPG + i)
                     bt = datetime.datetime.fromtimestamp(float(ep['btime']))
                     et = datetime.datetime.fromtimestamp(float(ep['etime']))
-                    ce.setLabel(fmt("{0} - {1} {2}",
-                                    bt.strftime("%H:%M"), et.strftime("%H:%M"), ep['name'].replace('&quot;', '"')))
+                    ce.setLabel(str2("{0} - {1} {2}").format(str2(bt.strftime("%H:%M")),
+                                                             str2(et.strftime("%H:%M")),
+                                                             str2(ep['name'].replace('&quot;', '"'))))
                     if i == 0:
                         if self.progress:
-                            self.progress.setPercent((ctime - bt).seconds * 100 / (et - bt).seconds)
+                            self.progress.setPercent((ctime - bt).seconds * 100 // (et - bt).seconds)
                         if 'screens' in ep:
                             self.showScreen(ep['screens'], 0.5)
                         if self.description_label:
-                            self.description_label.setText(ep['desc'])
+                            self.description_label.setText(str2(ep['desc']))
 
                 except:
                     break
@@ -413,14 +409,14 @@ class WMainForm(xbmcgui.WindowXML):
             return True
 
         except Exception as e:
-            log.e(fmt('showEpg error {0}', e))
+            log.e('showEpg error {0}'.format(uni(e)))
 
     def showNoEpg(self):
         for i in range(99):
             try:
                 ce = self.getControl(WMainForm.LBL_FIRST_EPG + i)
                 if i == 0:
-                    ce.setLabel('Нет программы')
+                    ce.setLabel(str2('Нет программы'))
                 else:
                     ce.setLabel('')
             except:
@@ -461,22 +457,21 @@ class WMainForm(xbmcgui.WindowXML):
 
         def dump_channel_groups():
             namedb = {}
-            for cat, val in self.channel_groups.iteritems():
-                for chs in val['channels']:
-                    for ch in chs.itervalues():
-                        namedb[utils.lower(ch.get_name(), 'utf8')] = {'logo': ch.get_logo(), 'cat': cat}
-                        break
+            for cat, val in iteritems(self.channel_groups):
+                for ch in val['channels']:
+                    namedb[ch.name().lower()] = {'logo': ch.logo(), 'cat': cat}
+                    break
             import os
-            s = utils.utf(json.dumps(namedb, indent=4, ensure_ascii=False))
+            s = json.dumps(namedb, indent=4, ensure_ascii=False)
             with open(os.path.join(defines.DATA_PATH, 'namedb.json'), 'wb') as fp:
                 fp.write(s)
 
         def LoadOther():
-            for name, thr in thrs.iteritems():
+            for name, thr in iteritems(thrs):
                 if name not in ('yatv_epg',):
                     thr.join(20)
 
-#             dump_channel_groups()
+        #             dump_channel_groups()
 
         self.showStatus("Получение списка каналов")
 
@@ -484,13 +479,12 @@ class WMainForm(xbmcgui.WindowXML):
             title = '[COLOR FFFFFF00][B]' + groupname + '[/B][/COLOR]'
             self.channel_groups.addGroup(groupname, title)
 
-        thrs = {}
-        thrs['favourite'] = defines.MyThread(self.loadFavourites)
-        thrs['yatv_epg'] = defines.MyThread(lambda: setattr(self, '_yatv_instance', yatv.YATV.get_instance()))
-        for src_name in ChannelSources.iterkeys():
+        thrs = {'favourite': defines.MyThread(self.loadFavourites),
+                'yatv_epg': defines.MyThread(lambda: setattr(self, '_yatv_instance', yatv.YATV.get_instance()))}
+        for src_name in ChannelSources:
             thrs[src_name] = defines.MyThread(self.loadChannels, src_name)
 
-        for thr in thrs.itervalues():
+        for thr in itervalues(thrs):
             thr.start()
 
         lo_thr = defines.MyThread(LoadOther)
@@ -513,7 +507,7 @@ class WMainForm(xbmcgui.WindowXML):
             if self.init:
                 self.select_channel()
                 self.init = False
-            if (self.list) and (0 < self.selitem_id < self.list.size()):
+            if self.list and (0 < self.selitem_id < self.list.size()):
                 if self.first_init:  # автостарт канала
                     self.first_init = False
                     self.startChannel()
@@ -540,13 +534,14 @@ class WMainForm(xbmcgui.WindowXML):
         if not self.list_type == 'channels':
             return
         if self.channel_number_str == '':
-            self.channel_number_str = str(sch) if sch != '' else str(self.selitem_id)
+            self.channel_number_str = sch if sch != '' else self.selitem_id
+        log('CHANNEL NUMBER IS: {0}'.format(self.channel_number_str))
         chnum = utils.str2int(self.channel_number_str)
-        log(fmt('CHANNEL NUMBER IS: {0}', chnum))
+
         if 0 < chnum < self.list.size():
             self.selitem_id = chnum
             self.setFocus(self.list)
-            self.list.selectItem(self.selitem_id)
+            self.list.selectItem(str2(self.selitem_id))
 
         if self.timers.get(WMainForm.TIMER_SEL_CHANNEL):
             self.timers[WMainForm.TIMER_SEL_CHANNEL].cancel()
@@ -559,13 +554,13 @@ class WMainForm(xbmcgui.WindowXML):
             self.timers[WMainForm.TIMER_SEL_CHANNEL].start()
 
     def hide_main_window(self, timeout=0):
-        log.d(fmt('hide main window in {0} sec', timeout))
+        log.d('hide main window in {0} sec'.format(timeout))
 
         def isPlaying():
             return not defines.isCancel() and self.player._player and self.player._player.isPlaying()
 
         def hide():
-            log.d(fmt('isPlaying={0}', isPlaying()))
+            log.d('isPlaying={0}'.format(isPlaying()))
             if isPlaying():
                 log.d('hide main window')
 
@@ -582,8 +577,28 @@ class WMainForm(xbmcgui.WindowXML):
             self.timers[WMainForm.TIMER_HIDE_WINDOW].daemon = False
             self.timers[WMainForm.TIMER_HIDE_WINDOW].start()
 
+    def add_recent_channel(self, channel, timeout=0):
+        log.d('add_resent_channel in {0} sec'.format(timeout))
+
+        def add():
+            if self.cur_category not in WMainForm.USER_GROUPS:
+                if favdb.LocalFDB().add_recent(channel.title()):
+                    self.channel_groups.clearGroup(WMainForm.USER_GROUPS[0])
+                    self.loadFavourites()
+            self.timers[WMainForm.TIMER_ADD_RECENT] = None
+
+        if self.timers.get(WMainForm.TIMER_ADD_RECENT):
+            self.timers[WMainForm.TIMER_ADD_RECENT].cancel()
+            self.timers[WMainForm.TIMER_ADD_RECENT] = None
+
+        if not defines.isCancel():
+            self.timers[WMainForm.TIMER_ADD_RECENT] = threading.Timer(timeout, add)
+            self.timers[WMainForm.TIMER_ADD_RECENT].name = WMainForm.TIMER_ADD_RECENT
+            self.timers[WMainForm.TIMER_ADD_RECENT].daemon = False
+            self.timers[WMainForm.TIMER_ADD_RECENT].start()
+
     def onClick(self, controlID):
-        log.d(fmt('onClick {0}', controlID))
+        log.d('onClick {0}'.format(controlID))
         if controlID == 200:
             self.setFocusId(WMainForm.CONTROL_LIST)
             self.player.manualStop()
@@ -592,13 +607,13 @@ class WMainForm(xbmcgui.WindowXML):
 
             if not selItem:
                 return
-            log.d(fmt("selItem is {0}", selItem.getLabel()))
-            if selItem.getLabel() == '..':
+            log.d("selItem is {0}".format(uni(selItem.getLabel())))
+            if uni(selItem.getLabel()) == '..':
                 self.fillCategory()
                 return
 
-            if selItem.getProperty('type') == 'category':
-                self.cur_category = selItem.getProperty("id")
+            if uni(selItem.getProperty('type')) == 'category':
+                self.cur_category = uni(selItem.getProperty("id"))
                 self.selitem_id = -1
                 self.fillChannels()
                 return
@@ -614,7 +629,7 @@ class WMainForm(xbmcgui.WindowXML):
             return
 
     def showMenuWindow(self):
-        mnu = MenuForm("menu.xml", defines.SKIN_PATH, defines.ADDON.getSetting('skin'))
+        mnu = MenuForm("menu.xml", defines.ADDON_PATH, "st.anger")
         mnu.li = self.getFocus().getSelectedItem()
         mnu.parent = self
 
@@ -622,7 +637,7 @@ class WMainForm(xbmcgui.WindowXML):
         mnu.doModal()
         log.d('Комманда выполнена')
         res = mnu.GetResult()
-        log.d(fmt('Результат команды {0}', res))
+        log.d('Результат команды {0}'.format(res))
         if res.startswith('OK'):
 
             self.channel_groups.clearGroup(WMainForm.USER_GROUPS[0])
@@ -644,11 +659,11 @@ class WMainForm(xbmcgui.WindowXML):
             self.showStatus('Канал не найден в избранном')
 
     def onAction(self, action):
-        #         log.d(fmt('Событие {0}', action.getId()))
+        #         log.d('Событие {0}'.format(action.getId()))
 
         if action in (xbmcgui.ACTION_NAV_BACK, xbmcgui.ACTION_BACKSPACE, xbmcgui.ACTION_PARENT_DIR):
             selItem = self.list.getListItem(0)
-            if selItem and selItem.getLabel() == "..":
+            if selItem and uni(selItem.getLabel()) == "..":
                 self.fillCategory()
                 return
 
@@ -669,11 +684,11 @@ class WMainForm(xbmcgui.WindowXML):
                 self.showMenuWindow()
 
             elif action == WMainForm.ACTION_MOUSE:
-                if (self.getFocusId() == WMainForm.CONTROL_LIST):
+                if self.getFocusId() == WMainForm.CONTROL_LIST:
                     self.onFocus(WMainForm.CONTROL_LIST)
             elif action in WMainForm.DIGIT_BUTTONS:
                 # IN PRESSING DIGIT KEYS ############ @IgnorePep8
-                self.channel_number_str += str(action.getId() - 58)
+                self.channel_number_str += str2(action.getId() - 58)
                 self.select_channel(timeout=1)
             else:
                 super(WMainForm, self).onAction(action)
@@ -682,13 +697,13 @@ class WMainForm(xbmcgui.WindowXML):
 
     def showStatus(self, text):
         try:
-            log.d(fmt("showStatus: {0}", text))
+            log.d("showStatus: {0}".format(text))
             if self.img_progress:
                 self.img_progress.setVisible(True)
             if self.txt_progress:
-                self.txt_progress.setLabel(text)
+                self.txt_progress.setLabel(str2(text))
         except Exception as e:
-            log.w(fmt("showStatus error: {0}", e))
+            log.w("showStatus error: {0}".format(uni(e)))
 
     def hideStatus(self):
         try:
@@ -697,7 +712,7 @@ class WMainForm(xbmcgui.WindowXML):
             if self.txt_progress:
                 self.txt_progress.setLabel("")
         except Exception as e:
-            log.w(fmt("hideStatus error: {0}", e))
+            log.w("hideStatus error: {0}".format(uni(e)))
 
     def fillChannels(self):
         self.showStatus("Заполнение списка")
@@ -707,38 +722,41 @@ class WMainForm(xbmcgui.WindowXML):
         log.d('fillChannels: Clear list')
         self.list.reset()
         self.list_type = 'channels'
-#         if not self.channel_groups.getChannels(self.cur_category):
-#             self.fillCategory()
-#             self.hideStatus()
-#         else:
+        #         if not self.channel_groups.getChannels(self.cur_category):
+        #             self.fillCategory()
+        #             self.hideStatus()
+        #         else:
         li = xbmcgui.ListItem('..')
         self.list.addItem(li)
 
-        for i, chs in enumerate(self.channel_groups.getChannels(self.cur_category)):
-            if chs:
-                for ch in chs.itervalues():
-                    try:
-                        if defines.isCancel():
-                            return
-                        chname = fmt("{0}. {1}", i + 1, ch.get_title())
-                        chli = xbmcgui.ListItem(chname, ch.get_id())
-                        self.setLogo(ch, chli, self.set_logo_sema)
-                        chli.setProperty('type', 'channel')
-                        chli.setProperty("id", ch.get_id())
-                        chli.setProperty("name", ch.get_name())
-                        if self.cur_category not in WMainForm.USER_GROUPS:
-                            chli.setProperty('commands', fmt("{0}", MenuForm.CMD_ADD_FAVOURITE))
+        for i, ch in enumerate(self.channel_groups.getChannels(self.cur_category)):
+            if ch:
+                try:
+                    if defines.isCancel():
+                        return
+                    chname = "{0}. {1}".format(i + 1, ch.title())
+                    chli = xbmcgui.ListItem(str2(chname), str2(ch.id()))
+                    self.setLogo(ch, chli, self.set_logo_sema)
+                    chli.setProperty('type', 'channel')
+                    chli.setProperty("id", str2(ch.id()))
+                    chli.setProperty("name", str2(ch.name()))
+                    chli.setProperty("title", str2(ch.title()))
+                    if self.cur_category not in WMainForm.USER_GROUPS:
+                        chli.setProperty('commands', str2("{0}".format(MenuForm.CMD_ADD_FAVOURITE)))
+                    else:
+                        cmds = [MenuForm.CMD_MOVE_FAVOURITE,
+                                MenuForm.CMD_DEL_FAVOURITE,
+                                MenuForm.CMD_DOWN_FAVOURITE,
+                                MenuForm.CMD_UP_FAVOURITE]
+                        if ch.get('pin'):
+                            cmds.append(MenuForm.CMD_SET_FALSE_PIN)
                         else:
-                            chli.setProperty('commands', fmt("{0},{1},{2},{3}",
-                                                             MenuForm.CMD_MOVE_FAVOURITE,
-                                                             MenuForm.CMD_DEL_FAVOURITE,
-                                                             MenuForm.CMD_DOWN_FAVOURITE,
-                                                             MenuForm.CMD_UP_FAVOURITE))
-                        self.list.addItem(chli)
+                            cmds.append(MenuForm.CMD_SET_TRUE_PIN)
+                        chli.setProperty('commands', str2(','.join(cmds)))
+                    self.list.addItem(chli)
 
-                        break
-                    except Exception as e:
-                        log.e(fmt("fillChannels error: {0}", e))
+                except Exception as e:
+                    log.e("fillChannels error: {0}".format(uni(e)))
         self.hideStatus()
         if self.selitem_id < 1:
             self.selitem_id = self.get_selitem_id(self.cur_channel)
@@ -747,7 +765,7 @@ class WMainForm(xbmcgui.WindowXML):
 
         def set_logo():
             with sema:
-                chli.setArt({"icon": ch.get_logo()})
+                chli.setArt({"icon": str2(ch.logo())})
 
         if not defines.isCancel():
             slthread = threading.Thread(target=set_logo)
@@ -758,9 +776,9 @@ class WMainForm(xbmcgui.WindowXML):
     def fillCategory(self):
 
         def AddItem(groupname):
-            li = xbmcgui.ListItem(self.channel_groups[groupname]['title'])
+            li = xbmcgui.ListItem(str2(self.channel_groups[groupname]['title']))
             li.setProperty('type', 'category')
-            li.setProperty('id', fmt('{0}', groupname))
+            li.setProperty('id', str2('{0}'.format(groupname)))
             self.list.addItem(li)
 
         if not self.list:
@@ -781,7 +799,7 @@ class WMainForm(xbmcgui.WindowXML):
             if self.player._player:
                 self.player._player.end()
 
-        for timer in self.timers.itervalues():
+        for timer in itervalues(self.timers):
             if timer:
                 timer.cancel()
 

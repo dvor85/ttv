@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import, division, unicode_literals
+
+import xbmcgui
+from utils import str2
+
+
 # Copyright (c) 2010-2011 Torrent-TV.RU
 # Writer (c) 2011, Welicobratov K.A., E-mail: 07pov23@gmail.com
 # Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
-
-import xbmcgui
 
 
 class OkDialog(xbmcgui.WindowXMLDialog):
@@ -16,12 +20,12 @@ class OkDialog(xbmcgui.WindowXMLDialog):
     TEXT_NOPORT = "Закрыт"
     TEXT_YESPORT = "Открыт"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, xmlFilename, scriptPath, *args, **kwargs):
+        super(OkDialog, self).__init__(xmlFilename, scriptPath)
         self.text = ""
-        pass
 
     def onInit(self):
-        self.getControl(1).setText(self.text)
+        self.getControl(1).setText(str2(self.text))
 
     def setText(self, text):
         self.text = text

@@ -1,24 +1,27 @@
 # -*- coding: utf-8 -*-
 # Writer (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
+from __future__ import absolute_import, division, unicode_literals
+
+import json
 import os
+
 import defines
 import logger
-import xbmc
-import utils
-import json
+from utils import uni, cmp
 
 
 log = logger.Logger(__name__)
-fmt = utils.fmt
 
 
-class FDB():
+class FDB:
     API_ERROR_INCORRECT = 'incorrect'
     API_ERROR_NOCONNECT = 'noconnect'
     API_ERROR_ALREADY = 'already'
     API_ERROR_NOPARAM = 'noparam'
     API_ERROR_NOFAVOURITE = 'nofavourite'
+    API_NO_REFRESH = 0
+    MAX_CHANNELS = 30
 
     def __init__(self):
         self.channels = []
@@ -36,13 +39,13 @@ class FDB():
         pass
 
     def delete(self, name):
-        log.d(fmt('delete channel name={0}', name))
+        log.d('delete channel name={0}'.format(name))
         k = self.find(name)
         if k is not None:
             if not self.channels:
                 self.get()
             if self.channels:
-                del(self.channels[k])
+                del (self.channels[k])
                 return self.save()
         return FDB.API_ERROR_NOFAVOURITE
 
@@ -52,23 +55,22 @@ class FDB():
             self.get()
         if self.channels and to_id < len(self.channels):
             k = self.find(name)
-            log.d(fmt('moveTo channel from {0} to {1}', k, to_id))
+            log.d('moveTo channel from {0} to {1}'.format(k, to_id))
             return self.swapTo(k, to_id)
 
         return FDB.API_ERROR_NOPARAM
 
     def find(self, name):
-        name = utils.lower(name, 'utf8')
-        log.d(fmt('find channel by name={0}', name))
+        log.d('find channel by name={0}'.format(name))
         if not self.channels:
             self.get()
         if self.channels:
             for i, ch in enumerate(self.channels):
-                if utils.lower(ch['name'], 'utf8') == name:
+                if ch['name'] == name:
                     return i
 
     def swap(self, i1, i2):
-        log.d(fmt('swap channels with indexes={0},{1}', i1, i2))
+        log.d('swap channels with indexes={0}, {1}'.format(i1, i2))
         try:
             ch = self.channels[i1]
             self.channels[i1] = self.channels[i2]
@@ -108,7 +110,7 @@ class LocalFDB(FDB):
                 try:
                     self.channels = json.load(fp)
                 except Exception as e:
-                    log.w(fmt('get error: {0}', e))
+                    log.w('get error: {0}'.format(uni(e)))
         return self.channels
 
     def save(self, obj=None):
@@ -121,16 +123,40 @@ class LocalFDB(FDB):
                 self.channels = obj
                 return True
         except Exception as e:
-            log.w(fmt('save error: {0}', e))
+            log.w('save error: {0}'.format(uni(e)))
             return FDB.API_ERROR_NOCONNECT
 
-    def add(self, ch):
-        name = ch.get_name()
-        log.d(fmt('add channels {0}', name))
-        channel = {'name': name}
+    def add(self, name):
+        log.d('add channel {0}'.format(name))
+        channel = {'name': name, 'pin': True}
 
         if self.find(name) is None:
             self.channels.append(channel)
             return self.save()
 
         return FDB.API_ERROR_ALREADY
+
+    def add_recent(self, name):
+        log.d('add recent channel {0}'.format(name))
+        channel = {'name': name, 'pin': False}
+
+        if self.find(name) is None:
+            self.channels.insert(0, channel)
+            if len(self.channels) > FDB.MAX_CHANNELS:
+                for i in range(len(self.channels), 0, -1):
+                    if not self.channels[i].get('pin', True):
+                        del self.channels[i]
+                        break
+
+            return self.save()
+
+        return FDB.API_ERROR_ALREADY
+
+    def set_pin(self, name, pin):
+        log.d('set pin={0} of channel {1}'.format(pin, name))
+
+        ci = self.find(name)
+        if ci is not None:
+            self.channels[ci]['pin'] = pin
+            self.save()
+            return FDB.API_NO_REFRESH

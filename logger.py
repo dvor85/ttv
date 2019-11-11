@@ -1,19 +1,17 @@
 # -*- coding: utf-8 -*-
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
+from __future__ import print_function, absolute_import, division, unicode_literals
+from utils import uni, str2
 import xbmc
-import utils
-import defines
 import time
+import defines
 
 
-fmt = utils.fmt
-
-
-class Logger():
+class Logger:
 
     def __init__(self, tag, minlevel=xbmc.LOGDEBUG):
-        self.tag = tag
+        self.tag = uni(tag)
         self.minlevel = minlevel
 
     def __call__(self, msg, level=xbmc.LOGNOTICE):
@@ -22,14 +20,13 @@ class Logger():
     def log(self, msg, level):
         if level >= self.minlevel:
             try:
-                m = fmt("[{id}::{tag}] {msg}", id=defines.ADDON_ID, tag=self.tag, msg=utils.utf(msg)).replace(
-                    defines.ADDON.getSetting('password'), '********')
-                xbmc.log(m, level)
+                m = "[{id}::{tag}] {msg}".format(id=defines.ADDON_ID, tag=self.tag, msg=uni(msg))
+                xbmc.log(str2(m), level)
                 if defines.DEBUG:
-                    m = fmt('{0} {1}', time.strftime('%X'), m)
-                    print m
+                    m = '{0} {1}'.format(uni(time.strftime('%X')), m)
+                    print(str2(m))
             except Exception as e:
-                xbmc.log(fmt('ERROR LOG OUT: {0}', e), xbmc.LOGERROR)
+                xbmc.log(str2('ERROR LOG OUT: {0}').format(str2(e)), xbmc.LOGERROR)
 
     def notice(self, msg):
         return self.__call__(msg)

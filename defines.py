@@ -1,81 +1,42 @@
 # -*- coding: utf-8 -*-
 # Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
+from __future__ import absolute_import, division, unicode_literals
+
+import os
+import sys
+import threading
+
+import requests
+import six
 import xbmcaddon
 import xbmc
 import xbmcgui
-import sys
-import threading
-import os
-import utils
+from six import iteritems
+from utils import uni, str2
+
 import logger
-import requests
 
 log = logger.Logger(__name__)
-fmt = utils.fmt
 
 ADDON = xbmcaddon.Addon()
-ADDON_ID = ADDON.getAddonInfo('id')
-ADDON_ICON = ADDON.getAddonInfo('icon')
-ADDON_PATH = utils.true_enc(ADDON.getAddonInfo('path'), 'utf8')
-DATA_PATH = utils.true_enc(xbmc.translatePath(os.path.join("special://profile/addon_data", ADDON_ID)), 'utf8')
-CACHE_PATH = utils.true_enc(xbmc.translatePath(os.path.join("special://temp", ADDON_ID)), 'utf8')
-PTR_FILE = ADDON.getSetting('port_path')
-# API_MIRROR = ADDON.getSetting('api_mirror')
-# SITE_MIRROR = '1ttv.org' if API_MIRROR == '1ttvxbmc.top' else 'torrent-tv.ru'
-
-# TTV_VERSION = '1.5.3'
-AUTOSTART = ADDON.getSetting('autostart') == 'true'
-AUTOSTART_LASTCH = ADDON.getSetting('autostart_lastch') == 'true'
-GENDER = ADDON.getSetting('gender')
-AGE = ADDON.getSetting('age')
-FAVOURITE = ADDON.getSetting('favourite')
-DEBUG = ADDON.getSetting('debug') == 'true'
-MANUAL_STOP = ADDON.getSetting('manual_stop') == 'true'
-
-skin = ADDON.getSetting('skin')
-if (skin is not None) and (skin != "") and (skin != 'st.anger'):
-    SKIN_PATH = DATA_PATH
-else:
-    SKIN_PATH = ADDON_PATH
+ADDON_ID = uni(ADDON.getAddonInfo('id'))
+ADDON_ICON = uni(ADDON.getAddonInfo('icon'))
+ADDON_PATH = uni(ADDON.getAddonInfo('path'))
+DATA_PATH = uni(xbmc.translatePath(str2(os.path.join("special://profile/addon_data", ADDON_ID))))
+CACHE_PATH = uni(xbmc.translatePath(str2(os.path.join("special://temp", ADDON_ID))))
+PTR_FILE = uni(ADDON.getSetting('port_path'))
+AUTOSTART = uni(ADDON.getSetting('autostart')) == 'true'
+AUTOSTART_LASTCH = uni(ADDON.getSetting('autostart_lastch')) == 'true'
+GENDER = uni(ADDON.getSetting('gender'))
+AGE = uni(ADDON.getSetting('age'))
+FAVOURITE = uni(ADDON.getSetting('favourite'))
+DEBUG = uni(ADDON.getSetting('debug')) == 'true'
 if not os.path.exists(CACHE_PATH):
     os.makedirs(CACHE_PATH)
 
 closeRequested = threading.Event()
 monitor = xbmc.Monitor()
-
-
-def AutostartViaAutoexec(state):
-    autoexec = os.path.join(
-        xbmc.translatePath("special://masterprofile"), 'autoexec.py')
-
-    if os.path.isfile(autoexec):
-        mode = 'r+'
-    elif state:
-        mode = 'w+'
-    else:
-        return
-
-    try:
-        found = False
-        with open(autoexec, mode) as autoexec_file:
-            for line in autoexec_file:
-                if ADDON_ID in line:
-                    found = True
-                    break
-
-            if not found and state:
-                autoexec_file.seek(0)
-                autoexec_file.write('import xbmc\n')
-                autoexec_file.write("xbmc.executebuiltin('RunAddon(%s)')\n" % ADDON_ID)
-                autoexec_file.truncate()
-
-        if not state and found:
-            os.unlink(autoexec)
-    except:
-        t, v, tb = sys.exc_info()
-        log.w(fmt("Error while write autoexec.py: {0}:{1}.", t, v))
-        del tb
 
 
 class MyThread(threading.Thread):
@@ -87,23 +48,20 @@ class MyThread(threading.Thread):
 
 def showNotification(msg, icon=ADDON_ICON):
     try:
-        msg = utils.utf(msg)
-        xbmcgui.Dialog().notification(ADDON.getAddonInfo('name'), msg, icon)
+        xbmcgui.Dialog().notification(str2(ADDON.getAddonInfo('name')), str2(msg), str2(icon))
     except Exception as e:
-        log.e(fmt('showNotification error: "{0}"', e))
+        log.e('showNotification error: "{0}"'.format(uni(e)))
 
 
 def isCancel():
     ret = monitor.abortRequested() or closeRequested.isSet()
-#     log.d(fmt("isCancel {ret}", ret=monitor.abortRequested()))
     return ret
 
 
 def request(url, method='get', params=None, trys=3, interval=0, session=None, **kwargs):
-
-    params_str = "?" + "&".join((fmt("{0}={1}", *i)
-                                 for i in params.iteritems())) if params is not None and method == 'get' else ""
-    log.d(fmt('try to get: {url}{params}', url=url, params=params_str))
+    params_str = "?" + "&".join(("{0}={1}".format(*i)
+                                 for i in iteritems(params))) if params is not None and method == 'get' else ""
+    log.d('try to get: {url}{params}'.format(url=url, params=params_str))
     if not url:
         return
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) \
@@ -128,7 +86,7 @@ Chrome/45.0.2454.99 Safari/537.36'}
             r.raise_for_status()
             return r
         except Exception as e:
-            log.error(fmt('Request error ({t}): {e}', t=t, e=e))
+            log.error('Request error ({t}): {e}'.format(t=t, e=e))
             xbmc.sleep(interval + 1000)
 
 
@@ -156,7 +114,7 @@ def platform():
             else:
                 ret["arch"] = 'mipsel_ucs2'
         elif "aarch64" in uname:
-            if sys.maxint > 2147483647:  # is_64bit_system
+            if six.MAXSIZE > 2147483647:  # is_64bit_system
                 if sys.maxunicode > 65536:
                     ret["arch"] = 'aarch64_ucs4'
                 else:

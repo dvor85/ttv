@@ -1,52 +1,64 @@
 # -*- coding: utf-8 -*-
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-from UserDict import UserDict
-import datetime
-import utils
-import defines
-import yatv
-import logger
-import os
-from channel_info import CHANNEL_INFO
+from __future__ import absolute_import, division, unicode_literals
 
-fmt = utils.fmt
+import datetime
+import os
+
+from six.moves import UserDict
+from utils import uni, str2
+
+import defines
+import logger
+import yatv
+from .channel_info import CHANNEL_INFO
+from .grouplang import translate
+
 log = logger.Logger(__name__)
 
 
 class TChannel(UserDict):
 
-    def __init__(self, data={}):
-        self.data = {}
-        self.data['mode'] = "PID"
-        self.data['players'] = ['ace']
+    def __init__(self, data=None, *args, **kwargs):
+        UserDict.__init__(self, *args, **kwargs)
+        if data is None:
+            data = {}
         self.data.update(data)
+        self.data.update(kwargs)
         self.yatv_logo_path = os.path.join(defines.CACHE_PATH, 'logo')
         if not os.path.exists(self.yatv_logo_path):
             os.mkdir(self.yatv_logo_path)
 
-    def get_url(self, player=None):
+    def src(self):
+        return self.data.get('src', 'undefined')
+
+    def player(self):
+        return self.data.get('player', 'undefined')
+
+    def xurl(self):
+        if self.data.get('url') and not isinstance(self.data.get('url'), dict):
+            self.data['url'] = {
+                self.player(): {
+                    self.src(): uni(self.data.get('url'))
+                }
+            }
         return self.data.get('url')
 
-    def get_mode(self):
-        return self.data.get('mode')
-
-    def get_group(self):
-        name = utils.lower(self.get_name(), 'utf8')
+    def group(self):
+        name = self.name().lower()
+        gr = self.data.get('cat')
         if name in CHANNEL_INFO:
-            self.data['cat'] = CHANNEL_INFO[name].get('cat')
-#         if not self.data.get('cat'):
-#             try:
-#                 self.data['cat'] = CHANNEL_INFO[name]['cat']
-#             except KeyError:
-#                 self.data['cat'] = None
-        return self.data.get('cat')
+            gr = CHANNEL_INFO[name].get('cat')
+        if gr:
+            self.data['cat'] = translate.get(gr.lower(), gr)
+        return uni(self.data.get('cat'))
 
-    def get_logo(self):
-        name = utils.lower(self.get_name(), 'utf8')
-        logo = os.path.join(utils.utf(self.yatv_logo_path), fmt("{name}.png", name=name))
+    def logo(self):
+        name = self.name().lower()
+        logo = os.path.join(self.yatv_logo_path, "{name}.png".format(name=name))
         if not self.data.get('logo'):
-            if os.path.exists(utils.true_enc(logo, 'utf8')):
+            if os.path.exists(logo):
                 self.data['logo'] = logo
             else:
                 self.data['logo'] = ''
@@ -58,31 +70,31 @@ class TChannel(UserDict):
                     ylogo = epg.get_logo_by_name(name)
                     if ylogo:
                         r = defines.request(ylogo, session=epg.get_yatv_sess(), headers={'Referer': 'https://tv.yandex.ru/'})
-                        with open(utils.true_enc(logo, 'utf8'), 'wb') as fp:
+                        with open(logo, 'wb') as fp:
                             fp.write(r.content)
                         self.data['logo'] = logo
 
         except Exception as e:
-            log.e(fmt('update_logo error {0}', e))
+            log.e('update_logo error {0}'.format(e))
 
-        return self.data.get('logo')
+        return uni(self.data.get('logo'))
 
-    def get_id(self):
-        return utils.utf(fmt("{0}", self.data.get('id')))
+    def id(self):
+        return uni(self.data.get('id', self.name()))
 
-    def get_name(self):
-        return utils.utf(self.data.get('name'))
+    def name(self):
+        return uni(self.data.get('name'))
 
-    def get_title(self):
+    def title(self):
         if not self.data.get('title'):
-            name = utils.lower(self.get_name(), 'utf8')
+            name = self.name().lower()
             if name in CHANNEL_INFO:
-                self.data['title'] = utils.uni(CHANNEL_INFO[name].get('aliases', [name])[0], 'utf8').capitalize()
+                self.data['title'] = CHANNEL_INFO[name].get('aliases', [name])[0].capitalize()
             else:
-                self.data['title'] = self.get_name()
-        return self.data["title"]
+                self.data['title'] = name.capitalize()
+        return uni(self.data["title"])
 
-    def get_screenshots(self):
+    def screenshots(self):
         """
         :return [{filename:url},...]
         """
@@ -96,12 +108,12 @@ class TChannel(UserDict):
             epg = yatv.YATV.get_instance()
             if not self.data.get('epg') and epg is not None:
                 self.data['epg'] = []
-                for ep in epg.get_epg_by_name(self.get_name()):
+                for ep in epg.get_epg_by_name(self.name()):
                     self.data['epg'].append(ep)
         except Exception as e:
-            log.e(fmt('update_epglist error {0}', e))
+            log.e('update_epglist error {0}'.format(e))
 
-    def get_epg(self):
+    def epg(self):
         """
         :return [{name, btime, etime},]
         """
@@ -126,15 +138,16 @@ class TChannel(UserDict):
                     log.error(e)
             self.data['epg'] = curepg
         except Exception as e:
-            log.e(fmt('get_epg error {0}', e))
+            log.e('epg error {0}'.format(e))
 
         return self.data.get('epg')
 
 
-class TChannels():
+class TChannels:
 
-    def __init__(self, reload_interval=-1):
+    def __init__(self, reload_interval=-1, prior=0):
         self.channels = []
+        self.prior = prior
         self.reload_interval = reload_interval
 
     def update_channels(self):
