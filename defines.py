@@ -14,6 +14,7 @@ import xbmc
 import xbmcgui
 from six import iteritems
 from utils import uni, str2
+from six.moves import UserDict
 
 import logger
 
@@ -44,6 +45,27 @@ class MyThread(threading.Thread):
     def __init__(self, func, *args, **kwargs):
         threading.Thread.__init__(self, target=func, name=func.__name__, args=args, kwargs=kwargs)
         self.daemon = False
+
+
+class Timers(UserDict):
+    def __init__(self, *args, **kwargs):
+        UserDict.__init__(self, *args, **kwargs)
+        self.data = {}
+        pass
+
+    def start(self, name, timer):
+        if not isCancel():
+            timer.name = name
+            timer.daemon = False
+            timer.start()
+            log.d('start timer "{name}"'.format(name=name))
+            self.data[name] = timer
+
+    def stop(self, name):
+        if self.data.get(name):
+            self.data[name].cancel()
+            log.d('stop timer "{name}"'.format(name=name))
+            self.data[name] = None
 
 
 def showNotification(msg, icon=ADDON_ICON):

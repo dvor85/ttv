@@ -8,7 +8,7 @@ import threading
 
 import xbmcgui
 import xbmc
-from six import itervalues, iteritems
+from six import iteritems, iterkeys
 from utils import uni, str2
 
 import defines
@@ -50,7 +50,7 @@ class MyPlayer(xbmcgui.WindowXML):
         self.title = ''
         self.focusId = MyPlayer.CONTROL_WINDOW_ID
 
-        self.timers = {}
+        self.timers = defines.Timers()
 
         self.channel_number = 0
         self.channel_number_str = ''
@@ -114,17 +114,9 @@ class MyPlayer(xbmcgui.WindowXML):
             self.control_window.setVisible(False)
             self.setFocusId(MyPlayer.CONTROL_WINDOW_ID)
             self.focusId = MyPlayer.CONTROL_WINDOW_ID
-            self.timers[MyPlayer.TIMER_HIDE_CONTROL] = None
 
-        if self.timers.get(MyPlayer.TIMER_HIDE_CONTROL):
-            self.timers[MyPlayer.TIMER_HIDE_CONTROL].cancel()
-            self.timers[MyPlayer.TIMER_HIDE_CONTROL] = None
-
-        if not defines.isCancel():
-            self.timers[MyPlayer.TIMER_HIDE_CONTROL] = threading.Timer(timeout, hide)
-            self.timers[MyPlayer.TIMER_HIDE_CONTROL].name = MyPlayer.TIMER_HIDE_CONTROL
-            self.timers[MyPlayer.TIMER_HIDE_CONTROL].daemon = False
-            self.timers[MyPlayer.TIMER_HIDE_CONTROL].start()
+        self.timers.stop(MyPlayer.TIMER_HIDE_CONTROL)
+        self.timers.start(MyPlayer.TIMER_HIDE_CONTROL, threading.Timer(timeout, hide))
 
     def UpdateEpg(self, ch):
         try:
@@ -179,8 +171,6 @@ class MyPlayer(xbmcgui.WindowXML):
 
     def Show(self):
         log.d('Show')
-        if self.parent.rotate_screen_thr:
-            self.parent.rotate_screen_thr.stop()
         if self._player:
             self.show()
 
@@ -276,17 +266,10 @@ class MyPlayer(xbmcgui.WindowXML):
             self.channel_number = self.parent.selitem_id
             self.chinfo.setLabel(self.parent.list.getListItem(self.parent.selitem_id).getLabel())
             self.channel_number_str = ''
-            self.timers[MyPlayer.TIMER_RUN_SEL_CHANNEL] = None
+            self.timers.stop(MyPlayer.TIMER_RUN_SEL_CHANNEL)
 
-        if self.timers.get(MyPlayer.TIMER_RUN_SEL_CHANNEL):
-            self.timers[MyPlayer.TIMER_RUN_SEL_CHANNEL].cancel()
-            self.timers[MyPlayer.TIMER_RUN_SEL_CHANNEL] = None
-
-        if not defines.isCancel():
-            self.timers[MyPlayer.TIMER_RUN_SEL_CHANNEL] = threading.Timer(timeout, run)
-            self.timers[MyPlayer.TIMER_RUN_SEL_CHANNEL].name = MyPlayer.TIMER_RUN_SEL_CHANNEL
-            self.timers[MyPlayer.TIMER_RUN_SEL_CHANNEL].daemon = False
-            self.timers[MyPlayer.TIMER_RUN_SEL_CHANNEL].start()
+        self.timers.stop(MyPlayer.TIMER_RUN_SEL_CHANNEL)
+        self.timers.start(MyPlayer.TIMER_RUN_SEL_CHANNEL, threading.Timer(timeout, run))
 
     def inc_channel_number(self):
         self.channel_number += 1
@@ -408,9 +391,8 @@ class MyPlayer(xbmcgui.WindowXML):
             self.autoStop()
 
     def close(self):
-        for timer in itervalues(self.timers):
-            if timer:
-                timer.cancel()
+        for name in iterkeys(self.timers):
+            self.timers.stop(name)
         if self.visible.is_set():
             xbmcgui.WindowXML.close(self)
         self.visible.clear()

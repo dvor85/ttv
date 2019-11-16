@@ -144,10 +144,6 @@ class YATV:
                 _yparams["channelOffset"] = p * _yparams["channelLimit"]
                 _params["params"] = json.dumps(_yparams)
 
-                #                 url = 'https://m.tv.yandex.ru/ajax/i-tv-region/get?params=%7B"channelLimit"%3A' + str(limit) + '%2C"channelOffset"%3A' + \
-                #                     str(n * limit) + \
-                #                     '%2C"fields"%3A"channel%2Ctitle%2Cid%2Clogo%2Csizes%2Cwidth%2Cheight%2Csrc%2Ccopyright%2Cschedules%2Cchannels%2CavailableProgramTypes%2Celement%2Cid%2Cname%2Cevents%2Cid%2CchannelId%2Cepisode%2Cdescription%2CseasonName%2CseasonNumber%2Cid%2CprogramId%2Cstart%2Cfinish%2Cprogram%2Cid%2Ctype%2Cid%2Cname"%2Cstart"%3A"' + dtm + \
-                #                     'T03%3A00%3A00%2B03%3A00"%2C"duration"%3A96400%2C"channelProgramsLimit"%3A500%2C"lang"%3A"ru"%7D&userRegion=193&resource=schedule&ncrd=' + ncrd
                 try:
                     r = defines.request(url, params=_params, session=self.sess, headers={'Referer': 'https://tv.yandex.ru/'})
                     fp.write(r.content)
@@ -156,20 +152,6 @@ class YATV:
                 except Exception as e:
                     log.error('update_yatv error: {0}'.format(e))
             fp.write(']')
-
-    def get_finish(self):
-        m = None
-        for p in self.jdata:
-            for sch in p['schedules']:
-                try:
-                    cm = strptime(sch['finish'].split('+')[0])
-                    if not m or m > cm:
-                        m = cm
-                except Exception as e:
-                    pass
-        if not m:
-            return datetime.datetime.now()
-        return m
 
     def get_epg_by_id(self, chid, epg_offset=None):
         if chid is None or chid not in self.availableChannels["availableChannelsIds"]:
@@ -183,11 +165,9 @@ class YATV:
                         ep = {}
                         bt = evt['start'].split('+')
                         bt = strptime(bt[0]) + datetime.timedelta(hours=-3 + offset)
-#                         bt = self.strptime(bt[0])
                         ep['btime'] = time.mktime(bt.timetuple())
                         et = evt['finish'].split('+')
                         et = strptime(et[0]) + datetime.timedelta(hours=-3 + offset)
-#                         et = self.strptime(et[0])
                         ep['etime'] = time.mktime(et.timetuple())
                         ep['name'] = evt['program']['title']
                         ep['desc'] = evt['program'].get('description', '')
