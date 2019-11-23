@@ -101,7 +101,7 @@ class ChannelGroups(UserDict):
 
     def find_group_by_chtitle(self, chtitle):
         for groupname in (x for x in self.getGroups() if x not in WMainForm.USER_GROUPS):
-            if self.find_channel_by_name(groupname, chtitle):
+            if self.find_channel_by_title(groupname, chtitle):
                 return groupname
 
     def find_channel_by_name(self, groupname, name):
@@ -680,10 +680,6 @@ class WMainForm(xbmcgui.WindowXML):
         log.d('fillChannels: Clear list')
         self.list.reset()
         self.list_type = 'channels'
-        #         if not self.channel_groups.getChannels(self.cur_category):
-        #             self.fillCategory()
-        #             self.hideStatus()
-        #         else:
         li = xbmcgui.ListItem('..')
         self.list.addItem(li)
 
