@@ -173,7 +173,6 @@ class YATV:
                         ep['desc'] = evt['program'].get('description', '')
                         if 'images' in evt['program']:
                             ep['screens'] = ['http:{src}'.format(src=x['sizes']['200']['src']) for x in evt['program']['images']]
-                            ep['screens'].insert(0, self.get_logo_by_id(chid))
 
                         yield ep
 

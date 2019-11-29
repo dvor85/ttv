@@ -321,7 +321,8 @@ class WMainForm(xbmcgui.WindowXML):
                     self.getEpg(sel_ch, timeout=0.5, callback=self.showEpg)
 
                 for controlId in (WMainForm.IMG_SCREEN,):
-                    self.getControl(controlId).setImage(selItem.getArt('icon'))
+                    # selItem.getArt('icon') return empty string (kodi 18.5)
+                    self.getControl(controlId).setImage(selItem.getProperty('icon'))
 
     def loadFavourites(self, *args):
         from sources.tchannel import TChannel
@@ -385,7 +386,7 @@ class WMainForm(xbmcgui.WindowXML):
                         if self.progress:
                             self.progress.setPercent((ctime - bt).seconds * 100 // (et - bt).seconds)
                         if 'screens' in ep:
-                            self.showScreen(ep['screens'], 0.5)
+                            self.showScreen(ep['screens'], 2)
                         if self.description_label:
                             self.description_label.setText(str2(ep['desc']))
 
@@ -720,6 +721,7 @@ class WMainForm(xbmcgui.WindowXML):
         def set_logo():
             with sema:
                 chli.setArt({"icon": str2(ch.logo())})
+                chli.setProperty("icon", str2(ch.logo()))
 
         if not defines.isCancel():
             slthread = threading.Thread(target=set_logo)
