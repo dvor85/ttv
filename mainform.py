@@ -9,7 +9,7 @@ import threading
 
 import xbmcgui
 import xbmc
-from six import itervalues, iteritems
+from six import itervalues, iteritems, iterkeys
 from six.moves import UserDict
 from utils import uni, str2
 
@@ -101,7 +101,7 @@ class ChannelGroups(UserDict):
 
     def find_group_by_chtitle(self, chtitle):
         for groupname in (x for x in self.getGroups() if x not in WMainForm.USER_GROUPS):
-            if self.find_channel_by_name(groupname, chtitle):
+            if self.find_channel_by_title(groupname, chtitle):
                 return groupname
 
     def find_channel_by_name(self, groupname, name):
@@ -234,18 +234,16 @@ class WMainForm(xbmcgui.WindowXML):
     API_ERROR_NOPARAM = 'noparam'
     API_ERROR_NOFAVOURITE = 'nofavourite'
 
-    TIMER_GET_EPG = 'get_epg_timer'
-    TIMER_SHOW_SCREEN = 'show_screen_timer'
-    TIMER_SEL_CHANNEL = 'sel_channel_timer'
-    TIMER_HIDE_WINDOW = 'hide_window_timer'
-    TIMER_ADD_RECENT = 'add_recent_timer'
+    TIMER_GET_EPG = __name__ + ':get_epg_timer'
+    TIMER_SHOW_SCREEN = __name__ + ':show_screen_timer'
+    TIMER_SEL_CHANNEL = __name__ + ':sel_channel_timer'
+    TIMER_HIDE_WINDOW = __name__ + ':hide_window_timer'
+    TIMER_ADD_RECENT = __name__ + ':add_recent_timer'
     THREAD_SET_LOGO = 'set_logo_thread'
 
     def __init__(self, *args, **kwargs):
         log.d('__init__')
         self.channel_groups = ChannelGroups()
-        #         self._re_1ttv_epg_text = re.compile('var\s+epg\s*=\s*(?P<e>\[.+?\])\s*;.*?</script>', re.DOTALL)
-        #         self._re_1ttv_epg_json = re.compile('(?P<k>\w+)\s*:\s*(?P<v>.+?[,}])')
         self.img_progress = None
         self.txt_progress = None
         self.progress = None
@@ -261,7 +259,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.channel_number_str = ''
         self.set_logo_sema = threading.Semaphore(24)
 
-        self.timers = {}
+        self.timers = defines.Timers()
         self.rotate_screen_thr = None
         self.loop_play_thr = None
         self._yatv_instance = None
@@ -321,10 +319,10 @@ class WMainForm(xbmcgui.WindowXML):
                 sel_ch = self.get_channel_by_title(uni(selItem.getProperty("title")))
                 if sel_ch:
                     self.getEpg(sel_ch, timeout=0.5, callback=self.showEpg)
-                #                     self.showScreen(sel_chs, timeout=0.5)
 
                 for controlId in (WMainForm.IMG_SCREEN,):
-                    self.getControl(controlId).setImage(selItem.getArt('icon'))
+                    # selItem.getArt('icon') return empty string (kodi 18.5)
+                    self.getControl(controlId).setImage(selItem.getProperty('icon'))
 
     def loadFavourites(self, *args):
         from sources.tchannel import TChannel
@@ -345,13 +343,8 @@ class WMainForm(xbmcgui.WindowXML):
                 timeout = src.reload_interval if res else 60
                 if timeout > 0:
                     name = 'reload_channels_{0}'.format(src_name)
-                    if self.timers.get(name):
-                        self.timers[name].cancel()
-                        self.timers[name] = None
-                    self.timers[name] = threading.Timer(timeout, self.loadChannels, args=args)
-                    self.timers[name].name = name
-                    self.timers[name].daemon = False
-                    self.timers[name].start()
+                    self.timers.stop(name)
+                    self.timers.start(name, threading.Timer(timeout, self.loadChannels, args=args))
 
             except Exception as e:
                 log.d('loadChannels {0} error: {1}'.format(src_name, e))
@@ -368,21 +361,15 @@ class WMainForm(xbmcgui.WindowXML):
                     epg = ch.epg()
                     if epg and callback is not None and chnum == self.player.channel_number:
                         callback(epg)
+                    self.getEpg(ch, 60, callback)
             except Exception as e:
                 log.d('getEpg->get error: {0}'.format(uni(e)))
             finally:
                 #                     self.get_epg_lock.clear()
                 self.hideStatus()
 
-        if self.timers.get(WMainForm.TIMER_GET_EPG):
-            self.timers[WMainForm.TIMER_GET_EPG].cancel()
-            self.timers[WMainForm.TIMER_GET_EPG] = None
-
-        if not defines.isCancel():
-            self.timers[WMainForm.TIMER_GET_EPG] = threading.Timer(timeout, get)
-            self.timers[WMainForm.TIMER_GET_EPG].name = WMainForm.TIMER_GET_EPG
-            self.timers[WMainForm.TIMER_GET_EPG].daemon = False
-            self.timers[WMainForm.TIMER_GET_EPG].start()
+        self.timers.stop(WMainForm.TIMER_GET_EPG)
+        self.timers.start(WMainForm.TIMER_GET_EPG, threading.Timer(timeout, get))
 
     def showEpg(self, curepg):
         try:
@@ -399,7 +386,7 @@ class WMainForm(xbmcgui.WindowXML):
                         if self.progress:
                             self.progress.setPercent((ctime - bt).seconds * 100 // (et - bt).seconds)
                         if 'screens' in ep:
-                            self.showScreen(ep['screens'], 0.5)
+                            self.showScreen(ep['screens'], 2)
                         if self.description_label:
                             self.description_label.setText(str2(ep['desc']))
 
@@ -441,17 +428,8 @@ class WMainForm(xbmcgui.WindowXML):
                 self.rotate_screen_thr = RotateScreen(img_screen, screens)
                 self.rotate_screen_thr.start()
 
-            self.timers[WMainForm.TIMER_SHOW_SCREEN] = None
-
-        if self.timers.get(WMainForm.TIMER_SHOW_SCREEN):
-            self.timers[WMainForm.TIMER_SHOW_SCREEN].cancel()
-            self.timers[WMainForm.TIMER_SHOW_SCREEN] = None
-
-        if not defines.isCancel():
-            self.timers[WMainForm.TIMER_SHOW_SCREEN] = threading.Timer(timeout, show)
-            self.timers[WMainForm.TIMER_SHOW_SCREEN].name = WMainForm.TIMER_SHOW_SCREEN
-            self.timers[WMainForm.TIMER_SHOW_SCREEN].daemon = False
-            self.timers[WMainForm.TIMER_SHOW_SCREEN].start()
+        self.timers.stop(WMainForm.TIMER_SHOW_SCREEN)
+        self.timers.start(WMainForm.TIMER_SHOW_SCREEN, threading.Timer(timeout, show))
 
     def updateList(self):
 
@@ -529,7 +507,6 @@ class WMainForm(xbmcgui.WindowXML):
 
         def clear():
             self.channel_number_str = ''
-            self.timers[WMainForm.TIMER_SEL_CHANNEL] = None
 
         if not self.list_type == 'channels':
             return
@@ -543,15 +520,8 @@ class WMainForm(xbmcgui.WindowXML):
             self.setFocus(self.list)
             self.list.selectItem(str2(self.selitem_id))
 
-        if self.timers.get(WMainForm.TIMER_SEL_CHANNEL):
-            self.timers[WMainForm.TIMER_SEL_CHANNEL].cancel()
-            self.timers[WMainForm.TIMER_SEL_CHANNEL] = None
-
-        if not defines.isCancel():
-            self.timers[WMainForm.TIMER_SEL_CHANNEL] = threading.Timer(timeout, clear)
-            self.timers[WMainForm.TIMER_SEL_CHANNEL].name = WMainForm.TIMER_SEL_CHANNEL
-            self.timers[WMainForm.TIMER_SEL_CHANNEL].daemon = False
-            self.timers[WMainForm.TIMER_SEL_CHANNEL].start()
+        self.timers.stop(WMainForm.TIMER_SEL_CHANNEL)
+        self.timers.start(WMainForm.TIMER_SEL_CHANNEL, threading.Timer(timeout, clear))
 
     def hide_main_window(self, timeout=0):
         log.d('hide main window in {0} sec'.format(timeout))
@@ -563,19 +533,16 @@ class WMainForm(xbmcgui.WindowXML):
             log.d('isPlaying={0}'.format(isPlaying()))
             if isPlaying():
                 log.d('hide main window')
-
                 self.player.Show()
-            self.timers[WMainForm.TIMER_HIDE_WINDOW] = None
+                for name in iterkeys(self.timers):
+                    if name.startswith(__name__):
+                        self.timers.stop(name)
 
-        if self.timers.get(WMainForm.TIMER_HIDE_WINDOW):
-            self.timers[WMainForm.TIMER_HIDE_WINDOW].cancel()
-            self.timers[WMainForm.TIMER_HIDE_WINDOW] = None
+                if self.rotate_screen_thr:
+                    self.rotate_screen_thr.stop()
 
-        if not defines.isCancel():
-            self.timers[WMainForm.TIMER_HIDE_WINDOW] = threading.Timer(timeout, hide)
-            self.timers[WMainForm.TIMER_HIDE_WINDOW].name = WMainForm.TIMER_HIDE_WINDOW
-            self.timers[WMainForm.TIMER_HIDE_WINDOW].daemon = False
-            self.timers[WMainForm.TIMER_HIDE_WINDOW].start()
+        self.timers.stop(WMainForm.TIMER_HIDE_WINDOW)
+        self.timers.start(WMainForm.TIMER_HIDE_WINDOW, threading.Timer(timeout, hide))
 
     def add_recent_channel(self, channel, timeout=0):
         log.d('add_resent_channel in {0} sec'.format(timeout))
@@ -585,17 +552,9 @@ class WMainForm(xbmcgui.WindowXML):
                 if favdb.LocalFDB().add_recent(channel.title()):
                     self.channel_groups.clearGroup(WMainForm.USER_GROUPS[0])
                     self.loadFavourites()
-            self.timers[WMainForm.TIMER_ADD_RECENT] = None
 
-        if self.timers.get(WMainForm.TIMER_ADD_RECENT):
-            self.timers[WMainForm.TIMER_ADD_RECENT].cancel()
-            self.timers[WMainForm.TIMER_ADD_RECENT] = None
-
-        if not defines.isCancel():
-            self.timers[WMainForm.TIMER_ADD_RECENT] = threading.Timer(timeout, add)
-            self.timers[WMainForm.TIMER_ADD_RECENT].name = WMainForm.TIMER_ADD_RECENT
-            self.timers[WMainForm.TIMER_ADD_RECENT].daemon = False
-            self.timers[WMainForm.TIMER_ADD_RECENT].start()
+        self.timers.stop(WMainForm.TIMER_ADD_RECENT)
+        self.timers.start(WMainForm.TIMER_ADD_RECENT, threading.Timer(timeout, add))
 
     def onClick(self, controlID):
         log.d('onClick {0}'.format(controlID))
@@ -722,10 +681,6 @@ class WMainForm(xbmcgui.WindowXML):
         log.d('fillChannels: Clear list')
         self.list.reset()
         self.list_type = 'channels'
-        #         if not self.channel_groups.getChannels(self.cur_category):
-        #             self.fillCategory()
-        #             self.hideStatus()
-        #         else:
         li = xbmcgui.ListItem('..')
         self.list.addItem(li)
 
@@ -766,6 +721,7 @@ class WMainForm(xbmcgui.WindowXML):
         def set_logo():
             with sema:
                 chli.setArt({"icon": str2(ch.logo())})
+                chli.setProperty("icon", str2(ch.logo()))
 
         if not defines.isCancel():
             slthread = threading.Thread(target=set_logo)
@@ -799,9 +755,8 @@ class WMainForm(xbmcgui.WindowXML):
             if self.player._player:
                 self.player._player.end()
 
-        for timer in itervalues(self.timers):
-            if timer:
-                timer.cancel()
+        for name in iterkeys(self.timers):
+            self.timers.stop(name)
 
         if self.rotate_screen_thr:
             self.rotate_screen_thr.stop()

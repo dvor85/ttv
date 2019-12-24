@@ -85,11 +85,13 @@ def str2(s, to_encoding='utf8'):
     return s
 
 
-def fs_enc(path):
+def fs_enc(path, from_encoding='utf8'):
     """
     windows workaround. Используется в Popen.
     """
-    enc = sys.getfilesystemencoding()
-    if enc is None:
-        enc = 'utf8'
-    return path.encode(enc, 'ignore')
+    if PY2:
+        enc = sys.getfilesystemencoding()
+        if enc is None:
+            enc = 'utf8'
+        return uni(path, from_encoding).encode(enc, 'ignore')
+    return uni(path, from_encoding)
