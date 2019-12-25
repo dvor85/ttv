@@ -46,7 +46,7 @@ class TChannel(UserDict):
         return self.data.get('url')
 
     def group(self):
-        name = self.name().lower()
+        name = yatv.get_name_offset(self.name().lower())[0]
         gr = self.data.get('cat')
         if name in CHANNEL_INFO:
             gr = CHANNEL_INFO[name].get('cat')

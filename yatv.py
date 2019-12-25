@@ -32,6 +32,8 @@ def get_name_offset(name):
     name_offset = _name_offset_regexp.search(name)
     if name_offset:
         return name_offset.group('name'), str2int(name_offset.group('offset'))
+    else:
+        return name, None
 
 
 class YATV:
@@ -186,10 +188,11 @@ class YATV:
 
     def get_epg_by_name(self, name):
         name_offset = get_name_offset(name)
-        if name_offset:
-            return self.get_epg_by_id(self.get_id_by_name(name_offset[0]), name_offset[1])
-        else:
-            return self.get_epg_by_id(self.get_id_by_name(name))
+        return self.get_epg_by_id(self.get_id_by_name(name_offset[0]), name_offset[1])
+#         if name_offset:
+#             return self.get_epg_by_id(self.get_id_by_name(name_offset[0]), name_offset[1])
+#         else:
+#             return self.get_epg_by_id(self.get_id_by_name(name))
 
     def get_logo_by_id(self, chid):
         if chid is None or chid not in self.availableChannels["availableChannelsIds"]:
@@ -203,10 +206,11 @@ class YATV:
 
     def get_logo_by_name(self, name):
         name_offset = get_name_offset(name)
-        if name_offset:
-            return self.get_logo_by_id(self.get_id_by_name(name_offset[0]))
-        else:
-            return self.get_logo_by_id(self.get_id_by_name(name))
+        return self.get_logo_by_id(self.get_id_by_name(name_offset[0]))
+#         if name_offset:
+#             return self.get_logo_by_id(self.get_id_by_name(name_offset[0]))
+#         else:
+#             return self.get_logo_by_id(self.get_id_by_name(name))
 
 
 if __name__ == '__main__':

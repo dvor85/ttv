@@ -114,7 +114,7 @@ Chrome/45.0.2454.99 Safari/537.36'}
 
 def platform():
     ret = {
-        "arch": sys.maxsize > 2 ** 32 and "x64" or "x86",
+        "arch": six.MAXSIZE > 2 ** 32 and "x64" or "x86",
     }
     if xbmc.getCondVisibility("system.platform.android"):
         ret["os"] = "android"
@@ -136,7 +136,7 @@ def platform():
             else:
                 ret["arch"] = 'mipsel_ucs2'
         elif "aarch64" in uname:
-            if six.MAXSIZE > 2147483647:  # is_64bit_system
+            if six.MAXSIZE > 2 ** 32:  # is_64bit_system
                 if sys.maxunicode > 65536:
                     ret["arch"] = 'aarch64_ucs4'
                 else:
