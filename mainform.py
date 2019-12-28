@@ -171,6 +171,7 @@ class LoopPlay(threading.Thread):
                     defines.ADDON.setSetting('cur_channel', str2(self.parent.cur_channel))
                     if not self.parent.player.Start(sel_ch):
                         break
+                    self.parent.player.close()
                 if not defines.isCancel():
                     xbmc.sleep(223)
                     self.parent.select_channel()
