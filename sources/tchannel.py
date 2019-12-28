@@ -87,12 +87,19 @@ class TChannel(UserDict):
 
     def title(self):
         if not self.data.get('title'):
-            name = self.name().lower()
-            if name in CHANNEL_INFO:
-                self.data['title'] = CHANNEL_INFO[name].get('aliases', [name])[0].capitalize()
+            name_offset = yatv.get_name_offset(self.name().lower())
+            ctime = datetime.datetime.now()
+            offset = round((ctime - datetime.datetime.utcnow()).total_seconds() / 3600)
+            if name_offset[0] in CHANNEL_INFO:
+                self.data['title'] = CHANNEL_INFO[name_offset[0]].get('aliases', [name_offset[0]])[0].capitalize()
             else:
-                self.data['title'] = name.capitalize()
+                self.data['title'] = name_offset[0].capitalize()
+            if name_offset[1] and name_offset[1] != offset and self.sign(name_offset[1]):
+                self.data['title'] += " ({sign}{offset})".format(sign=self.sign(name_offset[1]), offset=name_offset[1])
         return uni(self.data["title"])
+
+    def sign(self, num):
+        return "+" if num > 0 else "-"
 
     def screenshots(self):
         """

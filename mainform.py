@@ -265,6 +265,7 @@ class WMainForm(xbmcgui.WindowXML):
         self._yatv_instance = None
 
     def onInit(self):
+        log.d('onInit')
         self.cur_category = uni(defines.ADDON.getSetting('cur_category'))
         self.cur_channel = uni(defines.ADDON.getSetting('cur_channel'))
         self.img_progress = self.getControl(WMainForm.IMG_PROGRESS)

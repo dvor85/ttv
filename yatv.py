@@ -189,10 +189,6 @@ class YATV:
     def get_epg_by_name(self, name):
         name_offset = get_name_offset(name)
         return self.get_epg_by_id(self.get_id_by_name(name_offset[0]), name_offset[1])
-#         if name_offset:
-#             return self.get_epg_by_id(self.get_id_by_name(name_offset[0]), name_offset[1])
-#         else:
-#             return self.get_epg_by_id(self.get_id_by_name(name))
 
     def get_logo_by_id(self, chid):
         if chid is None or chid not in self.availableChannels["availableChannelsIds"]:
@@ -207,10 +203,6 @@ class YATV:
     def get_logo_by_name(self, name):
         name_offset = get_name_offset(name)
         return self.get_logo_by_id(self.get_id_by_name(name_offset[0]))
-#         if name_offset:
-#             return self.get_logo_by_id(self.get_id_by_name(name_offset[0]))
-#         else:
-#             return self.get_logo_by_id(self.get_id_by_name(name))
 
 
 if __name__ == '__main__':
