@@ -72,7 +72,7 @@ def uni(s, from_encoding='utf8'):
     """
 
     if isinstance(s, six.binary_type):
-        s = s.decode(from_encoding, 'ignore')
+        return s.decode(from_encoding, 'ignore')
     return s
 
 
@@ -82,7 +82,7 @@ def str2(s, to_encoding='utf8'):
     """
     if PY2 and isinstance(s, unicode):
         return s.encode(to_encoding, 'ignore')
-    return s
+    return str(s)
 
 
 def fs_enc(path, from_encoding='utf8'):

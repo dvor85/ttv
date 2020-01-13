@@ -9,7 +9,8 @@ import socket
 import subprocess
 import threading
 import time
-from requests.utils import unquote
+import random
+from requests.utils import quote, unquote
 
 # imports
 import xbmc
@@ -221,7 +222,7 @@ class AcePlayer(TPlayer):
         self._connectToTS()
 
     def _sockConnect(self):
-        self.sock.connect((str2(self.server_ip), str2(self.aceport)))
+        self.sock.connect((str2(self.server_ip), self.aceport))
         self.sock.setblocking(0)
         self.sock.settimeout(10)
 
@@ -482,6 +483,45 @@ class AcePlayer(TPlayer):
         self.sock_thr.owner = self
         self.sock_thr.start()
 
+    def _load_torrent(self, torrent, mode):
+        log("Load Torrent: {0}, mode: {1}".format(torrent, mode))
+        cmdparam = ''
+        if mode != AcePlayer.MODE_PID:
+            cmdparam = ' 0 0 0'
+        self.quid = str(random.randint(0, 0x7fffffff))
+        comm = 'LOADASYNC {req_id} {mode} {url} {param}'.format(req_id=self.quid, mode=mode, url=torrent, param=cmdparam)
+        self.parent.showStatus("Загрузка торрента")
+
+        if self._send_command(comm):
+            msg = self._send_command(comm, TSMessage.LOADRESP)
+            if msg:
+                try:
+                    log.d('_load_torrent - {0}'.format(msg.getType()))
+                    log.d('Compile file list')
+#                     jsonfile = uni(msg.getParams()['json'])
+#                     if 'files' not in jsonfile:
+#                         self.parent.showStatus(uni(jsonfile['message']))
+#                         self.last_error = Exception(jsonfile['message'])
+#                         log.e('Compile file list {0}'.format(uni(self.last_error)))
+#                         return
+#                     self.count = len(jsonfile['files'])
+#                     self.files = {}
+#                     for f in jsonfile['files']:
+#                         self.files[f[1]] = unquote(quote(f[0]))
+#                     log.d('End Compile file list')
+
+                except Exception as e:
+                    log.e('_load_torrent error: {0}'.format(uni(e)))
+#                     self.last_error = uni(e)
+#                     self.end()
+            else:
+                self.last_error = 'Incorrect msg from AceEngine'
+                self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
+                self.stop()
+                return
+
+            self.parent.hideStatus()
+
     def _stateHandler(self, state):
         """
         Run when a TSMessage are received.
@@ -578,15 +618,15 @@ class AcePlayer(TPlayer):
             return
         url = kwargs.get('url')
         mode = kwargs.get('mode')
-        index = kwargs.get('index')
+        index = kwargs.get('index', 0)
         if not url:
             self.parent.showStatus('Нечего проигрывать')
             return
-        spons = '0 0 0' if mode != AcePlayer.MODE_PID else ''
-        comm = 'START {mode} {torrent} {index} {spons}'.format(mode=mode,
-                                                               torrent=url,
-                                                               index=index,
-                                                               spons=spons)
+        oparams = '0 0 0' if mode != AcePlayer.MODE_PID else ''
+        comm = 'START {mode} {torrent} {index} {oparams}'.format(mode=mode,
+                                                                 torrent=url,
+                                                                 index=index,
+                                                                 oparams=oparams)
         log.d("Запуск торрента")
         xbmc.sleep(4)
         self.parent.showStatus("Запуск торрента")

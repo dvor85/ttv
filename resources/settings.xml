@@ -13,6 +13,7 @@
 		<setting default="https://iptvx.one/epg/epg.xml.gz" id="epg_url" label="Ссылка EPG (xmltv)" type="text" visible="false" />
 		<setting id="allfon" label="Allfon (Приоритет. Если <= 0, то выключен)" type="number" default="1" />
 		<setting id="acestream" label="Acestream (Приоритет. Если <= 0, то выключен)" type="number" default="2" />
+		<setting id="ttv" label="TTV (Приоритет. Если <= 0, то выключен)" type="number" default="1" />
 	</category>
 	<category label="AceStream">
 		<setting default="true" id="use_ace" label="Использовать Acestream, если доступно" type="bool" />
@@ -20,6 +21,8 @@
 		<setting default="127.0.0.1" id="ip_addr" label="IP-адрес acestreamengine" type="text" />
 		<setting default="8621" id="outport" label="Внеший порт AceStream" type="number" />
 		<setting default="20" id="freeze_timeout" label="Таймаут ожидания, сек." type="number" />
+		<setting default="" id="login" label="Логин ttv" type="text" visible="true" />
+		<setting default="" id="password" label="Пароль ttv" type="text" visible="true" />
 	</category>
 	<category label="Noxbit">
 		<setting default="false" id="use_nox" label="Использовать Noxbit, если доступно" type="bool" />

@@ -204,7 +204,7 @@ class MyPlayer(xbmcgui.WindowXML):
                             players.AcePlayer.clear_instance()
                             self._player = None
                         self._player = players.AcePlayer.get_instance(parent=self.parent)
-                        mode = 'PID'
+                        mode = channel.get('mode', 'PID')
                     elif player == 'nox':
                         if self._player and self._player.last_error:
                             players.NoxPlayer.clear_instance()

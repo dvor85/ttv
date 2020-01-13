@@ -389,7 +389,7 @@ class WMainForm(xbmcgui.WindowXML):
                             self.progress.setPercent((ctime - bt).seconds * 100 // (et - bt).seconds)
                         if 'screens' in ep:
                             self.showScreen(ep['screens'], 2)
-                        if self.description_label:
+                        if self.description_label and 'desc' in ep:
                             self.description_label.setText(str2(ep['desc']))
 
                 except:
@@ -520,7 +520,7 @@ class WMainForm(xbmcgui.WindowXML):
         if 0 < chnum < self.list.size():
             self.selitem_id = chnum
             self.setFocus(self.list)
-            self.list.selectItem(str2(self.selitem_id))
+            self.list.selectItem(self.selitem_id)
 
         self.timers.stop(WMainForm.TIMER_SEL_CHANNEL)
         self.timers.start(WMainForm.TIMER_SEL_CHANNEL, threading.Timer(timeout, clear))

@@ -18,6 +18,10 @@ from .grouplang import translate
 log = logger.Logger(__name__)
 
 
+def sign(num):
+    return "+" if num > 0 else "-"
+
+
 class TChannel(UserDict):
 
     def __init__(self, data=None, *args, **kwargs):
@@ -31,62 +35,63 @@ class TChannel(UserDict):
             os.mkdir(self.yatv_logo_path)
 
     def src(self):
-        return self.data.get('src', 'undefined')
+        return self.get('src', 'undefined')
 
     def player(self):
-        return self.data.get('player', 'undefined')
+        return self.get('player', 'undefined')
 
     def xurl(self):
-        if self.data.get('url') and not isinstance(self.data.get('url'), dict):
+        if self.get('url') and not isinstance(self.get('url'), dict):
             self.data['url'] = {
                 self.player(): {
-                    self.src(): uni(self.data.get('url'))
+                    self.src(): uni(self.get('url'))
                 }
             }
-        return self.data.get('url')
+        return self['url']
 
     def group(self):
         name = yatv.get_name_offset(self.name().lower())[0]
-        gr = self.data.get('cat')
+        gr = self.get('cat')
         if name in CHANNEL_INFO:
             gr = CHANNEL_INFO[name].get('cat')
         if gr:
             self.data['cat'] = translate.get(gr.lower(), gr)
-        return uni(self.data.get('cat'))
+        return uni(self.get('cat'))
 
     def logo(self):
         name = self.name().lower()
         logo = os.path.join(self.yatv_logo_path, "{name}.png".format(name=name))
-        if not self.data.get('logo'):
+        if not self.get('logo'):
             if os.path.exists(logo):
                 self.data['logo'] = logo
             else:
                 self.data['logo'] = ''
 
         try:
-            if not self.data.get('logo'):
+            if not self.get('logo'):
                 epg = yatv.YATV.get_instance()
                 if epg is not None:
                     ylogo = epg.get_logo_by_name(name)
                     if ylogo:
                         r = defines.request(ylogo, session=epg.get_yatv_sess(), headers={'Referer': 'https://tv.yandex.ru/'})
-                        with open(logo, 'wb') as fp:
-                            fp.write(r.content)
+                        if len(r.content) > 0:
+                            with open(logo, 'wb') as fp:
+                                fp.write(r.content)
                         self.data['logo'] = logo
 
         except Exception as e:
             log.e('update_logo error {0}'.format(e))
 
-        return uni(self.data.get('logo'))
+        return uni(self.get('logo'))
 
     def id(self):
-        return uni(self.data.get('id', self.name()))
+        return uni(self.get('id', self.name()))
 
     def name(self):
-        return uni(self.data.get('name'))
+        return uni(self.get('name'))
 
     def title(self):
-        if not self.data.get('title'):
+        if not self.get('title'):
             name_offset = yatv.get_name_offset(self.name().lower())
             ctime = datetime.datetime.now()
             offset = round((ctime - datetime.datetime.utcnow()).total_seconds() / 3600)
@@ -94,12 +99,9 @@ class TChannel(UserDict):
                 self.data['title'] = CHANNEL_INFO[name_offset[0]].get('aliases', [name_offset[0]])[0].capitalize()
             else:
                 self.data['title'] = name_offset[0].capitalize()
-            if name_offset[1] and name_offset[1] != offset and self.sign(name_offset[1]):
-                self.data['title'] += " ({sign}{offset})".format(sign=self.sign(name_offset[1]), offset=name_offset[1])
+            if name_offset[1] and name_offset[1] != offset and sign(name_offset[1]):
+                self.data['title'] += " ({sign}{offset})".format(sign=sign(name_offset[1]), offset=name_offset[1])
         return uni(self.data["title"])
-
-    def sign(self, num):
-        return "+" if num > 0 else "-"
 
     def screenshots(self):
         """
@@ -113,7 +115,7 @@ class TChannel(UserDict):
             #                 epg = xmltv.XMLTV.get_instance()
             #             else:
             epg = yatv.YATV.get_instance()
-            if not self.data.get('epg') and epg is not None:
+            if not self.get('epg') and epg is not None:
                 self.data['epg'] = []
                 for ep in epg.get_epg_by_name(self.name()):
                     self.data['epg'].append(ep)
@@ -133,7 +135,7 @@ class TChannel(UserDict):
             prev_bt = 0
             prev_et = 0
             curepg = []
-            for x in self.data.get('epg', []):
+            for x in self.get('epg', []):
                 try:
                     bt = datetime.datetime.fromtimestamp(float(x['btime']))
                     et = datetime.datetime.fromtimestamp(float(x['etime']))
@@ -147,7 +149,7 @@ class TChannel(UserDict):
         except Exception as e:
             log.e('epg error {0}'.format(e))
 
-        return self.data.get('epg')
+        return self.get('epg')
 
 
 class TChannels:
