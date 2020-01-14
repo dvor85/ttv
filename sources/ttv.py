@@ -5,35 +5,37 @@ from __future__ import absolute_import, division, unicode_literals
 
 import defines
 from utils import uni, str2, str2int
+import requests
 import logger
 import uuid
 import os
 from .tchannel import TChannel, TChannels
 
 log = logger.Logger(__name__)
+_server = 'ttv.world'
 _servers = ['api.ttv.world']
+_sess = requests.Session()
 
 
 class Channel(TChannel):
 
-    def __init__(self, data={}, session=None):
+    def __init__(self, data={}, ttv_session=None):
         TChannel.__init__(self, data=data, src='ttv', player='ace,nox')
         self.use_nox = uni(defines.ADDON.getSetting('use_nox')) == 'true'
         self.use_ace = uni(defines.ADDON.getSetting('use_ace')) == 'true'
-        self.session = session
+        self.ttv_session = ttv_session
 
     def __getitem__(self, key):
-        log.d('access {0}'.format(key))
         if key == 'url':
             if not isinstance(self.data.get(key), dict):
                 self.data[key] = {}
                 if self.use_ace:
                     self.data[key]['ace'] = {
-                        self.src(): self._get_ace_url(),
+                        self.src(): (self._get_ace_url(), self.get('mode'))
                     }
                 if self.use_nox:
                     self.data[key]['nox'] = {
-                        self.src(): self._get_nox_url(),
+                        self.src(): (self._get_nox_url(), self.get('mode'))
                     }
         return TChannel.__getitem__(self, key)
 
@@ -41,12 +43,12 @@ class Channel(TChannel):
         for server in _servers:
             try:
                 params = dict(
-                    session=self.session,
+                    session=self.ttv_session,
                     channel_id=self.id(),
                     typeresult='json')
 
                 r = defines.request("http://{server}/v3/translation_stream.php".format(server=server),
-                                    params=params, trys=1)
+                                    params=params, session=_sess, trys=1)
                 jdata = r.json()
                 self.data['mode'] = jdata["type"].upper().replace("CONTENTID", "PID")
                 return jdata['source']
@@ -59,10 +61,11 @@ class Channel(TChannel):
         for server in _servers:
             try:
                 params = dict(
-                    session=self.session,
+                    session=self.ttv_session,
                     channel_id=self.id(),
                     typeresult='json')
-                r = defines.request("http://{server}/v3/get_noxbit_cid.php".format(server=server), params=params, trys=1)
+                r = defines.request("http://{server}/v3/get_noxbit_cid.php".format(server=server),
+                                    params=params, session=_sess, trys=1)
 
                 jdata = r.json()
                 if not jdata["success"]:
@@ -83,11 +86,11 @@ class Channel(TChannel):
             for server in _servers:
                 try:
                     params = dict(
-                        session=self.session,
+                        session=self.ttv_session,
                         epg_id=self.get('epg_id'),
                         typeresult='json')
                     r = defines.request('http://{server}/v3/translation_epg.php'.format(server=server),
-                                        params=params, trys=1)
+                                        params=params, session=_sess, trys=1)
 
                     jdata = r.json()
                     if str2int(jdata.get('success')) != 0:
@@ -100,38 +103,20 @@ class Channel(TChannel):
                     log.d('update_epglist error: {0}'.format(uni(e)))
 
     def logo(self):
-        name = self.name().lower()
-        logo = os.path.join(self.yatv_logo_path, "{name}.png".format(name=name))
-        if os.path.exists(logo):
-            self.data['logo'] = logo
-
-        try:
-            if self.get('logo') and not os.path.exists(logo):
-                ttv_logo = 'http://{server}/uploads/{logo}'.format(server='ttv.world', logo=uni(self.data['logo']))
-                r = defines.request(ttv_logo)
-                if len(r.content) > 0:
-                    with open(logo, 'wb') as fp:
-                        fp.write(r.content)
-                self.data['logo'] = logo
-
-        except Exception as e:
-            log.e('update_logo error {0}'.format(e))
-
-        if not self.get('logo'):
-            self.data['logo'] = TChannel.logo(self)
-
-        return self.get('logo')
+        if self.get('logo') and '://' not in self.get('logo'):
+            self.data['logo'] = 'http://{server}/uploads/{logo}'.format(server=_server, logo=uni(self.get('logo')))
+        return TChannel.logo(self)
 
     def _get_screenshots(self):
         for server in _servers:
             try:
                 params = dict(
-                    session=self.session,
+                    session=self.ttv_session,
                     channel_id=self.id(),
                     count=2,
                     typeresult='json')
                 r = defines.request('http://{server}/v3/translation_screen.php'.format(server=server),
-                                    params=params, trys=1)
+                                    params=params, session=_sess, trys=1)
 
                 jdata = r.json()
                 if str2int(jdata.get('success')) != 0 and not jdata.get('error'):
@@ -144,7 +129,7 @@ class Channels(TChannels):
 
     def __init__(self, prior=0):
         self.user = {}
-        self.session = None
+        self.ttv_session = None
         TChannels.__init__(self, reload_interval=-1, prior=prior)
 
     def _initTTV(self):
@@ -178,7 +163,7 @@ class Channels(TChannels):
                         guid=guid
                     )
                     r = defines.request('http://{server}/v3/auth.php'.format(server=server),
-                                        params=params, trys=1)
+                                        params=params, session=_sess, trys=1)
                     jdata = r.json()
                     if str2int(jdata.get('success')) == 0:
                         raise Exception("Auth error: {0}".format(uni(jdata.get('error'))))
@@ -190,7 +175,7 @@ class Channels(TChannels):
                          "balance": jdata.get("balance"),
                          "vip": jdata["balance"] > 1}
 
-            self.session = jdata.get('session')
+            self.ttv_session = jdata.get('session')
         except Exception as e:
             log.error("_initTTV error: {0}".format(uni(e)))
 
@@ -203,15 +188,15 @@ class Channels(TChannels):
     def update_channels(self):
         TChannels.update_channels(self)
         self._initTTV()
-        if self.session:
+        if self.ttv_session:
             for server in _servers:
                 try:
                     params = dict(
-                        session=self.session,
+                        session=self.ttv_session,
                         type='channel',
                         typeresult='json')
                     r = defines.request('http://{server}/v3/translation_list.php'.format(server=server),
-                                        params=params, trys=1)
+                                        params=params, session=_sess, trys=1)
 
                     jdata = r.json()
 
@@ -228,6 +213,6 @@ class Channels(TChannels):
                             continue
                         channel = ch
                         channel['cat'] = self._get_groupname_by_id(jdata.get("categories"), ch['group'])
-                        self.channels.append(Channel(channel, self.session))
+                        self.channels.append(Channel(channel, self.ttv_session))
                     except Exception as e:
                         log.e('Add channel error: {0}'.format(uni(e)))

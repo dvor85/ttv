@@ -218,22 +218,22 @@ class MyPlayer(xbmcgui.WindowXML):
 
                     if self._player:
                         self.parent.add_recent_channel(channel, 300)
-                        for src_name, url in sorted(iteritems(src), key=src_cmp, reverse=True):
+                        for src_name, url_mode in sorted(iteritems(src), key=src_cmp, reverse=True):
                             try:
-                                log.d('play "{0}" from source "{1}"'.format(url, src_name))
+                                log.d('play "{0}" from source "{1}"'.format(url_mode[0], src_name))
                                 self._player.play_item(index=0, title=self.title,
                                                        iconImage=logo,
                                                        thumbnailImage=logo,
-                                                       url=url, mode=mode)
+                                                       url=url_mode[0], mode=url_mode[1])
                             except Exception as e:
-                                log.e("Error play {0}: {1}".format(url, e))
+                                log.e("Error play {0}: {1}".format(url_mode, e))
                             finally:
                                 if self.manual_stop_requested or defines.isCancel():
                                     self.close()
                                     return
                                 if self.channel_stop_requested:
                                     return True
-                            log.d('End playing url "{0}"'.format(url))
+                            log.d('End playing url "{0}"'.format(url_mode))
 
                 except Exception as e:
                     log.e("Error play with {0} player: {1}".format(player, e))

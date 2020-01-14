@@ -44,7 +44,7 @@ class TChannel(UserDict):
         if self.get('url') and not isinstance(self.get('url'), dict):
             self.data['url'] = {
                 self.player(): {
-                    self.src(): uni(self.get('url'))
+                    self.src(): (uni(self.get('url')), self.get('mode'))
                 }
             }
         return self['url']
@@ -61,24 +61,25 @@ class TChannel(UserDict):
     def logo(self):
         name = self.name().lower()
         logo = os.path.join(self.yatv_logo_path, "{name}.png".format(name=name))
+        epg = None
+        if os.path.exists(logo):
+            self.data['logo'] = logo
+            return logo
         if not self.get('logo'):
-            if os.path.exists(logo):
-                self.data['logo'] = logo
-            else:
-                self.data['logo'] = ''
+            epg = yatv.YATV.get_instance()
+            if epg is not None:
+                logo_url = epg.get_logo_by_name(name)
+        elif '://' in self.get('logo'):
+            logo_url = self.get('logo')
 
         try:
-            if not self.get('logo'):
-                epg = yatv.YATV.get_instance()
-                if epg is not None:
-                    ylogo = epg.get_logo_by_name(name)
-                    if ylogo:
-                        r = defines.request(ylogo, session=epg.get_yatv_sess(), headers={'Referer': 'https://tv.yandex.ru/'})
-                        if len(r.content) > 0:
-                            with open(logo, 'wb') as fp:
-                                fp.write(r.content)
-                        self.data['logo'] = logo
-
+            if logo_url:
+                _sess = epg.get_yatv_sess() if epg else None
+                r = defines.request(logo_url, session=_sess, headers={'Referer': 'https://tv.yandex.ru/'})
+                if len(r.content) > 0:
+                    with open(logo, 'wb') as fp:
+                        fp.write(r.content)
+                    self.data['logo'] = logo
         except Exception as e:
             log.e('update_logo error {0}'.format(e))
 
