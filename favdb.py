@@ -152,11 +152,10 @@ class LocalFDB(FDB):
 
         return FDB.API_ERROR_ALREADY
 
-    def set_pin(self, name, pin):
+    def set_pin(self, name, pin=True):
         log.d('set pin={0} of channel {1}'.format(pin, name))
 
         ci = self.find(name)
         if ci is not None:
             self.channels[ci]['pin'] = pin
-            self.save()
-            return FDB.API_NO_REFRESH
+            return self.save()

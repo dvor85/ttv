@@ -518,7 +518,7 @@ class WMainForm(xbmcgui.WindowXML):
         if 0 < chnum < self.list.size():
             self.selitem_id = chnum
             self.setFocus(self.list)
-            self.list.selectItem(str2(self.selitem_id))
+            self.list.selectItem(self.selitem_id)
 
         self.timers.stop(WMainForm.TIMER_SEL_CHANNEL)
         self.timers.start(WMainForm.TIMER_SEL_CHANNEL, threading.Timer(timeout, clear))
@@ -591,6 +591,7 @@ class WMainForm(xbmcgui.WindowXML):
         mnu = MenuForm("menu.xml", defines.ADDON_PATH, "st.anger")
         mnu.li = self.getFocus().getSelectedItem()
         mnu.parent = self
+        selitemid = self.list.getSelectedPosition()
 
         log.d('Выполнить команду')
         mnu.doModal()
@@ -616,6 +617,10 @@ class WMainForm(xbmcgui.WindowXML):
             self.showStatus('Ошибка входных параметров')
         elif res == WMainForm.API_ERROR_NOFAVOURITE:
             self.showStatus('Канал не найден в избранном')
+
+        if self.list.size() > selitemid:
+            self.setFocus(self.list)
+            self.list.selectItem(selitemid)
 
     def onAction(self, action):
         #         log.d('Событие {0}'.format(action.getId()))
