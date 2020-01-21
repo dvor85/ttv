@@ -185,40 +185,40 @@ class MyPlayer(xbmcgui.WindowXML):
             """
             Функция сортировки источников по приоритету
             """
-            return ChannelSources[src[0]].prior
+            return ChannelSources[src[0]].order
 
         log("Start play")
         self.channel = channel
         self.channel_number = self.parent.selitem_id
         try:
             self.title = "{0}. {1}".format(self.channel_number, channel.title())
-            for player, src in iteritems(channel.xurl()):
-                try:
-                    log.d('Try to play with {0} player'.format(player))
-                    mode = None
-                    logo = channel.logo()
-                    if self.cicon:
-                        self.cicon.setImage(str2(logo))
-                    if player == 'ace':
-                        if self._player and self._player.last_error:
-                            players.AcePlayer.clear_instance()
-                            self._player = None
-                        self._player = players.AcePlayer.get_instance(parent=self.parent)
-                        mode = channel.get('mode', 'PID')
-                    elif player == 'nox':
-                        if self._player and self._player.last_error:
-                            players.NoxPlayer.clear_instance()
-                            self._player = None
-                        self._player = players.NoxPlayer.get_instance(parent=self.parent)
-                    else:
-                        if self._player and self._player.last_error:
-                            players.TPlayer.clear_instance()
-                            self._player = None
-                        self._player = players.TPlayer.get_instance(parent=self.parent)
+            for src_name, player_url in channel.xurl():
+                for player, url_mode in iteritems(player_url):
+                    try:
+                        log.d('Try to play with {0} player'.format(player))
+                        logo = channel.logo()
+                        if self.cicon:
+                            self.cicon.setImage(str2(logo))
+                        if player == 'ace':
+                            if self._player and self._player.last_error:
+                                players.AcePlayer.clear_instance()
+                                self._player = None
+                            self._player = players.AcePlayer.get_instance(parent=self.parent)
 
-                    if self._player:
-                        self.parent.add_recent_channel(channel, 300)
-                        for src_name, url_mode in sorted(iteritems(src), key=src_cmp, reverse=True):
+                        elif player == 'nox':
+                            if self._player and self._player.last_error:
+                                players.NoxPlayer.clear_instance()
+                                self._player = None
+                            self._player = players.NoxPlayer.get_instance(parent=self.parent)
+                        else:
+                            if self._player and self._player.last_error:
+                                players.TPlayer.clear_instance()
+                                self._player = None
+                            self._player = players.TPlayer.get_instance(parent=self.parent)
+
+                        if self._player:
+                            self.parent.add_recent_channel(channel, 300)
+#                             for src_name, url_mode in sorted(iteritems(src), key=src_cmp):
                             try:
                                 log.d('play "{0}" from source "{1}"'.format(url_mode[0], src_name))
                                 self._player.play_item(index=0, title=self.title,
@@ -235,14 +235,14 @@ class MyPlayer(xbmcgui.WindowXML):
                                     return True
                             log.d('End playing url "{0}"'.format(url_mode))
 
-                except Exception as e:
-                    log.e("Error play with {0} player: {1}".format(player, e))
-                finally:
-                    if self.manual_stop_requested or defines.isCancel():
-                        self.close()
-                        return
-                    if self.channel_stop_requested:
-                        return True
+                    except Exception as e:
+                        log.e("Error play with {0} player: {1}".format(player, e))
+                    finally:
+                        if self.manual_stop_requested or defines.isCancel():
+                            self.close()
+                            return
+                        if self.channel_stop_requested:
+                            return True
 
         except Exception as e:
             log.e('Start error: {0}'.format(uni(e)))

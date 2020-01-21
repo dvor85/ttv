@@ -88,7 +88,7 @@ class MenuForm(xbmcgui.WindowXMLDialog):
             if cmd == MenuForm.CMD_ADD_FAVOURITE:
                 return fdb.add(self.channel.title())
             elif cmd == MenuForm.CMD_DEL_FAVOURITE:
-                return fdb.delete(self.title())
+                return fdb.delete(self.channel.title())
             elif cmd == MenuForm.CMD_MOVE_FAVOURITE:
                 to_num = int(xbmcgui.Dialog().numeric(0, heading=str2('Введите позицию')))
                 return fdb.moveTo(self.channel.title(), to_num)

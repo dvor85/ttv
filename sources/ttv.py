@@ -28,15 +28,10 @@ class Channel(TChannel):
     def __getitem__(self, key):
         if key == 'url':
             if not isinstance(self.data.get(key), dict):
-                self.data[key] = {}
                 if self.use_ace:
-                    self.data[key]['ace'] = {
-                        self.src(): (self._get_ace_url(), self.get('mode'))
-                    }
+                    self.data[key] = {'ace': (self._get_ace_url(), self.get('mode'))}
                 if self.use_nox:
-                    self.data[key]['nox'] = {
-                        self.src(): (self._get_nox_url(), self.get('mode'))
-                    }
+                    self.data[key] = {'nox': (self._get_nox_url(), self.get('mode'))}
         return TChannel.__getitem__(self, key)
 
     def _get_ace_url(self):
@@ -127,10 +122,10 @@ class Channel(TChannel):
 
 class Channels(TChannels):
 
-    def __init__(self, prior=0):
+    def __init__(self, order=0):
         self.user = {}
         self.ttv_session = None
-        TChannels.__init__(self, reload_interval=-1, prior=prior)
+        TChannels.__init__(self, reload_interval=-1, order=order)
 
     def _initTTV(self):
         try:

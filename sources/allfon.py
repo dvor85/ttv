@@ -18,7 +18,7 @@ log = logger.Logger(__name__)
 class Channel(TChannel):
 
     def __init__(self, data=None):
-        TChannel.__init__(self, data=data, src='allfon', player='ace')
+        TChannel.__init__(self, data=data, src='allfon', player='ace', mode='PID')
         if data is None:
             data = {}
         self.data['cat'] = None
@@ -26,10 +26,10 @@ class Channel(TChannel):
 
 class Channels(TChannels):
 
-    def __init__(self, prior=0):
+    def __init__(self, order=0):
         self.url = 'http://{pomoyka}/trash/ttv-list/allfon.json'.format(pomoyka=uni(defines.ADDON.getSetting('pomoyka_domain')))
         self._temp = self._temp = os.path.join(defines.CACHE_PATH, "allfon.json")
-        TChannels.__init__(self, reload_interval=1800, prior=prior)
+        TChannels.__init__(self, reload_interval=1800, order=order)
 
     def _load_jdata(self):
         log.d('get {temp}'.format(temp=self._temp))

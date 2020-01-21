@@ -21,6 +21,7 @@ import yatv
 from menu import MenuForm
 from playerform import MyPlayer
 from sources.table import ChannelSources
+from sources.tchannel import TChannel, MChannel
 
 
 log = logger.Logger(__name__)
@@ -71,15 +72,10 @@ class ChannelGroups(UserDict):
             if groupname not in self.data:
                 self.addGroup(groupname)
             c = self.find_channel_by_title(groupname, ch.title())
-            if c and ch.xurl():
-                if ch.player() not in c.xurl():
-                    c['url'][ch.player()] = {}
-                c['url'][ch.player()][ch.src()] = ch.xurl()[ch.player()][ch.src()]
-
-                if not c.get('logo') and ch.get('logo'):
-                    c['logo'] = ch['logo']
+            if c:
+                c.insert(ChannelSources[src_name].order, ch)
             else:
-                self.getChannels(groupname).append(ch)
+                self.getChannels(groupname).append(MChannel([ch]))
         except Exception as e:
             log.error("addChannel from source:{0} error: {1}".format(src_name, uni(e)))
 
@@ -327,7 +323,6 @@ class WMainForm(xbmcgui.WindowXML):
                     self.getControl(controlId).setImage(selItem.getProperty('icon'))
 
     def loadFavourites(self, *args):
-        from sources.tchannel import TChannel
         for ch in favdb.LocalFDB().get():
             try:
                 self.channel_groups.addChannel(TChannel(ch), src_name='fav', groupname=WMainForm.USER_GROUPS[0])
@@ -593,6 +588,7 @@ class WMainForm(xbmcgui.WindowXML):
         mnu = MenuForm("menu.xml", defines.ADDON_PATH, "st.anger")
         mnu.li = self.getFocus().getSelectedItem()
         mnu.parent = self
+        selitemid = self.list.getSelectedPosition()
 
         log.d('Выполнить команду')
         mnu.doModal()
@@ -618,6 +614,10 @@ class WMainForm(xbmcgui.WindowXML):
             self.showStatus('Ошибка входных параметров')
         elif res == WMainForm.API_ERROR_NOFAVOURITE:
             self.showStatus('Канал не найден в избранном')
+
+        if self.list.size() > selitemid:
+            self.setFocus(self.list)
+            self.list.selectItem(selitemid)
 
     def onAction(self, action):
         #         log.d('Событие {0}'.format(action.getId()))
@@ -692,10 +692,10 @@ class WMainForm(xbmcgui.WindowXML):
                     if defines.isCancel():
                         return
                     chname = "{0}. {1}".format(i + 1, ch.title())
-                    chli = xbmcgui.ListItem(str2(chname), str2(ch.id()))
+                    chli = xbmcgui.ListItem(str2(chname))
                     self.setLogo(ch, chli, self.set_logo_sema)
                     chli.setProperty('type', 'channel')
-                    chli.setProperty("id", str2(ch.id()))
+#                     chli.setProperty("id", str2(ch.id()))
                     chli.setProperty("name", str2(ch.name()))
                     chli.setProperty("title", str2(ch.title()))
                     if self.cur_category not in WMainForm.USER_GROUPS:
@@ -705,7 +705,7 @@ class WMainForm(xbmcgui.WindowXML):
                                 MenuForm.CMD_DEL_FAVOURITE,
                                 MenuForm.CMD_DOWN_FAVOURITE,
                                 MenuForm.CMD_UP_FAVOURITE]
-                        if ch.get('pin'):
+                        if ch.pin():
                             cmds.append(MenuForm.CMD_SET_FALSE_PIN)
                         else:
                             cmds.append(MenuForm.CMD_SET_TRUE_PIN)

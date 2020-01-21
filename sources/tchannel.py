@@ -6,7 +6,8 @@ from __future__ import absolute_import, division, unicode_literals
 import datetime
 import os
 
-from six.moves import UserDict
+from six.moves import UserDict, UserList
+from six import iteritems, itervalues
 from utils import uni, str2
 
 import defines
@@ -20,6 +21,76 @@ log = logger.Logger(__name__)
 
 def sign(num):
     return "+" if num > 0 else "-"
+
+
+class MChannel(UserList):
+
+    def __init__(self, chs):
+        UserList.__init__(self)
+        self.data = chs
+
+    def append(self, ch):
+        if self.title() != ch.title():
+            for pu in itervalues(self.xurl()):
+                for u in itervalues(pu):
+                    for cu in itervalues(ch['url']):
+                        if u[0] == cu[0]:
+                            return
+        return UserList.append(self, ch)
+
+    def insert(self, index, ch):
+        if self.title() != ch.title():
+            for pu in itervalues(self.xurl()):
+                for u in itervalues(pu):
+                    for cu in itervalues(ch['url']):
+                        if u[0] == cu[0]:
+                            return
+        return UserList.insert(self, index, ch)
+
+    def group(self):
+        for ch in self.data:
+            gr = ch.group()
+            if gr:
+                return gr
+
+    def xurl(self):
+        """
+        [src_name, {player: (url, mode)}]
+        """
+        ret = []
+        for ch in self.data:
+            ret.append([ch.src(), ch['url']])
+        return ret
+
+    def logo(self):
+        for ch in self.data:
+            lo = ch.logo()
+            if lo:
+                return lo
+
+    def name(self):
+        for ch in self.data:
+            nm = ch.name()
+            if nm:
+                return nm
+
+    def pin(self):
+        for ch in self.data:
+            p = ch.get('pin')
+            if p:
+                return p
+
+    def title(self):
+        for ch in self.data:
+            tit = ch.title()
+            if tit:
+                return tit
+
+    def epg(self):
+        for ch in self.data:
+            ep = ch.epg()
+            if ep:
+                return ep
 
 
 class TChannel(UserDict):
@@ -40,14 +111,19 @@ class TChannel(UserDict):
     def player(self):
         return self.get('player', 'undefined')
 
-    def xurl(self):
-        if self.get('url') and not isinstance(self.get('url'), dict):
-            self.data['url'] = {
-                self.player(): {
-                    self.src(): (uni(self.get('url')), self.get('mode'))
-                }
-            }
-        return self['url']
+    def __getitem__(self, key):
+        if key == 'url':
+            if not isinstance(self.data.get(key), dict):
+                self.data[key] = {self.player(): (uni(self.data.get(key)), self.get('mode', 'PID'))}
+
+        return UserDict.__getitem__(self, key)
+
+#     def xurl(self):
+#         if self.get('url') and not isinstance(self.get('url'), dict):
+#             self.data['url'] = {
+#                 self.player(): (uni(self.get('url')), self.get('mode'))
+#             }
+#         return self['url']
 
     def group(self):
         name = yatv.get_name_offset(self.name().lower())[0]
@@ -61,6 +137,7 @@ class TChannel(UserDict):
     def logo(self):
         name = self.name().lower()
         logo = os.path.join(self.yatv_logo_path, "{name}.png".format(name=name))
+        logo_url = None
         epg = None
         if os.path.exists(logo):
             self.data['logo'] = logo
@@ -75,7 +152,7 @@ class TChannel(UserDict):
         try:
             if logo_url:
                 _sess = epg.get_yatv_sess() if epg else None
-                r = defines.request(logo_url, session=_sess, headers={'Referer': 'https://tv.yandex.ru/'})
+                r = defines.request(logo_url, session=_sess)
                 if len(r.content) > 0:
                     with open(logo, 'wb') as fp:
                         fp.write(r.content)
@@ -103,12 +180,6 @@ class TChannel(UserDict):
             if name_offset[1] and name_offset[1] != offset and sign(name_offset[1]):
                 self.data['title'] += " ({sign}{offset})".format(sign=sign(name_offset[1]), offset=name_offset[1])
         return uni(self.data["title"])
-
-    def screenshots(self):
-        """
-        :return [{filename:url},...]
-        """
-        pass
 
     def update_epglist(self):
         try:
@@ -155,9 +226,9 @@ class TChannel(UserDict):
 
 class TChannels:
 
-    def __init__(self, reload_interval=-1, prior=0):
+    def __init__(self, reload_interval=-1, order=0):
         self.channels = []
-        self.prior = prior
+        self.order = order
         self.reload_interval = reload_interval
 
     def update_channels(self):
