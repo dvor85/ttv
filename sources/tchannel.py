@@ -134,9 +134,8 @@ class TChannel(UserDict):
             self.data['cat'] = translate.get(gr.lower(), gr)
         return uni(self.get('cat'))
 
-    def logo(self):
-        name = self.name().lower()
-        logo = os.path.join(self.yatv_logo_path, "{name}.png".format(name=name))
+    def logo(self, session=None):
+        logo = os.path.join(self.yatv_logo_path, "{name}.png".format(name=self.title().lower()))
         logo_url = None
         epg = None
         if os.path.exists(logo):
@@ -145,13 +144,13 @@ class TChannel(UserDict):
         if not self.get('logo'):
             epg = yatv.YATV.get_instance()
             if epg is not None:
-                logo_url = epg.get_logo_by_name(name)
+                logo_url = epg.get_logo_by_name(self.name())
         elif '://' in self.get('logo'):
             logo_url = self.get('logo')
 
         try:
             if logo_url:
-                _sess = epg.get_yatv_sess() if epg else None
+                _sess = epg.get_yatv_sess() if epg else session
                 r = defines.request(logo_url, session=_sess)
                 if len(r.content) > 0:
                     with open(logo, 'wb') as fp:

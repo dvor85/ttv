@@ -97,10 +97,10 @@ class Channel(TChannel):
                 except Exception as e:
                     log.d('update_epglist error: {0}'.format(uni(e)))
 
-    def logo(self):
+    def logo(self, *args):
         if self.get('logo') and '://' not in self.get('logo'):
             self.data['logo'] = 'http://{server}/uploads/{logo}'.format(server=_server, logo=uni(self.get('logo')))
-        return TChannel.logo(self)
+        return TChannel.logo(self, session=_sess)
 
     def _get_screenshots(self):
         for server in _servers:
