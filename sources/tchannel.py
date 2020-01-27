@@ -59,7 +59,8 @@ class MChannel(UserList):
         """
         ret = []
         for ch in self.data:
-            ret.append([ch.src(), ch['url']])
+            if ch['url']:
+                ret.append([ch.src(), ch['url']])
         return ret
 
     def logo(self):

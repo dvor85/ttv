@@ -48,6 +48,18 @@ class FlagsControl:
             log_string += '{k}: {v}; '.format(k=k, v=f.is_set())
         log.d(log_string)
 
+    def autoStop(self):
+        self.clear()
+        self.switch_source.set()
+
+    def manualStop(self):
+        self.clear()
+        self.manual_stopped.set()
+
+    def channelStop(self):
+        self.clear()
+        self.channel_stop.set()
+
 
 Flags = FlagsControl()
 
@@ -139,20 +151,17 @@ class TPlayer(xbmc.Player):
 
     def autoStop(self):
         log('autoStop')
-        Flags.clear()
-        Flags.switch_source.set()
+        Flags.autoStop()
         self.stop()
 
     def manualStop(self):
         log('manualStop')
-        Flags.clear()
-        Flags.manual_stopped.set()
+        Flags.manualStop()
         self.stop()
 
     def channelStop(self):
         log('channelStop')
-        Flags.clear()
-        Flags.channel_stop.set()
+        Flags.channelStop()
         self.stop()
 
 
