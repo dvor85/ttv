@@ -14,12 +14,13 @@
 			<height>0</height>
 			<texture border="20">ContextMenu.png</texture>
 		</control>
-		<control type="list" id="301">
+		<control type="panel" id="301">
 			<left>15</left>
 			<top>30</top>
 			<width>260</width>
 			<height>0</height>
 			<visible>true</visible>
+			<viewtype>list</viewtype>
 			<itemlayout width="260" height="40">
 		        <control type="image">
 					<width>243</width>
@@ -57,7 +58,6 @@
 					<height>35</height>
 					<font>fontContextMenu</font>
 					<aligny>center</aligny>
-					<scroll>true</scroll>
 					<selectedcolor>green</selectedcolor>
 					<align>left</align>
 					<info>ListItem.Label</info>

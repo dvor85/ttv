@@ -75,7 +75,8 @@ class ChannelGroups(UserDict):
             if c:
                 c.insert(ChannelSources[src_name].order, ch)
             else:
-                self.getChannels(groupname).append(MChannel([ch]))
+                if src_name != 'ttv':  # не добавлять чистые каналы с ttv
+                    self.getChannels(groupname).append(MChannel([ch]))
         except Exception as e:
             log.error("addChannel from source:{0} error: {1}".format(src_name, uni(e)))
 
@@ -235,7 +236,7 @@ class WMainForm(xbmcgui.WindowXML):
     TIMER_SHOW_SCREEN = __name__ + ':show_screen_timer'
     TIMER_SEL_CHANNEL = __name__ + ':sel_channel_timer'
     TIMER_HIDE_WINDOW = __name__ + ':hide_window_timer'
-    TIMER_ADD_RECENT = __name__ + ':add_recent_timer'
+    TIMER_ADD_RECENT = 'add_recent_timer'
     THREAD_SET_LOGO = 'set_logo_thread'
 
     def __init__(self, *args, **kwargs):
