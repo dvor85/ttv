@@ -75,7 +75,7 @@ class ChannelGroups(UserDict):
             if c:
                 c.insert(ChannelSources[src_name].order, ch)
             else:
-                if src_name != 'ttv':  # не добавлять чистые каналы с ttv
+                if src_name not in ['ttv']:  # не добавлять чистые каналы с ttv
                     self.getChannels(groupname).append(MChannel([ch]))
         except Exception as e:
             log.error("addChannel from source:{0} error: {1}".format(src_name, uni(e)))
@@ -529,15 +529,16 @@ class WMainForm(xbmcgui.WindowXML):
 
         def hide():
             log.d('isPlaying={0}'.format(isPlaying()))
+            for name in iterkeys(self.timers):
+                if name.startswith(__name__):
+                    self.timers.stop(name)
+
+            if self.rotate_screen_thr:
+                self.rotate_screen_thr.stop()
+
             if isPlaying():
                 log.d('hide main window')
                 self.player.Show()
-                for name in iterkeys(self.timers):
-                    if name.startswith(__name__):
-                        self.timers.stop(name)
-
-                if self.rotate_screen_thr:
-                    self.rotate_screen_thr.stop()
 
         self.timers.stop(WMainForm.TIMER_HIDE_WINDOW)
         self.timers.start(WMainForm.TIMER_HIDE_WINDOW, threading.Timer(timeout, hide))
@@ -750,6 +751,10 @@ class WMainForm(xbmcgui.WindowXML):
             if defines.isCancel():
                 return
             AddItem(gr)
+
+        if self.list.size() > 0:
+            self.setFocus(self.list)
+            self.list.selectItem(0)
 
     def close(self):
         defines.closeRequested.set()

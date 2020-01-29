@@ -14,6 +14,8 @@
 		<setting id="acestream" label="Acestream (Порядоковый номер. Если <= 0, то выключен)" type="number" default="1" />
 		<setting id="allfon" label="Allfon (Порядоковый номер. Если <= 0, то выключен)" type="number" default="2" />
 		<setting id="ttv" label="TTV (Порядоковый номер. Если <= 0, то выключен)" type="number" default="3" />
+		<setting default="" id="ttv_login" label="Логин ttv" type="text" enable="gt(-1,0)" subsetting="true" />
+		<setting default="" id="ttv_password" label="Пароль ttv" type="text" enable="gt(-2,0)" subsetting="true" />
 	</category>
 	<category label="AceStream">
 		<setting default="true" id="use_ace" label="Использовать Acestream, если доступно" type="bool" />
@@ -21,8 +23,6 @@
 		<setting default="127.0.0.1" id="ip_addr" label="IP-адрес acestreamengine" type="text" />
 		<setting default="8621" id="outport" label="Внеший порт AceStream" type="number" />
 		<setting default="20" id="freeze_timeout" label="Таймаут ожидания, сек." type="number" />
-		<setting default="" id="login" label="Логин ttv" type="text" visible="true" />
-		<setting default="" id="password" label="Пароль ttv" type="text" visible="true" />
 	</category>
 	<category label="Noxbit">
 		<setting default="false" id="use_nox" label="Использовать Noxbit, если доступно" type="bool" />

@@ -153,8 +153,8 @@ class Channels(TChannels):
             for server in _servers:
                 try:
                     params = dict(
-                        username=uni(defines.ADDON.getSetting('login')),
-                        password=uni(defines.ADDON.getSetting('password')),
+                        username=uni(defines.ADDON.getSetting('ttv_login')),
+                        password=uni(defines.ADDON.getSetting('ttv_password')),
                         typeresult='json',
                         application='xbmc',
                         guid=guid
@@ -168,7 +168,7 @@ class Channels(TChannels):
                 except Exception as e:
                     log.e(e)
 
-            self.user = {"login": uni(defines.ADDON.getSetting('login')),
+            self.user = {"login": uni(defines.ADDON.getSetting('ttv_login')),
                          "balance": jdata.get("balance"),
                          "vip": jdata["balance"] > 1}
 
