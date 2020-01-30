@@ -9,8 +9,8 @@ import threading
 
 import xbmcgui
 import xbmc
-from six import itervalues, iteritems, iterkeys
-from six.moves import UserDict
+from six import itervalues, iteritems, iterkeys, next
+from collections import OrderedDict
 from utils import uni, str2
 
 import defines
@@ -27,7 +27,7 @@ from sources.tchannel import TChannel, MChannel
 log = logger.Logger(__name__)
 
 
-class ChannelGroups(UserDict):
+class ChannelGroups(OrderedDict):
     """
     :return {
             groupname: {
@@ -37,24 +37,22 @@ class ChannelGroups(UserDict):
     }
     """
 
-    def __init__(self, *args, **kwargs):
-        self.data = {}
-
     def addGroup(self, groupname, title=None):
-        self.data[groupname] = {}
+
+        self[groupname] = {}
         if not title:
             title = groupname
-        self.data[groupname]['title'] = title
+        self[groupname]['title'] = title
         self.clearGroup(groupname)
 
     def clearGroup(self, groupname):
-        self.data[groupname]['channels'] = []
+        self[groupname]['channels'] = []
 
     def delGroup(self, groupname):
-        del self.data[groupname]
+        del self[groupname]
 
     def getGroups(self):
-        return list(self.data)
+        return list(self.keys())
 
     def addChannels(self, channels, src_name):
         for ch in channels:
@@ -69,20 +67,26 @@ class ChannelGroups(UserDict):
                 groupname = src_name
             if groupname.lower() in ["18+"] and utils.str2int(defines.AGE) < 2:
                 return
-            if groupname not in self.data:
+            if groupname not in self:
                 self.addGroup(groupname)
-            c = self.find_channel_by_title(groupname, ch.title())
+            try:
+                c = next(self.find_channel_by_title(groupname, ch.title()))
+            except:
+                c = None
             if c:
                 c.insert(ChannelSources[src_name].order, ch)
             else:
                 if src_name not in ['ttv']:  # не добавлять чистые каналы с ttv
-                    self.getChannels(groupname).append(MChannel([ch]))
+                    if not isinstance(ch, MChannel):
+                        self.getChannels(groupname).append(MChannel([ch]))
+                    else:
+                        self.getChannels(groupname).append(ch)
         except Exception as e:
             log.error("addChannel from source:{0} error: {1}".format(src_name, uni(e)))
 
     def getChannels(self, groupname):
         try:
-            return self.data[groupname]["channels"]
+            return self[groupname]["channels"]
         except KeyError:
             return []
 
@@ -92,25 +96,29 @@ class ChannelGroups(UserDict):
                 return ch
 
     def find_group_by_name(self, name):
-        for groupname in (x for x in self.getGroups() if x not in WMainForm.USER_GROUPS):
+        for groupname in (x for x in self.getGroups() if x not in (WMainForm.FAVOURITE_GROUP, WMainForm.SEARCH_GROUP)):
             if self.find_channel_by_name(groupname, name):
                 return groupname
 
     def find_group_by_chtitle(self, chtitle):
-        for groupname in (x for x in self.getGroups() if x not in WMainForm.USER_GROUPS):
-            if self.find_channel_by_title(groupname, chtitle):
-                return groupname
+        for groupname in (x for x in self.getGroups() if x not in (WMainForm.FAVOURITE_GROUP, WMainForm.SEARCH_GROUP)):
+            try:
+                ch = next(self.find_channel_by_title(groupname, chtitle))
+            except:
+                ch = None
+            if ch:
+                yield groupname
 
     def find_channel_by_name(self, groupname, name):
         name = name.lower()
         for ch in self.getChannels(groupname):
-            if ch.name().lower() == name:
+            if ch.name().lower() == name.lower():
                 return ch
 
     def find_channel_by_title(self, groupname, title):
         for ch in self.getChannels(groupname):
-            if ch.title() == title:
-                return ch
+            if title.lower() in ch.title().lower():
+                yield ch
 
 
 class RotateScreen(threading.Thread):
@@ -224,7 +232,8 @@ class WMainForm(xbmcgui.WindowXML):
     BTN_INFO = 209
     LBL_FIRST_EPG = 300
 
-    USER_GROUPS = ['Избранное']
+    SEARCH_GROUP = 'Поиск'
+    FAVOURITE_GROUP = 'Избранное'
 
     API_ERROR_INCORRECT = 'incorrect'
     API_ERROR_NOCONNECT = 'noconnect'
@@ -291,9 +300,15 @@ class WMainForm(xbmcgui.WindowXML):
 
     def get_channel_by_title(self, chtitle):
         categ = self.cur_category
-        if self.cur_category in WMainForm.USER_GROUPS:
-            categ = self.channel_groups.find_group_by_chtitle(chtitle)
-        return self.channel_groups.find_channel_by_title(categ, chtitle)
+        if self.cur_category in (WMainForm.FAVOURITE_GROUP, WMainForm.SEARCH_GROUP):
+            try:
+                categ = next(self.channel_groups.find_group_by_chtitle(chtitle))
+            except:
+                pass
+        try:
+            return next(self.channel_groups.find_channel_by_title(categ, chtitle))
+        except:
+            return None
 
     def showDialog(self, msg):
         from okdialog import OkDialog
@@ -326,9 +341,23 @@ class WMainForm(xbmcgui.WindowXML):
     def loadFavourites(self, *args):
         for ch in favdb.LocalFDB().get():
             try:
-                self.channel_groups.addChannel(TChannel(ch), src_name='fav', groupname=WMainForm.USER_GROUPS[0])
+                self.channel_groups.addChannel(TChannel(ch), src_name='fav', groupname=WMainForm.FAVOURITE_GROUP)
             except Exception as e:
                 log.d('loadFavourites error: {0}'.format(uni(e)))
+
+    def loadSearch(self, *args):
+        self.channel_groups.clearGroup(WMainForm.SEARCH_GROUP)
+        if len(args) > 0:
+            chtitle = args[0]
+        else:
+            chtitle = uni(xbmcgui.Dialog().input(heading=str2('введите название канала')))
+        if chtitle:
+            for gr in self.channel_groups.find_group_by_chtitle(chtitle):
+                for ch in self.channel_groups.find_channel_by_title(gr, chtitle):
+                    try:
+                        self.channel_groups.addChannel(ch, src_name='search', groupname=WMainForm.SEARCH_GROUP)
+                    except Exception as e:
+                        log.d('loadFavourites error: {0}'.format(uni(e)))
 
     def loadChannels(self, *args):
         src_name = args[0]
@@ -451,12 +480,13 @@ class WMainForm(xbmcgui.WindowXML):
 
         self.showStatus("Получение списка каналов")
 
-        for groupname in WMainForm.USER_GROUPS:
+        for groupname in (WMainForm.SEARCH_GROUP, WMainForm.FAVOURITE_GROUP):
             title = '[COLOR FFFFFF00][B]' + groupname + '[/B][/COLOR]'
             self.channel_groups.addGroup(groupname, title)
 
         thrs = {'favourite': defines.MyThread(self.loadFavourites),
                 'yatv_epg': defines.MyThread(lambda: setattr(self, '_yatv_instance', yatv.YATV.get_instance()))}
+
         for src_name in ChannelSources:
             thrs[src_name] = defines.MyThread(self.loadChannels, src_name)
 
@@ -467,10 +497,13 @@ class WMainForm(xbmcgui.WindowXML):
         lo_thr.start()
 
         log.d('Ожидание результата')
-        if self.cur_category in WMainForm.USER_GROUPS:
+        if self.cur_category == WMainForm.FAVOURITE_GROUP:
             thrs['favourite'].join(20)
         else:
             lo_thr.join(len(thrs) * 20)
+
+        if self.cur_category == WMainForm.SEARCH_GROUP:
+            self.loadSearch(self.cur_channel)
 
         self.loadList()
 
@@ -478,7 +511,6 @@ class WMainForm(xbmcgui.WindowXML):
         if self.cur_category == '' or self.cur_category not in self.channel_groups.getGroups():
             self.fillCategory()
         else:
-            self.list.reset()
             self.fillChannels()
             if self.init:
                 self.select_channel()
@@ -529,14 +561,13 @@ class WMainForm(xbmcgui.WindowXML):
 
         def hide():
             log.d('isPlaying={0}'.format(isPlaying()))
-            for name in iterkeys(self.timers):
-                if name.startswith(__name__):
-                    self.timers.stop(name)
-
-            if self.rotate_screen_thr:
-                self.rotate_screen_thr.stop()
-
             if isPlaying():
+                for name in iterkeys(self.timers):
+                    if name.startswith(__name__):
+                        self.timers.stop(name)
+
+                if self.rotate_screen_thr:
+                    self.rotate_screen_thr.stop()
                 log.d('hide main window')
                 self.player.Show()
 
@@ -547,9 +578,9 @@ class WMainForm(xbmcgui.WindowXML):
         log.d('add_resent_channel in {0} sec'.format(timeout))
 
         def add():
-            if self.cur_category not in WMainForm.USER_GROUPS:
+            if not self.cur_category == WMainForm.FAVOURITE_GROUP:
                 if favdb.LocalFDB().add_recent(channel.title()):
-                    self.channel_groups.clearGroup(WMainForm.USER_GROUPS[0])
+                    self.channel_groups.clearGroup(WMainForm.FAVOURITE_GROUP)
                     self.loadFavourites()
 
         self.timers.stop(WMainForm.TIMER_ADD_RECENT)
@@ -566,9 +597,13 @@ class WMainForm(xbmcgui.WindowXML):
             if not selItem:
                 return
             log.d("selItem is {0}".format(uni(selItem.getLabel())))
+
             if uni(selItem.getLabel()) == '..':
                 self.fillCategory()
                 return
+
+            if WMainForm.SEARCH_GROUP in uni(selItem.getLabel()):
+                self.loadSearch()
 
             if uni(selItem.getProperty('type')) == 'category':
                 self.cur_category = uni(selItem.getProperty("id"))
@@ -599,10 +634,10 @@ class WMainForm(xbmcgui.WindowXML):
         log.d('Результат команды {0}'.format(res))
         if res.startswith('OK'):
 
-            self.channel_groups.clearGroup(WMainForm.USER_GROUPS[0])
+            self.channel_groups.clearGroup(WMainForm.FAVOURITE_GROUP)
             fthr = defines.MyThread(self.loadFavourites)
             fthr.start()
-            if self.cur_category == WMainForm.USER_GROUPS[0]:
+            if self.cur_category == WMainForm.FAVOURITE_GROUP:
                 fthr.join(10)
                 self.loadList()
 
@@ -700,7 +735,7 @@ class WMainForm(xbmcgui.WindowXML):
 #                     chli.setProperty("id", str2(ch.id()))
                     chli.setProperty("name", str2(ch.name()))
                     chli.setProperty("title", str2(ch.title()))
-                    if self.cur_category not in WMainForm.USER_GROUPS:
+                    if not self.cur_category == WMainForm.FAVOURITE_GROUP:
                         chli.setProperty('commands', str2("{0}".format(MenuForm.CMD_ADD_FAVOURITE)))
                     else:
                         cmds = [MenuForm.CMD_MOVE_FAVOURITE,
@@ -741,6 +776,12 @@ class WMainForm(xbmcgui.WindowXML):
             li.setProperty('id', str2('{0}'.format(groupname)))
             self.list.addItem(li)
 
+        for name in iterkeys(self.timers):
+            if name.startswith(__name__):
+                self.timers.stop(name)
+
+        if self.rotate_screen_thr:
+            self.rotate_screen_thr.stop()
         if not self.list:
             self.showStatus("Список не инициализирован")
             return
