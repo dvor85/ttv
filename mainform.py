@@ -71,7 +71,7 @@ class ChannelGroups(OrderedDict):
                 self.addGroup(groupname)
             try:
                 c = next(self.find_channel_by_title(groupname, ch.title()))
-            except:
+            except StopIteration:
                 c = None
             if c:
                 c.insert(ChannelSources[src_name].order, ch)
@@ -93,27 +93,29 @@ class ChannelGroups(OrderedDict):
     def find_channel_by_id(self, groupname, chid):
         for ch in self.getChannels(groupname):
             if ch.id() == chid:
-                return ch
+                yield ch
 
     def find_group_by_name(self, name):
         for groupname in (x for x in self.getGroups() if x not in (WMainForm.FAVOURITE_GROUP, WMainForm.SEARCH_GROUP)):
-            if self.find_channel_by_name(groupname, name):
-                return groupname
+            try:
+                if next(self.find_channel_by_name(groupname, name)):
+                    yield groupname
+            except StopIteration:
+                pass
 
     def find_group_by_chtitle(self, chtitle):
         for groupname in (x for x in self.getGroups() if x not in (WMainForm.FAVOURITE_GROUP, WMainForm.SEARCH_GROUP)):
             try:
-                ch = next(self.find_channel_by_title(groupname, chtitle))
-            except:
-                ch = None
-            if ch:
-                yield groupname
+                if next(self.find_channel_by_title(groupname, chtitle)):
+                    yield groupname
+            except StopIteration:
+                pass
 
     def find_channel_by_name(self, groupname, name):
         name = name.lower()
         for ch in self.getChannels(groupname):
             if ch.name().lower() == name.lower():
-                return ch
+                yield ch
 
     def find_channel_by_title(self, groupname, title):
         for ch in self.getChannels(groupname):
@@ -303,11 +305,11 @@ class WMainForm(xbmcgui.WindowXML):
         if self.cur_category in (WMainForm.FAVOURITE_GROUP, WMainForm.SEARCH_GROUP):
             try:
                 categ = next(self.channel_groups.find_group_by_chtitle(chtitle))
-            except:
+            except StopIteration:
                 pass
         try:
             return next(self.channel_groups.find_channel_by_title(categ, chtitle))
-        except:
+        except StopIteration:
             return None
 
     def showDialog(self, msg):
@@ -346,6 +348,7 @@ class WMainForm(xbmcgui.WindowXML):
                 log.d('loadFavourites error: {0}'.format(uni(e)))
 
     def loadSearch(self, *args):
+        self.timers.stop(WMainForm.TIMER_HIDE_WINDOW)
         self.channel_groups.clearGroup(WMainForm.SEARCH_GROUP)
         if len(args) > 0:
             chtitle = args[0]
