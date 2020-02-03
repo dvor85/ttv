@@ -6,7 +6,7 @@ from __future__ import absolute_import, division, unicode_literals
 import datetime
 import json
 import threading
-
+import sys
 import xbmcgui
 import xbmc
 from six import itervalues, iteritems, iterkeys, next
@@ -487,8 +487,9 @@ class WMainForm(xbmcgui.WindowXML):
             title = '[COLOR FFFFFF00][B]' + groupname + '[/B][/COLOR]'
             self.channel_groups.addGroup(groupname, title)
 
-        thrs = {'favourite': defines.MyThread(self.loadFavourites),
-                'yatv_epg': defines.MyThread(lambda: setattr(self, '_yatv_instance', yatv.YATV.get_instance()))}
+        thrs = OrderedDict()
+        thrs['favourite'] = defines.MyThread(self.loadFavourites)
+        thrs['yatv_epg'] = defines.MyThread(lambda: setattr(self, '_yatv_instance', yatv.YATV.get_instance()))
 
         for src_name in ChannelSources:
             thrs[src_name] = defines.MyThread(self.loadChannels, src_name)
