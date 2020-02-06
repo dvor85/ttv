@@ -20,7 +20,7 @@ import utils
 import yatv
 from menu import MenuForm
 from playerform import MyPlayer
-from sources.table import ChannelSources
+from sources.table import channel_sources
 from sources.tchannel import TChannel, MChannel
 
 
@@ -74,13 +74,12 @@ class ChannelGroups(OrderedDict):
             except StopIteration:
                 c = None
             if c:
-                c.insert(ChannelSources[src_name].order, ch)
+                c.insert(channel_sources.index_by_name(src_name), ch)
             else:
-                if src_name not in ['ttv']:  # не добавлять чистые каналы с ttv
-                    if not isinstance(ch, MChannel):
-                        self.getChannels(groupname).append(MChannel([ch]))
-                    else:
-                        self.getChannels(groupname).append(ch)
+                if not isinstance(ch, MChannel):
+                    self.getChannels(groupname).append(MChannel([ch]))
+                else:
+                    self.getChannels(groupname).append(ch)
         except Exception as e:
             log.error("addChannel from source:{0} error: {1}".format(src_name, uni(e)))
 
@@ -365,19 +364,17 @@ class WMainForm(xbmcgui.WindowXML):
     def loadChannels(self, *args):
         src_name = args[0]
         log.d('loadChannels {0}'.format(src_name))
+        src = channel_sources.get_by_name(src_name)
+        try:
+            res = self.channel_groups.addChannels(src.get_channels(), src_name=src_name)
+            timeout = src.reload_interval if res else 60
+            if timeout > 0:
+                name = 'reload_channels_{0}'.format(src_name)
+                self.timers.stop(name)
+                self.timers.start(name, threading.Timer(timeout, self.loadChannels, args=args))
 
-        if src_name in ChannelSources:
-            try:
-                src = ChannelSources[src_name]
-                res = self.channel_groups.addChannels(src.get_channels(), src_name=src_name)
-                timeout = src.reload_interval if res else 60
-                if timeout > 0:
-                    name = 'reload_channels_{0}'.format(src_name)
-                    self.timers.stop(name)
-                    self.timers.start(name, threading.Timer(timeout, self.loadChannels, args=args))
-
-            except Exception as e:
-                log.d('loadChannels {0} error: {1}'.format(src_name, e))
+        except Exception as e:
+            log.d('loadChannels {0} error: {1}'.format(src_name, e))
 
     def getEpg(self, ch, timeout=0, callback=None):
 
@@ -491,8 +488,8 @@ class WMainForm(xbmcgui.WindowXML):
         thrs['favourite'] = defines.MyThread(self.loadFavourites)
         thrs['yatv_epg'] = defines.MyThread(lambda: setattr(self, '_yatv_instance', yatv.YATV.get_instance()))
 
-        for src_name in ChannelSources:
-            thrs[src_name] = defines.MyThread(self.loadChannels, src_name)
+        for src in channel_sources:
+            thrs[src.name] = defines.MyThread(self.loadChannels, src.name)
 
         for thr in itervalues(thrs):
             thr.start()
@@ -729,6 +726,9 @@ class WMainForm(xbmcgui.WindowXML):
 
         for i, ch in enumerate(self.channel_groups.getChannels(self.cur_category)):
             if ch:
+                # не добавлять чистые каналы с ttv
+                if len(ch) == 1 and ch[0].src() in ['ttv']:
+                    continue
                 try:
                     if defines.isCancel():
                         return

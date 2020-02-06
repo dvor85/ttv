@@ -124,10 +124,10 @@ class Channel(TChannel):
 
 class Channels(TChannels):
 
-    def __init__(self, order=0):
+    def __init__(self):
         self.user = {}
         self.ttv_session = None
-        TChannels.__init__(self, reload_interval=-1, order=order)
+        TChannels.__init__(self, name='ttv', reload_interval=-1)
 
     def _initTTV(self):
         try:

@@ -15,7 +15,6 @@ import defines
 import logger
 import players
 import utils
-from sources.table import ChannelSources
 
 
 log = logger.Logger(__name__)

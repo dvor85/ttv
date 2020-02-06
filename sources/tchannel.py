@@ -36,7 +36,10 @@ class MChannel(UserList):
                     for cu in itervalues(ch['url']):
                         if u[0] == cu[0]:
                             return
-        return UserList.append(self, ch)
+        if not isinstance(ch, self.__class__):
+            return UserList.append(self, ch)
+        else:
+            return UserList.extend(self, ch)
 
     def insert(self, index, ch):
         if self.title() != ch.title():
@@ -45,7 +48,10 @@ class MChannel(UserList):
                     for cu in itervalues(ch['url']):
                         if u[0] == cu[0]:
                             return
-        return UserList.insert(self, index, ch)
+        if not isinstance(ch, self.__class__):
+            return UserList.insert(self, index, ch)
+        else:
+            return UserList.extend(self, ch)
 
     def group(self):
         for ch in self.data:
@@ -226,9 +232,9 @@ class TChannel(UserDict):
 
 class TChannels:
 
-    def __init__(self, reload_interval=-1, order=0):
+    def __init__(self, name, reload_interval=-1):
+        self.name = name
         self.channels = []
-        self.order = order
         self.reload_interval = reload_interval
 
     def update_channels(self):
