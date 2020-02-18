@@ -31,11 +31,12 @@ class MChannel(UserList):
 
     def append(self, ch):
         if self.title() != ch.title():
-            for pu in itervalues(self.xurl()):
-                for u in itervalues(pu):
-                    for cu in itervalues(ch['url']):
-                        if u[0] == cu[0]:
-                            return
+            for pu in self.xurl():
+                for u in itervalues(pu[1]):
+                    if ch['url']:
+                        for cu in itervalues(ch['url']):
+                            if u[0] == cu[0]:
+                                return
         if not isinstance(ch, self.__class__):
             return UserList.append(self, ch)
         else:
@@ -43,11 +44,12 @@ class MChannel(UserList):
 
     def insert(self, index, ch):
         if self.title() != ch.title():
-            for pu in itervalues(self.xurl()):
-                for u in itervalues(pu):
-                    for cu in itervalues(ch['url']):
-                        if u[0] == cu[0]:
-                            return
+            for pu in self.xurl():
+                for u in itervalues(pu[1]):
+                    if ch['url']:
+                        for cu in itervalues(ch['url']):
+                            if u[0] == cu[0]:
+                                return
         if not isinstance(ch, self.__class__):
             return UserList.insert(self, index, ch)
         else:
