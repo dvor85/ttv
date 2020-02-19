@@ -9,6 +9,7 @@ import threading
 import sys
 import xbmcgui
 import xbmc
+from operator import methodcaller
 from six import itervalues, iteritems, iterkeys, next
 from collections import OrderedDict
 from utils import uni, str2
@@ -32,7 +33,7 @@ class ChannelGroups(OrderedDict):
     :return {
             groupname: {
                 title=str,
-                channels=[tchannel,...]
+                channels=[mchannel,...]
             }
     }
     """
@@ -82,6 +83,9 @@ class ChannelGroups(OrderedDict):
                     self.getChannels(groupname).append(ch)
         except Exception as e:
             log.error("addChannel from source:{0} error: {1}".format(src_name, uni(e)))
+
+    def getSortedChannels(self, groupname):
+        return sorted(self.getChannels(groupname), key=methodcaller('title'))
 
     def getChannels(self, groupname):
         try:
@@ -724,7 +728,7 @@ class WMainForm(xbmcgui.WindowXML):
         li = xbmcgui.ListItem('..')
         self.list.addItem(li)
 
-        for i, ch in enumerate(self.channel_groups.getChannels(self.cur_category)):
+        for i, ch in enumerate(self.channel_groups.getSortedChannels(self.cur_category)):
             if ch:
                 # не добавлять чистые каналы с ttv
                 if len(ch) == 1 and ch[0].src() in ['ttv']:
