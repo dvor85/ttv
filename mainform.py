@@ -85,7 +85,10 @@ class ChannelGroups(OrderedDict):
             log.error("addChannel from source:{0} error: {1}".format(src_name, uni(e)))
 
     def getSortedChannels(self, groupname):
-        return sorted(self.getChannels(groupname), key=methodcaller('title'))
+        if groupname == WMainForm.FAVOURITE_GROUP:
+            return self.getChannels(groupname)
+        else:
+            return sorted(self.getChannels(groupname), key=methodcaller('title'))
 
     def getChannels(self, groupname):
         try:

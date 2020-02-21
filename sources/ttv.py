@@ -92,9 +92,9 @@ class Channel(TChannel):
                     jdata = r.json()
                     if str2int(jdata.get('success')) != 0:
                         self.data['epg'] = jdata['data']
-                        screens = self._get_screenshots()
-                        if screens:
-                            self.data['epg']['screens'] = screens
+#                         screens = self._get_screenshots()
+#                         if screens:
+#                             self.data['epg']['screens'] = screens
                         break
                 except Exception as e:
                     log.d('update_epglist error: {0}'.format(uni(e)))
@@ -127,7 +127,7 @@ class Channels(TChannels):
     def __init__(self):
         self.user = {}
         self.ttv_session = None
-        TChannels.__init__(self, name='ttv', reload_interval=-1)
+        TChannels.__init__(self, name='ttv', reload_interval=-1, lock=None)
 
     def _initTTV(self):
         try:

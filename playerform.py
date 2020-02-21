@@ -347,7 +347,7 @@ class MyPlayer(xbmcgui.WindowXML):
         elif action in (
                 xbmcgui.ACTION_MOVE_UP, xbmcgui.ACTION_MOVE_DOWN, xbmcgui.ACTION_PAGE_UP, xbmcgui.ACTION_PAGE_DOWN):
             # IF ARROW UP AND DOWN PRESSED - SWITCH CHANNEL ##### @IgnorePep8
-            if action in (xbmcgui.ACTION_MOVE_UP, xbmcgui.ACTION_PAGE_DOWN):
+            if action in (xbmcgui.ACTION_MOVE_UP, xbmcgui.ACTION_PAGE_UP):
                 self.inc_channel_number()
             else:
                 self.dec_channel_number()

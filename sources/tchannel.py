@@ -234,8 +234,9 @@ class TChannel(UserDict):
 
 class TChannels:
 
-    def __init__(self, name, reload_interval=-1):
+    def __init__(self, name, reload_interval=-1, lock=None):
         self.name = name
+        self.lock = lock
         self.channels = []
         self.reload_interval = reload_interval
 

@@ -7,6 +7,7 @@ import defines
 from . import allfon, acestream, ttv
 from utils import str2int
 from six.moves import UserList
+from threading import Lock
 
 
 class ChannelSources(UserList):
@@ -26,9 +27,10 @@ class ChannelSources(UserList):
 
 
 channel_sources = ChannelSources()
+_lock = Lock()
 if str2int(defines.ADDON.getSetting('allfon')) > 0:
-    channel_sources.insert(str2int(defines.ADDON.getSetting('allfon')), allfon.Channels())
+    channel_sources.insert(str2int(defines.ADDON.getSetting('allfon')), allfon.Channels(_lock))
 if str2int(defines.ADDON.getSetting('acestream')) > 0:
-    channel_sources.insert(str2int(defines.ADDON.getSetting('acestream')), acestream.Channels())
+    channel_sources.insert(str2int(defines.ADDON.getSetting('acestream')), acestream.Channels(_lock))
 if str2int(defines.ADDON.getSetting('ttv')) > 0:
     channel_sources.insert(str2int(defines.ADDON.getSetting('ttv')), ttv.Channels())

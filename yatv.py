@@ -109,12 +109,12 @@ class YATV:
         ncrd = uni(int(time.time()) * 1000 + 1080)
         url = 'https://m.tv.yandex.ru/ajax/i-tv-region/get'
         _yparams = {"fields": "availableChannels,availableChannelsIds"}
-        _params = {"userRegion": 193,
-                   "resource": "schedule",
-                   "ncrd": ncrd,
-                   "params": json.dumps(_yparams),
-                   "lang": "ru"
-                   }
+        _params = {
+            "resource": "schedule",
+            "ncrd": ncrd,
+            "params": json.dumps(_yparams),
+            "lang": "ru"
+        }
         r = defines.request(url, params=_params, session=self.sess, headers={'Referer': 'https://tv.yandex.ru/'})
         return r.json()
 
@@ -133,12 +133,12 @@ class YATV:
                     "channelOffset": 0,
                     "start": dtm + 'T03:00:00+03:00'
                     }
-        _params = {"userRegion": 193,
-                   "resource": "schedule",
-                   "ncrd": ncrd,
-                   "params": json.dumps(_yparams),
-                   "lang": "ru"
-                   }
+        _params = {
+            "resource": "schedule",
+            "ncrd": ncrd,
+            "params": json.dumps(_yparams),
+            "lang": "ru"
+        }
         with gzip.open(self.yatv_file_json, 'ab+') as fp:
             fp.write('[')
             m = int(round(_yparams["channelProgramsLimit"] / _yparams["channelLimit"]))
