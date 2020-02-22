@@ -110,6 +110,7 @@ class YATV:
         url = 'https://m.tv.yandex.ru/ajax/i-tv-region/get'
         _yparams = {"fields": "availableChannels,availableChannelsIds"}
         _params = {
+            "userRegion": 193,
             "resource": "schedule",
             "ncrd": ncrd,
             "params": json.dumps(_yparams),
@@ -134,6 +135,7 @@ class YATV:
                     "start": dtm + 'T03:00:00+03:00'
                     }
         _params = {
+            "userRegion": 193,
             "resource": "schedule",
             "ncrd": ncrd,
             "params": json.dumps(_yparams),
