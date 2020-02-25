@@ -413,9 +413,9 @@ class WMainForm(xbmcgui.WindowXML):
                     ce = self.getControl(WMainForm.LBL_FIRST_EPG + i)
                     bt = datetime.datetime.fromtimestamp(float(ep['btime']))
                     et = datetime.datetime.fromtimestamp(float(ep['etime']))
-                    ce.setLabel(str2("{0} - {1} {2}").format(str2(bt.strftime("%H:%M")),
-                                                             str2(et.strftime("%H:%M")),
-                                                             str2(ep['name'].replace('&quot;', '"'))))
+                    ce.setLabel(str2("{0} - {1} {2}".format(bt.strftime("%H:%M"),
+                                                            et.strftime("%H:%M"),
+                                                            ep['name'].replace('&quot;', '"'))))
                     if i == 0:
                         if self.progress:
                             self.progress.setPercent((ctime - bt).seconds * 100 // (et - bt).seconds)
