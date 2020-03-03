@@ -101,6 +101,12 @@ class MChannel(UserList):
             if ep:
                 return ep
 
+    def get_screenshots(self):
+        for ch in self.data:
+            screens = ch.get_screenshots()
+            if screens:
+                return screens
+
 
 class TChannel(UserDict):
 
@@ -230,6 +236,9 @@ class TChannel(UserDict):
             log.e('epg error {0}'.format(e))
 
         return self.get('epg')
+
+    def get_screenshots(self):
+        pass
 
 
 class TChannels:

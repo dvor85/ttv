@@ -1730,7 +1730,7 @@ CHANNEL_INFO = {
     },
     "первый канал hd": {
         "cat": "Общие",
-        "aliases": ["первый hd", "первый"]
+        "aliases": ["первый hd"]
     },
     "kronehit tv hd": {
         "cat": "Музыка"

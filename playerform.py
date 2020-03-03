@@ -128,7 +128,7 @@ class MyPlayer(xbmcgui.WindowXML):
         except Exception as e:
             log.w('UpdateEpg error: {0}'.format(uni(e)))
 
-    def showEpg(self, curepg):
+    def showEpg(self, ch, curepg):
         try:
             ctime = datetime.datetime.now()
             if not curepg:

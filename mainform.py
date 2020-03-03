@@ -394,7 +394,7 @@ class WMainForm(xbmcgui.WindowXML):
                 if ch:
                     epg = ch.epg()
                     if epg and callback is not None and chnum == self.player.channel_number:
-                        callback(epg)
+                        callback(ch, epg)
                     self.getEpg(ch, 60, callback)
             except Exception as e:
                 log.d('getEpg->get error: {0}'.format(uni(e)))
@@ -405,7 +405,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.timers.stop(WMainForm.TIMER_GET_EPG)
         self.timers.start(WMainForm.TIMER_GET_EPG, threading.Timer(timeout, get))
 
-    def showEpg(self, curepg):
+    def showEpg(self, ch, curepg):
         try:
             ctime = datetime.datetime.now()
             for i, ep in enumerate(curepg):
@@ -419,6 +419,11 @@ class WMainForm(xbmcgui.WindowXML):
                     if i == 0:
                         if self.progress:
                             self.progress.setPercent((ctime - bt).seconds * 100 // (et - bt).seconds)
+                        if 'screens' not in ep:
+                            screens = ch.get_screenshots()
+                            if screens:
+                                ep['screens'] = screens
+
                         if 'screens' in ep:
                             self.showScreen(ep['screens'], 2)
                         if self.description_label and 'desc' in ep:
