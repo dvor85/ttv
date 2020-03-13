@@ -253,7 +253,7 @@ class AcePlayer(TPlayer):
         if AcePlayer.ACE_PATH:
             return AcePlayer.ACE_PATH
         if sys_platform == 'windows':
-            from six.moves import winreg
+            from six.moves import winreg  # @UnresolvedImport
             t = winreg.OpenKey(winreg.HKEY_CURRENT_USER, 'Software\\ACEStream')  # @UndefinedVariable
             try:
                 return uni(winreg.QueryValueEx(t, 'EnginePath')[0])  # @UndefinedVariable

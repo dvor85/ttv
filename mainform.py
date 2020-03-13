@@ -735,8 +735,9 @@ class WMainForm(xbmcgui.WindowXML):
         self.list_type = 'channels'
         li = xbmcgui.ListItem('..')
         self.list.addItem(li)
+        i = 0
 
-        for i, ch in enumerate(self.channel_groups.getSortedChannels(self.cur_category)):
+        for ch in self.channel_groups.getSortedChannels(self.cur_category):
             if ch:
                 # не добавлять чистые каналы с ttv
                 if len(ch) == 1 and ch[0].src() in ['ttv']:
@@ -744,7 +745,8 @@ class WMainForm(xbmcgui.WindowXML):
                 try:
                     if defines.isCancel():
                         return
-                    chname = "{0}. {1}".format(i + 1, ch.title())
+                    i += 1
+                    chname = "{0}. {1}".format(i, ch.title())
                     chli = xbmcgui.ListItem(str2(chname))
                     self.setLogo(ch, chli, self.set_logo_sema)
                     chli.setProperty('type', 'channel')
@@ -768,8 +770,8 @@ class WMainForm(xbmcgui.WindowXML):
                 except Exception as e:
                     log.e("fillChannels error: {0}".format(uni(e)))
         self.hideStatus()
-        if self.selitem_id < 1:
-            self.selitem_id = self.get_selitem_id(self.cur_channel)
+#         if self.selitem_id < 1:
+        self.selitem_id = self.get_selitem_id(self.cur_channel)
 
     def setLogo(self, ch, chli, sema):
 
