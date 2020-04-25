@@ -97,6 +97,7 @@ class Channel(TChannel):
         return TChannel.logo(self, session=_sess)
 
     def get_screenshots(self):
+        return
         try:
             params = dict(
                 session=self.ttv_session,
