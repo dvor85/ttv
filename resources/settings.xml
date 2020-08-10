@@ -30,4 +30,8 @@
 		<setting default="6689" id="nox_port" label="Порт Noxbit" type="number" />
 		<setting default="stream" id="nox_streamtype" label="Тип потока" type="labelenum" values="stream|hls"/>
 	</category>
+	<category label="TSProxy">
+		<setting default="false" id="use_tsproxy" label="Использовать TSProxy" type="bool" />
+		<setting default="true" id="proxy_hls" label="HLS" type="bool" />
+	</category>
 </settings>

@@ -500,7 +500,7 @@ class WMainForm(xbmcgui.WindowXML):
         thrs['favourite'] = defines.MyThread(self.loadFavourites)
         thrs['yatv_epg'] = defines.MyThread(lambda: setattr(self, '_yatv_instance', yatv.YATV.get_instance()))
 
-        for src in channel_sources:
+        for src in itervalues(channel_sources):
             thrs[src.name] = defines.MyThread(self.loadChannels, src.name)
 
         for thr in itervalues(thrs):
@@ -740,8 +740,8 @@ class WMainForm(xbmcgui.WindowXML):
         for ch in self.channel_groups.getSortedChannels(self.cur_category):
             if ch:
                 # не добавлять чистые каналы с ttv
-                if len(ch) == 1 and ch[0].src() in ['ttv']:
-                    continue
+                #                 if len(ch) == 1 and ch[0].src() in ['ttv']:
+                #                     continue
                 try:
                     if defines.isCancel():
                         return
