@@ -15,6 +15,9 @@ import logger
 import yatv
 from .channel_info import CHANNEL_INFO
 from .grouplang import translate
+from utils import str2int
+# from .table import channel_sources
+
 
 log = logger.Logger(__name__)
 
@@ -23,24 +26,26 @@ def sign(num):
     return "+" if num > 0 else "-"
 
 
-class MChannel(UserList):
+class MChannel(UserDict):
 
-    def __init__(self, chs):
-        UserList.__init__(self)
-        self.data = chs
+    def __init__(self, chs=None):
+        UserDict.__init__(self)
+        if chs is None:
+            chs = {}
+        self.data.update(chs)
 
-    def append(self, ch):
-        if self.title() != ch.title():
-            for pu in self.xurl():
-                for u in itervalues(pu[1]):
-                    if ch['url']:
-                        for cu in itervalues(ch['url']):
-                            if u[0] == cu[0]:
-                                return
-        if not isinstance(ch, self.__class__):
-            return UserList.append(self, ch)
-        else:
-            return UserList.extend(self, ch)
+#     def append(self, ch):
+#         if self.title() != ch.title():
+#             for pu in self.xurl():
+#                 for u in itervalues(pu[1]):
+#                     if ch['url']:
+#                         for cu in itervalues(ch['url']):
+#                             if u[0] == cu[0]:
+#                                 return
+#         if not isinstance(ch, self.__class__):
+#             return UserList.append(self, ch)
+#         else:
+#             return UserList.extend(self, ch)
 
     def insert(self, index, ch):
         if self.title() != ch.title():
@@ -51,12 +56,12 @@ class MChannel(UserList):
                             if u[0] == cu[0]:
                                 return
         if not isinstance(ch, self.__class__):
-            return UserList.insert(self, index, ch)
+            UserDict.__setitem__(self, index, ch)
         else:
-            return UserList.extend(self, ch)
+            UserDict.update(ch)
 
     def group(self):
-        for ch in self.data:
+        for ch in itervalues(self.data):
             gr = ch.group()
             if gr:
                 return gr
@@ -66,43 +71,45 @@ class MChannel(UserList):
         [src_name, {player: (url, mode)}]
         """
         ret = []
-        for ch in self.data:
+
+#         self.data.sort(key=lambda ch: channel_sources.index_by_name(ch.src()))
+        for ch in itervalues(self.data):
             if ch['url']:
                 ret.append([ch.src(), ch['url']])
         return ret
 
     def logo(self):
-        for ch in self.data:
+        for ch in itervalues(self.data):
             lo = ch.logo()
             if lo:
                 return lo
 
     def name(self):
-        for ch in self.data:
+        for ch in itervalues(self.data):
             nm = ch.name()
             if nm:
                 return nm
 
     def pin(self):
-        for ch in self.data:
+        for ch in itervalues(self.data):
             p = ch.get('pin')
             if p:
                 return p
 
     def title(self):
-        for ch in self.data:
+        for ch in itervalues(self.data):
             tit = ch.title()
             if tit:
                 return tit
 
     def epg(self):
-        for ch in self.data:
+        for ch in itervalues(self.data):
             ep = ch.epg()
             if ep:
                 return ep
 
     def get_screenshots(self):
-        for ch in self.data:
+        for ch in itervalues(self.data):
             screens = ch.get_screenshots()
             if screens:
                 return screens

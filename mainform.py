@@ -21,8 +21,8 @@ import utils
 import yatv
 from menu import MenuForm
 from playerform import MyPlayer
-from sources.table import channel_sources
 from sources.tchannel import TChannel, MChannel
+from sources.table import channel_sources
 
 
 log = logger.Logger(__name__)
@@ -70,15 +70,16 @@ class ChannelGroups(OrderedDict):
                 return
             if groupname not in self:
                 self.addGroup(groupname)
+            src_index = channel_sources.index_by_name(src_name)
             try:
                 c = next(self.find_channel_by_title(groupname, ch.title()))
             except StopIteration:
                 c = None
             if c:
-                c.insert(channel_sources.index_by_name(src_name), ch)
+                c.insert(src_index, ch)
             else:
                 if not isinstance(ch, MChannel):
-                    self.getChannels(groupname).append(MChannel([ch]))
+                    self.getChannels(groupname).append(MChannel({src_index: ch}))
                 else:
                     self.getChannels(groupname).append(ch)
         except Exception as e:
@@ -500,7 +501,7 @@ class WMainForm(xbmcgui.WindowXML):
         thrs['favourite'] = defines.MyThread(self.loadFavourites)
         thrs['yatv_epg'] = defines.MyThread(lambda: setattr(self, '_yatv_instance', yatv.YATV.get_instance()))
 
-        for src in itervalues(channel_sources):
+        for src in channel_sources:
             thrs[src.name] = defines.MyThread(self.loadChannels, src.name)
 
         for thr in itervalues(thrs):

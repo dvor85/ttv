@@ -19,10 +19,10 @@ _sess = requests.Session()
 class Channel(TChannel):
 
     def __init__(self, data={}, ttv_session=None):
-        TChannel.__init__(self, data=data, src='ttv', player='ace,nox')
+        TChannel.__init__(self, data=data, src='ttv', player='ace,nox,tsp')
         self.use_nox = uni(defines.ADDON.getSetting('use_nox')) == 'true'
         self.use_ace = uni(defines.ADDON.getSetting('use_ace')) == 'true'
-        self.use_tsproxy = uni(defines.ADDON.getSetting('use_ace')) == 'true'
+        self.use_tsproxy = uni(defines.ADDON.getSetting('use_tsproxy')) == 'true'
         self.ttv_session = ttv_session
 
     def __getitem__(self, key):
