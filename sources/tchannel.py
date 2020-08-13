@@ -34,28 +34,18 @@ class MChannel(UserDict):
             chs = {}
         self.data.update(chs)
 
-#     def append(self, ch):
-#         if self.title() != ch.title():
-#             for pu in self.xurl():
-#                 for u in itervalues(pu[1]):
-#                     if ch['url']:
-#                         for cu in itervalues(ch['url']):
-#                             if u[0] == cu[0]:
-#                                 return
-#         if not isinstance(ch, self.__class__):
-#             return UserList.append(self, ch)
-#         else:
-#             return UserList.extend(self, ch)
-
     def insert(self, index, ch):
         if self.title() != ch.title():
             for pu in self.xurl():
                 for u in itervalues(pu[1]):
                     if ch['url']:
                         for cu in itervalues(ch['url']):
-                            if u[0] == cu[0]:
-                                return
+                            if isinstance(u[0], unicode) and isinstance(cu[0], unicode):
+                                if u[0] == cu[0]:
+                                    return
         if not isinstance(ch, self.__class__):
+            while index in self.data:
+                index += 1
             UserDict.__setitem__(self, index, ch)
         else:
             UserDict.update(ch)
@@ -72,7 +62,6 @@ class MChannel(UserDict):
         """
         ret = []
 
-#         self.data.sort(key=lambda ch: channel_sources.index_by_name(ch.src()))
         for ch in itervalues(self.data):
             if ch['url']:
                 ret.append([ch.src(), ch['url']])
@@ -103,10 +92,15 @@ class MChannel(UserDict):
                 return tit
 
     def epg(self):
+        fep = None
         for ch in itervalues(self.data):
             ep = ch.epg()
+#             Если нет описания, посмотреть в другом источнике
             if ep:
-                return ep
+                fep = ep
+                if ep[0].get('desc'):
+                    return ep
+        return fep
 
     def get_screenshots(self):
         for ch in itervalues(self.data):

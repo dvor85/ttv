@@ -190,6 +190,8 @@ class MyPlayer(xbmcgui.WindowXML):
                     for player, url_mode in iteritems(player_url):
                         try:
                             url, mode = url_mode
+                            if not isinstance(url, unicode):
+                                url = url()
                             log.d('Try to play with {0} player'.format(player))
                             logo = channel.logo()
                             if self.cicon:

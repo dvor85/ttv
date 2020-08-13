@@ -29,12 +29,12 @@ class Channel(TChannel):
         if key == 'url':
             #             return None
             if not isinstance(self.data.get(key), dict):
-                #                 if self.use_ace:
-                #                     self.data[key] = {'ace': (self._get_ace_url(), self.get('mode'))}
-                #                 if self.use_nox:
-                #                     self.data[key] = {'nox': (self._get_nox_url(), self.get('mode'))}
+                if self.use_ace:
+                    self.data[key] = {'ace': (self._get_ace_url, self.get('mode'))}
+                if self.use_nox:
+                    self.data[key] = {'nox': (self._get_nox_url, self.get('mode'))}
                 if self.use_tsproxy:
-                    self.data[key] = {'tsproxy': (self._get_tsproxy_url(), self.get('mode'))}
+                    self.data[key] = {'tsproxy': (self._get_tsproxy_url, self.get('mode'))}
 
         return TChannel.__getitem__(self, key)
 
