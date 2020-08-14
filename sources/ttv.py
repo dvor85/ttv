@@ -19,19 +19,22 @@ _sess = requests.Session()
 class Channel(TChannel):
 
     def __init__(self, data={}, ttv_session=None):
-        TChannel.__init__(self, data=data, src='ttv', player='ace,nox')
+        TChannel.__init__(self, data=data, src='ttv', player='ace,nox,tsp')
         self.use_nox = uni(defines.ADDON.getSetting('use_nox')) == 'true'
         self.use_ace = uni(defines.ADDON.getSetting('use_ace')) == 'true'
+        self.use_tsproxy = uni(defines.ADDON.getSetting('use_tsproxy')) == 'true'
         self.ttv_session = ttv_session
 
     def __getitem__(self, key):
         if key == 'url':
-            return None
+            #             return None
             if not isinstance(self.data.get(key), dict):
                 if self.use_ace:
-                    self.data[key] = {'ace': (self._get_ace_url(), self.get('mode'))}
+                    self.data[key] = {'ace': (self._get_ace_url, self.get('mode'))}
                 if self.use_nox:
-                    self.data[key] = {'nox': (self._get_nox_url(), self.get('mode'))}
+                    self.data[key] = {'nox': (self._get_nox_url, self.get('mode'))}
+                if self.use_tsproxy:
+                    self.data[key] = {'tsproxy': (self._get_tsproxy_url, self.get('mode'))}
 
         return TChannel.__getitem__(self, key)
 
@@ -75,6 +78,28 @@ class Channel(TChannel):
         except Exception as e:
             log.w('_get_nox_url error: {0}'.format(uni(e)))
 
+    def _get_tsproxy_url(self):
+        zoneid = 0
+        nohls = 0 if defines.ADDON.getSetting("proxy_hls") == "true" else 1
+        try:
+            params = dict(
+                session=self.ttv_session,
+                channel_id=self.id(),
+                typeresult='json',
+                zone_id=zoneid,
+                nohls=nohls)
+            r = defines.request("http://{server}/v3/translation_http.php".format(server='api.{0}'.format(_server)),
+                                params=params, session=_sess, trys=1)
+
+            jdata = r.json()
+            if not jdata["success"]:
+                return
+            if jdata["success"] == 0:
+                return
+            return jdata['source']
+        except Exception as e:
+            log.w('_get_tsproxy_url error: {0}'.format(uni(e)))
+
     def update_epglist(self):
         if not self.get('epg'):
             try:
@@ -97,6 +122,7 @@ class Channel(TChannel):
         return TChannel.logo(self, session=_sess)
 
     def get_screenshots(self):
+        # Скрины пока не работают в ttv
         return
         try:
             params = dict(
@@ -196,6 +222,7 @@ class Channels(TChannels):
                     try:
                         if not (ch.get("name") or ch.get("id")):
                             continue
+
                         channel = ch
                         channel['cat'] = self._get_groupname_by_id(jdata.get("categories"), ch['group'])
                         self.channels.append(Channel(channel, self.ttv_session))

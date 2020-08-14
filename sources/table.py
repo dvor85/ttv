@@ -6,8 +6,11 @@ from __future__ import absolute_import, division, unicode_literals
 import defines
 from . import allfon, acestream, ttv
 from utils import str2int
+from six import itervalues, iteritems, iterkeys, next
 from six.moves import UserList
 from threading import Lock
+from operator import itemgetter, attrgetter, methodcaller
+from utils import str2int
 
 
 class ChannelSources(UserList):
@@ -29,8 +32,9 @@ class ChannelSources(UserList):
 channel_sources = ChannelSources()
 _lock = Lock()
 if str2int(defines.ADDON.getSetting('allfon')) > 0:
-    channel_sources.insert(str2int(defines.ADDON.getSetting('allfon')), allfon.Channels(_lock))
+    channel_sources.append(allfon.Channels(_lock))
 if str2int(defines.ADDON.getSetting('acestream')) > 0:
-    channel_sources.insert(str2int(defines.ADDON.getSetting('acestream')), acestream.Channels(_lock))
+    channel_sources.append(acestream.Channels(_lock))
 if str2int(defines.ADDON.getSetting('ttv')) > 0:
-    channel_sources.insert(str2int(defines.ADDON.getSetting('ttv')), ttv.Channels())
+    channel_sources.append(ttv.Channels())
+channel_sources.sort(key=lambda src: str2int(defines.ADDON.getSetting(src.name)))

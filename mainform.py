@@ -21,8 +21,8 @@ import utils
 import yatv
 from menu import MenuForm
 from playerform import MyPlayer
-from sources.table import channel_sources
 from sources.tchannel import TChannel, MChannel
+from sources.table import channel_sources
 
 
 log = logger.Logger(__name__)
@@ -70,15 +70,16 @@ class ChannelGroups(OrderedDict):
                 return
             if groupname not in self:
                 self.addGroup(groupname)
+            src_index = channel_sources.index_by_name(src_name)
             try:
                 c = next(self.find_channel_by_title(groupname, ch.title()))
             except StopIteration:
                 c = None
             if c:
-                c.insert(channel_sources.index_by_name(src_name), ch)
+                c.insert(src_index, ch)
             else:
                 if not isinstance(ch, MChannel):
-                    self.getChannels(groupname).append(MChannel([ch]))
+                    self.getChannels(groupname).append(MChannel({src_index: ch}))
                 else:
                     self.getChannels(groupname).append(ch)
         except Exception as e:
@@ -425,7 +426,7 @@ class WMainForm(xbmcgui.WindowXML):
                                 ep['screens'] = screens
 
                         if 'screens' in ep:
-                            self.showScreen(ep['screens'], 2)
+                            self.showScreen(ep['screens'], 1)
                         if self.description_label and 'desc' in ep:
                             self.description_label.setText(str2(ep['desc']))
 
@@ -740,8 +741,8 @@ class WMainForm(xbmcgui.WindowXML):
         for ch in self.channel_groups.getSortedChannels(self.cur_category):
             if ch:
                 # не добавлять чистые каналы с ttv
-                if len(ch) == 1 and ch[0].src() in ['ttv']:
-                    continue
+                #                 if len(ch) == 1 and ch[0].src() in ['ttv']:
+                #                     continue
                 try:
                     if defines.isCancel():
                         return

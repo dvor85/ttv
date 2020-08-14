@@ -11,9 +11,9 @@
 	<category label="Источники">
 		<setting default="pomoyka.win" id="pomoyka_domain" label="IP адрес или доменное имя помойки" type="text" />
 		<setting default="https://iptvx.one/epg/epg.xml.gz" id="epg_url" label="Ссылка EPG (xmltv)" type="text" visible="false" />
-		<setting id="acestream" label="Acestream (Порядоковый номер. Если <= 0, то выключен)" type="number" default="1" />
+		<setting id="acestream" label="Acestream (Порядоковый номер. Если <= 0, то выключен)" type="number" default="2" />
 		<setting id="allfon" label="Allfon (Порядоковый номер. Если <= 0, то выключен)" type="number" default="0" />
-		<setting id="ttv" label="TTV (Порядоковый номер. Если <= 0, то выключен)" type="number" default="3" />
+		<setting id="ttv" label="TTV (Порядоковый номер. Если <= 0, то выключен)" type="number" default="1" />
 		<setting default="" id="ttv_login" label="Логин ttv" type="text" enable="gt(-1,0)" subsetting="true" />
 		<setting default="" id="ttv_password" label="Пароль ttv" type="text" enable="gt(-2,0)" subsetting="true" />
 	</category>
@@ -29,5 +29,9 @@
 		<setting default="127.0.0.1" id="nox_ip" label="IP-адрес Noxbit" type="text" />
 		<setting default="6689" id="nox_port" label="Порт Noxbit" type="number" />
 		<setting default="stream" id="nox_streamtype" label="Тип потока" type="labelenum" values="stream|hls"/>
+	</category>
+	<category label="TSProxy">
+		<setting default="true" id="use_tsproxy" label="Использовать TSProxy" type="bool" />
+		<setting default="true" id="proxy_hls" label="HLS" type="bool" />
 	</category>
 </settings>
