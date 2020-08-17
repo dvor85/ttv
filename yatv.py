@@ -9,7 +9,7 @@ import json
 import os
 import re
 import time
-from threading import Event, Timer, Lock
+from threading import Event, Timer
 import requests
 import defines
 import logger
@@ -38,22 +38,20 @@ def get_name_offset(name):
 
 class YATV:
     _instance = None
-#     _lock = Event()
-    _lock = Lock()
+    _lock = Event()
 
     @staticmethod
     def get_instance():
         if YATV._instance is None:
-            with YATV._lock:
-                #             if not YATV._lock.is_set():
-                #                 YATV._lock.set()
+            if not YATV._lock.is_set():
+                YATV._lock.set()
                 try:
                     YATV._instance = YATV()
                 except Exception as e:
                     log.error("get_instance error: {0}".format(e))
                     YATV._instance = None
-#                 finally:
-#                     YATV._lock.clear()
+                finally:
+                    YATV._lock.clear()
         return YATV._instance
 
     def __init__(self):

@@ -6,7 +6,6 @@ from __future__ import absolute_import, division, unicode_literals
 import datetime
 import json
 import threading
-import sys
 import xbmcgui
 import xbmc
 from operator import methodcaller
@@ -328,6 +327,8 @@ class WMainForm(xbmcgui.WindowXML):
     def onFocus(self, ControlID):
         if self.rotate_screen_thr:
             self.rotate_screen_thr.stop()
+            self.rotate_screen_thr = None
+        self.timers.stop(WMainForm.TIMER_SHOW_SCREEN)
 
         for controlId in (WMainForm.IMG_SCREEN,):
             self.getControl(controlId).setImage('')

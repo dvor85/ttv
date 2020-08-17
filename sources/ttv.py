@@ -8,7 +8,6 @@ from utils import uni, str2, str2int
 import requests
 import logger
 import uuid
-import os
 from .tchannel import TChannel, TChannels
 
 log = logger.Logger(__name__)

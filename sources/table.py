@@ -5,11 +5,8 @@ from __future__ import absolute_import, division, unicode_literals
 
 import defines
 from . import allfon, acestream, ttv
-from utils import str2int
-from six import itervalues, iteritems, iterkeys, next
 from six.moves import UserList
 from threading import Lock
-from operator import itemgetter, attrgetter, methodcaller
 from utils import str2int
 
 

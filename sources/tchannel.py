@@ -6,17 +6,15 @@ from __future__ import absolute_import, division, unicode_literals
 import datetime
 import os
 
-from six.moves import UserDict, UserList
-from six import iteritems, itervalues
-from utils import uni, str2
+from six.moves import UserDict
+from six import itervalues
+from utils import uni
 
 import defines
 import logger
 import yatv
 from .channel_info import CHANNEL_INFO
 from .grouplang import translate
-from utils import str2int
-# from .table import channel_sources
 
 
 log = logger.Logger(__name__)
@@ -98,7 +96,7 @@ class MChannel(UserDict):
 #             Если нет описания, посмотреть в другом источнике
             if ep:
                 fep = ep
-                if ep[0].get('desc'):
+                if 'desc' in ep[0]:
                     return ep
         return fep
 
