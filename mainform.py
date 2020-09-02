@@ -395,7 +395,7 @@ class WMainForm(xbmcgui.WindowXML):
                 self.showStatus('Загрузка программы')
                 if ch:
                     epg = ch.epg()
-                    if epg and callback is not None and chnum == self.player.channel_number:
+                    if callback is not None and chnum == self.player.channel_number:
                         callback(ch, epg)
                     self.getEpg(ch, 60, callback)
             except Exception as e:
