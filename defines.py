@@ -80,7 +80,7 @@ def isCancel():
     return ret
 
 
-def request(url, method='get', params=None, trys=3, interval=0, session=None, **kwargs):
+def request(url, method='get', params=None, trys=3, interval=0, session=None, proxies=None, **kwargs):
     params_str = "?" + "&".join(("{0}={1}".format(*i)
                                  for i in iteritems(params))) if params is not None and method == 'get' else ""
     log.d('try to get: {url}{params}'.format(url=url, params=params_str))
@@ -102,9 +102,9 @@ Chrome/45.0.2454.99 Safari/537.36'}
             raise Exception('Attempts are over')
         try:
             if session:
-                r = session.request(method, url, params=params, headers=headers, **kwargs)
+                r = session.request(method, url, params=params, headers=headers, proxies=proxies, **kwargs)
             else:
-                r = requests.request(method, url, params=params, headers=headers, **kwargs)
+                r = requests.request(method, url, params=params, headers=headers, proxies=proxies, **kwargs)
             r.raise_for_status()
             return r
         except Exception as e:
