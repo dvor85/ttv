@@ -6,6 +6,7 @@
     <requires>
 		<import addon="xbmc.python" version="2.26.0" />
 		<import addon="script.module.requests" /> 
+		<import addon="script.module.pysocks" /> 
 		<import addon="script.module.six" />
     </requires>
     <extension point="xbmc.python.script" library="default.py">
