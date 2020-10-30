@@ -92,7 +92,7 @@ Chrome/45.0.2454.99 Safari/537.36'}
         headers.update(kwargs['headers'])
         del kwargs['headers']
     kwargs.setdefault('allow_redirects', True)
-    kwargs.setdefault('timeout', 3.05)
+    kwargs.setdefault('timeout', 10.05)
 
     t = 0
     xbmc.sleep(interval)

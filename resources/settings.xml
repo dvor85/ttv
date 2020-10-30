@@ -9,8 +9,8 @@
 		<setting id="age" label="Возраст" type="enum" values="Младше 13|13-17|18-24|25-34|35-44|45-54|55-64|Старше 64" />
 	</category>
 	<category label="Источники">
-		<setting default="f27uk3gyl2gfu4z36eifv4ob73w6xgrcms4w4vdxzcsxsobgc766ityd.onion" id="pomoyka_domain" label="IP адрес или доменное имя помойки" type="text" />
-		<setting default="127.0.0.1:9050" id="socks5_proxy" label="IP адрес socks5 прокси" type="text" />
+		<setting default="omt56v4jxa4hurbwk44vqbbcwn3eavuynyc24c25cy7grucjh24q.b32.i2p" id="pomoyka_domain" label="Адрес помойки" type="text" />
+		<setting default="http://127.0.0.1:4444" id="pomoyka_proxy" label="Прокси помойки (http,socks5h,...)" type="text" />
 		<setting default="https://iptvx.one/epg/epg.xml.gz" id="epg_url" label="Ссылка EPG (xmltv)" type="text" visible="false" />
 		<setting id="acestream" label="Acestream (Порядоковый номер. Если <= 0, то выключен)" type="number" default="2" />
 		<setting id="allfon" label="Allfon (Порядоковый номер. Если <= 0, то выключен)" type="number" default="0" />

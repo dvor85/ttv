@@ -28,7 +28,7 @@ class Channels(TChannels):
 
     def __init__(self, lock):
         self.url = 'http://{pomoyka}/trash/ttv-list/allfon.json'.format(pomoyka=uni(defines.ADDON.getSetting('pomoyka_domain')))
-        self.proxies = {'http': 'socks5://{socks5_proxy}'.format(socks5_proxy=defines.ADDON.getSetting('socks5_proxy'))}
+        self.proxies = {'http': defines.ADDON.getSetting('pomoyka_proxy')}
         self._temp = self._temp = os.path.join(defines.CACHE_PATH, "allfon.json")
         TChannels.__init__(self, name='allfon', reload_interval=1800, lock=lock)
 
