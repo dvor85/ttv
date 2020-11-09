@@ -93,6 +93,9 @@ Chrome/45.0.2454.99 Safari/537.36'}
         del kwargs['headers']
     kwargs.setdefault('allow_redirects', True)
     kwargs.setdefault('timeout', 10.05)
+    if proxies is None and ADDON.getSetting('pomoyka_proxy_for_all') == 'true':
+        proxies = {'http': ADDON.getSetting('pomoyka_proxy'),
+                   'https': ADDON.getSetting('pomoyka_proxy')}
 
     t = 0
     xbmc.sleep(interval)
