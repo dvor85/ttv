@@ -8,6 +8,7 @@ import sys
 import threading
 
 import requests
+import urllib3
 import six
 import xbmcaddon
 import xbmc
@@ -33,6 +34,12 @@ GENDER = uni(ADDON.getSetting('gender'))
 AGE = uni(ADDON.getSetting('age'))
 FAVOURITE = uni(ADDON.getSetting('favourite'))
 DEBUG = uni(ADDON.getSetting('debug')) == 'true'
+PROXY_TYPE, _proxy_addr, _port = urllib3.get_host(uni(ADDON.getSetting('pomoyka_proxy')))
+PROXY_TYPE = uni(ADDON.getSetting('proxy_type'))
+if PROXY_TYPE == 'socks5':
+    PROXY_TYPE = 'socks5h'
+PROXIES = {"http": "{t}://{a}:{p}".format(t=PROXY_TYPE, a=_proxy_addr, p=_port),
+           "https": "{t}://{a}:{p}".format(t=PROXY_TYPE, a=_proxy_addr, p=_port)}
 if not os.path.exists(CACHE_PATH):
     os.makedirs(CACHE_PATH)
 
@@ -83,7 +90,10 @@ def isCancel():
 def request(url, method='get', params=None, trys=3, interval=0, session=None, proxies=None, **kwargs):
     params_str = "?" + "&".join(("{0}={1}".format(*i)
                                  for i in iteritems(params))) if params is not None and method == 'get' else ""
+    if proxies is None and ADDON.getSetting('pomoyka_proxy_for_all') == 'true':
+        proxies = PROXIES
     log.d('try to get: {url}{params}'.format(url=url, params=params_str))
+    log.d('proxies: {proxies}'.format(proxies=proxies))
     if not url:
         return
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) \
@@ -93,9 +103,6 @@ Chrome/45.0.2454.99 Safari/537.36'}
         del kwargs['headers']
     kwargs.setdefault('allow_redirects', True)
     kwargs.setdefault('timeout', 10.05)
-    if proxies is None and ADDON.getSetting('pomoyka_proxy_for_all') == 'true':
-        proxies = {'http': ADDON.getSetting('pomoyka_proxy'),
-                   'https': ADDON.getSetting('pomoyka_proxy')}
 
     t = 0
     xbmc.sleep(interval)

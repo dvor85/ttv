@@ -10,7 +10,8 @@
 	</category>
 	<category label="Сеть">
 		<setting default="f27uk3gyl2gfu4z36eifv4ob73w6xgrcms4w4vdxzcsxsobgc766ityd.onion" id="pomoyka_domain" label="Адрес помойки" type="text" />
-		<setting default="socks5h://127.0.0.1:9050" id="pomoyka_proxy" label="Прокси (http,socks5h,...)" type="text" />
+		<setting default="socks5" id="proxy_type" label="Тип прокси" type="labelenum" values="http|socks5" visible="true" />
+		<setting default="127.0.0.1:9050" id="pomoyka_proxy" label="Прокси" type="text" />
 		<setting default="false" id="pomoyka_proxy_for_all" label="Использовать прокси для всего" type="bool" />
 	</category>			
 	<category label="Источники">		
