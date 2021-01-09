@@ -13,6 +13,7 @@ from utils import uni
 import defines
 import logger
 import yatv
+import six
 from .channel_info import CHANNEL_INFO
 from .grouplang import translate
 
@@ -38,7 +39,7 @@ class MChannel(UserDict):
                 for u in itervalues(pu[1]):
                     if ch['url']:
                         for cu in itervalues(ch['url']):
-                            if isinstance(u[0], unicode) and isinstance(cu[0], unicode):
+                            if isinstance(u[0], six.text_type) and isinstance(cu[0], six.text_type):
                                 if u[0] == cu[0]:
                                     return
         if not isinstance(ch, self.__class__):
