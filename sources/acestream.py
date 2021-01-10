@@ -22,10 +22,10 @@ class Channels(TChannels):
         self._temp = os.path.join(defines.CACHE_PATH, "ace.json")
         TChannels.__init__(self, name='acestream', reload_interval=1800, lock=lock)
 
-    def _load_jdata(self):
+    def _load_jdata(self, avail=True):
         log.d('get {temp}'.format(temp=self._temp))
         if os.path.exists(self._temp):
-            if time.time() - os.path.getmtime(self._temp) <= self.reload_interval:
+            if not avail or (time.time() - os.path.getmtime(self._temp) <= self.reload_interval):
                 with open(self._temp, 'r') as fp:
                     return json.load(fp)
 
@@ -50,7 +50,15 @@ class Channels(TChannels):
                 self._save_jdata(jdata)
             except Exception as e:
                 log.error("get_channels error: {0}".format(uni(e)))
+                log.i('Try to load previos channels, if availible')
+                try:
+                    jdata = self._load_jdata(False)
+                    if not jdata:
+                        raise Exception("Channels are not avalible")
+                except Exception as e:
+                    log.error(uni(e))
 
-        chs = jdata.get('channels', [])
-        for ch in chs:
-            self.channels.append(TChannel(ch, src='acestream', player='ace', mode='PID'))
+        if jdata:
+            chs = jdata.get('channels', [])
+            for ch in chs:
+                self.channels.append(TChannel(ch, src='acestream', player='ace', mode='PID'))

@@ -44,7 +44,7 @@ class Channels(TChannels):
 
     def update_channels(self):
         TChannels.update_channels(self)
-        jdata = dict
+        jdata = dict()
         try:
             jdata = self._load_jdata()
             if not jdata:
@@ -59,7 +59,15 @@ class Channels(TChannels):
                 self._save_jdata(jdata)
             except Exception as e:
                 log.error("get_channels error: {0}".format(uni(e)))
+                log.i('Try to load previos channels, if availible')
+                try:
+                    jdata = self._load_jdata(False)
+                    if not jdata:
+                        raise Exception("Channels are not avalible")
+                except Exception as e:
+                    log.error(uni(e))
 
-        chs = jdata.get('channels', [])
-        for ch in chs:
-            self.channels.append(Channel(ch))
+        if jdata:
+            chs = jdata.get('channels', [])
+            for ch in chs:
+                self.channels.append(Channel(ch))
