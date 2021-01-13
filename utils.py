@@ -80,9 +80,13 @@ def str2(s, to_encoding='utf8'):
     """
     PY2 - Кодирует :s: в :to_encoding:
     """
-    if PY2 and isinstance(s, six.text_type):
-        return s.encode(to_encoding, 'ignore')
-    return str(s)
+    try:
+        return six.ensure_str(s, to_encoding, errors='ignore')
+    except TypeError:
+        try:
+            return str(s)
+        except:
+            return s
 
 
 def fs_enc(path, from_encoding='utf8'):
