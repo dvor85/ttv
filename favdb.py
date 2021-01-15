@@ -106,7 +106,7 @@ class LocalFDB(FDB):
     def get(self):
         log.d('get channels')
         if os.path.exists(fs_str(self.DB)):
-            with open(fs_str(self.DB, 'r')) as fp:
+            with open(fs_str(self.DB), 'r') as fp:
                 try:
                     self.channels = json.load(fp)
                 except Exception as e:

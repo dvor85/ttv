@@ -14,7 +14,8 @@ import requests
 import defines
 import logger
 from sources.channel_info import CHANNEL_INFO
-from utils import uni, str2int, fs_str
+from utils import uni, str2int, fs_str, makedirs
+from six import itervalues
 
 
 log = logger.Logger(__name__)
@@ -56,46 +57,85 @@ class YATV:
 
     def __init__(self):
         log.d('start initialization')
-        self.jdata = []
+        self.jdata = {}
         self.update_timer = None
-        self.yatv_file_json = os.path.join(defines.CACHE_PATH, 'yatv.json.gz')
+        self.yatv_path = os.path.join(defines.CACHE_PATH, 'yatv')
         self.yatv_logo_path = os.path.join(defines.CACHE_PATH, 'logo')
         self.sess = requests.Session()
+        makedirs(fs_str(self.yatv_path))
 
         self.availableChannels = self.get_availible_channels()
+        self.limit_channels = 24
+        self.pages = int(round(self.availableChannels["availableChannels"] / self.limit_channels))
         self._get_jdata()
 
         log.d('stop initialization')
 
     def _get_jdata(self):
-        valid_date = False
-        if os.path.exists(fs_str(self.yatv_file_json)):
-            valid_date = datetime.date.today() == datetime.date.fromtimestamp(os.path.getmtime(fs_str(self.yatv_file_json)))
+        for page in range(0, self.pages):
+            if defines.isCancel():
+                self.cancel()
+                return
+            self.update_yatv(page)
+            yatv_file = os.path.join(self.yatv_path, "{0}.gz".format(page))
+            if page not in self.jdata:
+                bt = time.time()
+                self.update_yatv(page)
+                log.d("Loading yatv {y} in {t} sec".format(y=yatv_file, t=time.time() - bt))
+
+                try:
+                    bt = time.time()
+                    with gzip.open(fs_str(yatv_file), 'rb') as fp:
+                        self.jdata[page] = json.load(fp)
+                    log.d("Loading yatv {y} from json in {t} sec".format(y=yatv_file, t=time.time() - bt))
+                except Exception as e:
+                    log.e("Error while loading json from {y}: {e}".format(y=yatv_file, e=uni(e)))
+                    if os.path.exists(fs_str(yatv_file)):
+                        os.unlink(fs_str(yatv_file))
+                    raise e
+
         interval = (datetime.datetime.combine(datetime.date.today() + datetime.timedelta(days=1),
                                               datetime.time(3, 0)) - datetime.datetime.now()).seconds
-
-        if not os.path.exists(fs_str(self.yatv_file_json)) or not valid_date:
-            if os.path.exists(fs_str(self.yatv_file_json)):
-                os.unlink(fs_str(self.yatv_file_json))
-            bt = time.time()
-            self.update_yatv()
-            log.d("Loading yatv in {t} sec".format(t=time.time() - bt))
-        if not self.jdata:
-            try:
-                bt = time.time()
-                with gzip.open(fs_str(self.yatv_file_json), 'rb') as fp:
-                    self.jdata = json.loads(fp.read())
-                log.d("Loading yatv from json in {t} sec".format(t=time.time() - bt))
-            except Exception as e:
-                log.e("Error while loading json: {0}".format(uni(e)))
-                if os.path.exists(fs_str(self.yatv_file_json)):
-                    os.unlink(fs_str(self.yatv_file_json))
-                raise e
-
         self.update_timer = Timer(interval, self._get_jdata)
         self.update_timer.name = "update_yatv_timer"
         self.update_timer.daemon = False
         self.update_timer.start()
+
+    def update_yatv(self, page=0):
+        yatv_file = os.path.join(self.yatv_path, "{0}.gz".format(page))
+
+        valid_date = os.path.exists(fs_str(yatv_file)) and \
+            datetime.date.today() == datetime.date.fromtimestamp(os.path.getmtime(fs_str(yatv_file)))
+        if not valid_date:
+            ncrd = uni(int(time.time()) * 1000 + 1080)
+            dtm = uni(time.strftime('%Y-%m-%d'))
+
+            url = 'https://m.tv.yandex.ru/ajax/i-tv-region/get'
+            """
+            https://tv.yandex.ru/ajax/i-tv-region/get?params={"duration":96400,"fields":"schedules,channel,title,id,events,channelId,start,finish,program,availableChannels,availableChannelsIds"}&resource=schedule&lang=ru&userRegion=193
+            """
+
+            _yparams = {"fields": "schedules,channel,title,id,events,description,channelId,start,finish,program,logo,sizes,src,images",
+                        "channelLimit": self.limit_channels,
+                        "channelProgramsLimit": self.availableChannels["availableChannels"],
+                        "channelOffset": page * self.limit_channels,
+                        "start": dtm + 'T03:00:00+03:00'
+                        }
+            _params = {
+                "userRegion": 193,
+                "resource": "schedule",
+                "ncrd": ncrd,
+                "params": json.dumps(_yparams),
+                "lang": "ru"
+            }
+
+            with gzip.open(fs_str(yatv_file), 'wb') as fp:
+                try:
+                    r = defines.request(url, params=_params, session=self.sess, headers={'Referer': 'https://tv.yandex.ru/'})
+                    fp.write(r.content)
+                    YATV._lock.clear()
+                except Exception as e:
+                    log.error('update_yatv error: {0}'.format(e))
 
     def cancel(self):
         if self.update_timer:
@@ -119,50 +159,12 @@ class YATV:
         r = defines.request(url, params=_params, session=self.sess, headers={'Referer': 'https://tv.yandex.ru/'})
         return r.json()
 
-    def update_yatv(self):
-        ncrd = uni(int(time.time()) * 1000 + 1080)
-        dtm = uni(time.strftime('%Y-%m-%d'))
-
-        url = 'https://m.tv.yandex.ru/ajax/i-tv-region/get'
-        """
-        https://tv.yandex.ru/ajax/i-tv-region/get?params={"duration":96400,"fields":"schedules,channel,title,id,events,channelId,start,finish,program,availableChannels,availableChannelsIds"}&resource=schedule&lang=ru&userRegion=193
-        """
-
-        _yparams = {"fields": "schedules,channel,title,id,events,description,channelId,start,finish,program,logo,sizes,src,images",
-                    "channelLimit": 24,
-                    "channelProgramsLimit": self.availableChannels["availableChannels"],
-                    "channelOffset": 0,
-                    "start": dtm + 'T03:00:00+03:00'
-                    }
-        _params = {
-            "userRegion": 193,
-            "resource": "schedule",
-            "ncrd": ncrd,
-            "params": json.dumps(_yparams),
-            "lang": "ru"
-        }
-        with gzip.open(fs_str(self.yatv_file_json), 'ab+') as fp:
-            fp.write('[')
-            m = int(round(_yparams["channelProgramsLimit"] / _yparams["channelLimit"]))
-            for p in range(0, m):
-                _yparams["channelOffset"] = p * _yparams["channelLimit"]
-                _params["params"] = json.dumps(_yparams)
-
-                try:
-                    r = defines.request(url, params=_params, session=self.sess, headers={'Referer': 'https://tv.yandex.ru/'})
-                    fp.write(r.content)
-                    if p < m - 1:
-                        fp.write(',')
-                except Exception as e:
-                    log.error('update_yatv error: {0}'.format(e))
-            fp.write(']')
-
     def get_epg_by_id(self, chid, epg_offset=None):
         if chid is None or chid not in self.availableChannels["availableChannelsIds"]:
             return
         ctime = datetime.datetime.now()
         offset = round((ctime - datetime.datetime.utcnow()).total_seconds() / 3600) if epg_offset is None else epg_offset
-        for p in self.jdata:
+        for p in itervalues(self.jdata):
             for sch in p['schedules']:
                 if sch['channel']['id'] == chid:
                     for evt in sch['events']:
@@ -183,7 +185,7 @@ class YATV:
     def get_id_by_name(self, name):
         names = [name.lower()]
         names.extend(CHANNEL_INFO.get(names[0], {}).get("aliases", []))
-        for p in self.jdata:
+        for p in itervalues(self.jdata):
             for sch in p['schedules']:
                 if sch['channel']['title'].lower() in names:
                     return sch['channel']['id']
@@ -195,7 +197,7 @@ class YATV:
     def get_logo_by_id(self, chid):
         if chid is None or chid not in self.availableChannels["availableChannelsIds"]:
             return ''
-        for p in self.jdata:
+        for p in itervalues(self.jdata):
             for sch in p['schedules']:
                 if sch['channel']['id'] == chid:
                     if 'logo' in sch['channel']:

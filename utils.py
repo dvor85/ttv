@@ -105,3 +105,11 @@ def fs_enc(path, from_encoding='utf8'):
             enc = 'utf8'
         return uni(path, from_encoding).encode(enc, 'ignore')
     return uni(path, from_encoding)
+
+
+def makedirs(path, mode=0o0775):
+    try:
+        if not os.path.exists(path):
+            os.makedirs(path, mode)
+    except Exception as e:
+        print(e)
