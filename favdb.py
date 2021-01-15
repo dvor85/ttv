@@ -8,7 +8,7 @@ import os
 
 import defines
 import logger
-from utils import uni, cmp
+from utils import uni, cmp, fs_str
 
 
 log = logger.Logger(__name__)
@@ -105,8 +105,8 @@ class LocalFDB(FDB):
 
     def get(self):
         log.d('get channels')
-        if os.path.exists(self.DB):
-            with open(self.DB, 'r') as fp:
+        if os.path.exists(fs_str(self.DB)):
+            with open(fs_str(self.DB, 'r')) as fp:
                 try:
                     self.channels = json.load(fp)
                 except Exception as e:
@@ -116,7 +116,7 @@ class LocalFDB(FDB):
     def save(self, obj=None):
         log.d('save channels')
         try:
-            with open(self.DB, 'w+') as fp:
+            with open(fs_str(self.DB), 'w+') as fp:
                 if not obj:
                     obj = self.channels
                 json.dump(obj, fp)

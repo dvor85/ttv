@@ -89,6 +89,12 @@ def str2(s, to_encoding='utf8'):
             return s
 
 
+def fs_str(s):
+    if sys.platform.startswith('win'):
+        return uni(s)
+    return six.ensure_binary(s, encoding='utf8', errors='ignore')
+
+
 def fs_enc(path, from_encoding='utf8'):
     """
     windows workaround. Используется в Popen.

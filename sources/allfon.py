@@ -10,7 +10,7 @@ import time
 import defines
 import logger
 from .tchannel import TChannel, TChannels
-from utils import uni
+from utils import uni, fs_str
 
 log = logger.Logger(__name__)
 
@@ -33,13 +33,13 @@ class Channels(TChannels):
 
     def _load_jdata(self):
         log.d('get {temp}'.format(temp=self._temp))
-        if os.path.exists(self._temp):
-            if time.time() - os.path.getmtime(self._temp) <= self.reload_interval:
-                with open(self._temp, 'r') as fp:
+        if os.path.exists(fs_str(self._temp)):
+            if time.time() - os.path.getmtime(fs_str(self._temp)) <= self.reload_interval:
+                with open(fs_str(self._temp), 'r') as fp:
                     return json.load(fp)
 
     def _save_jdata(self, jdata):
-        with open(self._temp, 'wb') as fp:
+        with open(fs_str(self._temp), 'wb') as fp:
             json.dump(jdata, fp)
 
     def update_channels(self):

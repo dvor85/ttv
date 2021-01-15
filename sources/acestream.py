@@ -6,7 +6,7 @@ from __future__ import absolute_import, division, unicode_literals
 import json
 import os
 import time
-from utils import uni
+from utils import uni, fs_str
 
 import defines
 import logger
@@ -24,13 +24,13 @@ class Channels(TChannels):
 
     def _load_jdata(self, avail=True):
         log.d('get {temp}'.format(temp=self._temp))
-        if os.path.exists(self._temp):
-            if not avail or (time.time() - os.path.getmtime(self._temp) <= self.reload_interval):
-                with open(self._temp, 'r') as fp:
+        if os.path.exists(fs_str(self._temp)):
+            if not avail or (time.time() - os.path.getmtime(fs_str(self._temp)) <= self.reload_interval):
+                with open(fs_str(self._temp), 'r') as fp:
                     return json.load(fp)
 
     def _save_jdata(self, jdata):
-        with open(self._temp, 'wb') as fp:
+        with open(fs_str(self._temp), 'wb') as fp:
             json.dump(jdata, fp)
 
     def update_channels(self):

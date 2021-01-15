@@ -16,7 +16,7 @@ from requests.utils import quote, unquote
 import xbmc
 import xbmcgui
 from six import iteritems, itervalues
-from utils import uni, str2
+from utils import uni, str2, fs_str, fs_enc
 
 import defines
 import logger
@@ -267,8 +267,8 @@ class AcePlayer(TPlayer):
     def _getWinPort(self):
         log.d('Считываем порт')
         for i in range(15):
-            if os.path.exists(self.port_file):
-                with open(self.port_file, 'rb') as gf:
+            if os.path.exists(fs_str(self.port_file)):
+                with open(fs_str(self.port_file), 'rb') as gf:
                     return utils.str2int(gf.read())
             else:
                 self.parent.showStatus("Запуск AceEngine ({0})".format(i))
@@ -290,7 +290,7 @@ class AcePlayer(TPlayer):
                 subprocess.call(["taskkill", "/F", "/IM", os.path.basename(self.ace_engine)], shell=False,
                                 startupinfo=si)
                 log.d('Remove "{0}"'.format(self.port_file))
-                os.remove(self.port_file)
+                os.unlink(fs_str(self.port_file))
             except Exception as e:
                 log.d("_killEngine error: {0}".format(uni(e)))
 
@@ -303,7 +303,7 @@ class AcePlayer(TPlayer):
 
                     log('try to start AceEngine for windows')
                     self.parent.showStatus("Запуск AceEngine")
-                    p = subprocess.Popen([utils.fs_enc(self.ace_engine)] + acestream_params)
+                    p = subprocess.Popen([fs_enc(self.ace_engine)] + acestream_params)
                     log.d('pid = {0}'.format(p.pid))
 
                     self.aceport = self._getWinPort()

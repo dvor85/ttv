@@ -14,7 +14,7 @@ import xbmcaddon
 import xbmc
 import xbmcgui
 from six import iteritems
-from utils import uni, str2
+from utils import uni, str2, fs_str
 from six.moves import UserDict
 
 import logger
@@ -40,8 +40,8 @@ if PROXY_TYPE == 'socks5':
     PROXY_TYPE = 'socks5h'
 PROXIES = {"http": "{t}://{a}:{p}".format(t=PROXY_TYPE, a=_proxy_addr, p=_port),
            "https": "{t}://{a}:{p}".format(t=PROXY_TYPE, a=_proxy_addr, p=_port)}
-if not os.path.exists(CACHE_PATH):
-    os.makedirs(CACHE_PATH)
+if not os.path.exists(fs_str(CACHE_PATH)):
+    os.makedirs(fs_str(CACHE_PATH))
 
 closeRequested = threading.Event()
 monitor = xbmc.Monitor()

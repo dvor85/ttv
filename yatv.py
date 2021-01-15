@@ -14,7 +14,7 @@ import requests
 import defines
 import logger
 from sources.channel_info import CHANNEL_INFO
-from utils import uni, str2int
+from utils import uni, str2int, fs_str
 
 
 log = logger.Logger(__name__)
@@ -69,27 +69,27 @@ class YATV:
 
     def _get_jdata(self):
         valid_date = False
-        if os.path.exists(self.yatv_file_json):
-            valid_date = datetime.date.today() == datetime.date.fromtimestamp(os.path.getmtime(self.yatv_file_json))
+        if os.path.exists(fs_str(self.yatv_file_json)):
+            valid_date = datetime.date.today() == datetime.date.fromtimestamp(os.path.getmtime(fs_str(self.yatv_file_json)))
         interval = (datetime.datetime.combine(datetime.date.today() + datetime.timedelta(days=1),
                                               datetime.time(3, 0)) - datetime.datetime.now()).seconds
 
-        if not os.path.exists(self.yatv_file_json) or not valid_date:
-            if os.path.exists(self.yatv_file_json):
-                os.unlink(self.yatv_file_json)
+        if not os.path.exists(fs_str(self.yatv_file_json)) or not valid_date:
+            if os.path.exists(fs_str(self.yatv_file_json)):
+                os.unlink(fs_str(self.yatv_file_json))
             bt = time.time()
             self.update_yatv()
             log.d("Loading yatv in {t} sec".format(t=time.time() - bt))
         if not self.jdata:
             try:
                 bt = time.time()
-                with gzip.open(self.yatv_file_json, 'rb') as fp:
-                    self.jdata = json.load(fp)
+                with gzip.open(fs_str(self.yatv_file_json), 'rb') as fp:
+                    self.jdata = json.loads(fp.read())
                 log.d("Loading yatv from json in {t} sec".format(t=time.time() - bt))
             except Exception as e:
                 log.e("Error while loading json: {0}".format(uni(e)))
-                if os.path.exists(self.yatv_file_json):
-                    os.unlink(self.yatv_file_json)
+                if os.path.exists(fs_str(self.yatv_file_json)):
+                    os.unlink(fs_str(self.yatv_file_json))
                 raise e
 
         self.update_timer = Timer(interval, self._get_jdata)
@@ -141,7 +141,7 @@ class YATV:
             "params": json.dumps(_yparams),
             "lang": "ru"
         }
-        with gzip.open(self.yatv_file_json, 'ab+') as fp:
+        with gzip.open(fs_str(self.yatv_file_json), 'ab+') as fp:
             fp.write('[')
             m = int(round(_yparams["channelProgramsLimit"] / _yparams["channelLimit"]))
             for p in range(0, m):

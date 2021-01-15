@@ -8,7 +8,7 @@ import os
 
 from six.moves import UserDict
 from six import itervalues
-from utils import uni
+from utils import uni, fs_str
 
 import defines
 import logger
@@ -117,8 +117,8 @@ class TChannel(UserDict):
         self.data.update(data)
         self.data.update(kwargs)
         self.yatv_logo_path = os.path.join(defines.CACHE_PATH, 'logo')
-        if not os.path.exists(self.yatv_logo_path):
-            os.mkdir(self.yatv_logo_path)
+        if not os.path.exists(fs_str(self.yatv_logo_path)):
+            os.mkdir(fs_str(self.yatv_logo_path))
 
     def src(self):
         return self.get('src', 'undefined')
@@ -153,7 +153,7 @@ class TChannel(UserDict):
         logo = os.path.join(self.yatv_logo_path, "{name}.png".format(name=self.title().lower()))
         logo_url = None
         epg = None
-        if os.path.exists(logo):
+        if os.path.exists(fs_str(logo)):
             self.data['logo'] = logo
             return logo
         if not self.get('logo'):
@@ -168,7 +168,7 @@ class TChannel(UserDict):
                 _sess = epg.get_yatv_sess() if epg else session
                 r = defines.request(logo_url, session=_sess)
                 if len(r.content) > 0:
-                    with open(logo, 'wb') as fp:
+                    with open(fs_str(logo), 'wb') as fp:
                         fp.write(r.content)
                     self.data['logo'] = logo
         except Exception as e:
