@@ -833,7 +833,4 @@ class WMainForm(xbmcgui.WindowXML):
         if self.loop_play_thr:
             self.loop_play_thr.stop()
 
-        if self._yatv_instance:
-            self._yatv_instance.cancel()
-
         xbmcgui.WindowXML.close(self)

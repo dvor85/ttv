@@ -9,7 +9,7 @@ import json
 import os
 import re
 import time
-from threading import Event, Timer
+from threading import Event, Lock
 import requests
 import defines
 import logger
@@ -62,43 +62,32 @@ class YATV:
         self.yatv_path = os.path.join(defines.CACHE_PATH, 'yatv')
         self.yatv_logo_path = os.path.join(defines.CACHE_PATH, 'logo')
         self.sess = requests.Session()
+        self.lock = Lock()
         makedirs(fs_str(self.yatv_path))
 
         self.availableChannels = self.get_availible_channels()
         self.limit_channels = 24
         self.pages = int(round(self.availableChannels["availableChannels"] / self.limit_channels))
-        self._get_jdata()
+        self.get_jdata()
 
         log.d('stop initialization')
 
-    def _get_jdata(self):
-        for page in range(0, self.pages):
-            if defines.isCancel():
-                self.cancel()
-                return
-            self.update_yatv(page)
-            yatv_file = os.path.join(self.yatv_path, "{0}.gz".format(page))
-            if page not in self.jdata:
-                try:
-                    bt = time.time()
-                    with gzip.open(fs_str(yatv_file), 'rb') as fp:
-                        self.jdata[page] = json.load(fp)
-                    log.d("Loading yatv {y} from json in {t} sec".format(y=yatv_file, t=time.time() - bt))
-                except Exception as e:
-                    log.e("Error while loading json from {y}: {e}".format(y=yatv_file, e=uni(e)))
-                    if os.path.exists(fs_str(yatv_file)):
-                        os.unlink(fs_str(yatv_file))
+    def get_jdata(self):
+        threads = []
+        with self.lock:
+            for page in range(0, self.pages):
+                if defines.isCancel():
+                    return
+                threads.append(defines.MyThread(self.update_yatv, page=page))
 
-        interval = (datetime.datetime.combine(datetime.date.today() + datetime.timedelta(days=1),
-                                              datetime.time(3, 0)) - datetime.datetime.now()).seconds
-        self.update_timer = Timer(interval, self._get_jdata)
-        self.update_timer.name = "update_yatv_timer"
-        self.update_timer.daemon = False
-        self.update_timer.start()
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+        return self.jdata
 
     def update_yatv(self, page=0):
         yatv_file = os.path.join(self.yatv_path, "{0}.gz".format(page))
-
         valid_date = os.path.exists(fs_str(yatv_file)) and \
             datetime.date.today() == datetime.date.fromtimestamp(os.path.getmtime(fs_str(yatv_file)))
         if not valid_date:
@@ -128,14 +117,19 @@ class YATV:
                 try:
                     r = defines.request(url, params=_params, session=self.sess, headers={'Referer': 'https://tv.yandex.ru/'})
                     fp.write(r.content)
-                    YATV._lock.clear()
+                    self.jdata[page] = r.json()
                 except Exception as e:
                     log.error('update_yatv error: {0}'.format(e))
-
-    def cancel(self):
-        if self.update_timer:
-            self.update_timer.cancel()
-            self.update_timer = None
+        if page not in self.jdata:
+            try:
+                bt = time.time()
+                with gzip.open(fs_str(yatv_file), 'rb') as fp:
+                    self.jdata[page] = json.load(fp)
+                log.d("Loading yatv {y} from json in {t} sec".format(y=yatv_file, t=time.time() - bt))
+            except Exception as e:
+                log.e("Error while loading json from {y}: {e}".format(y=yatv_file, e=uni(e)))
+                if os.path.exists(fs_str(yatv_file)):
+                    os.unlink(fs_str(yatv_file))
 
     def get_yatv_sess(self):
         return self.sess
@@ -159,7 +153,7 @@ class YATV:
             return
         ctime = datetime.datetime.now()
         offset = round((ctime - datetime.datetime.utcnow()).total_seconds() / 3600) if epg_offset is None else epg_offset
-        for p in itervalues(self.jdata):
+        for p in itervalues(self.get_jdata()):
             for sch in p['schedules']:
                 if sch['channel']['id'] == chid:
                     for evt in sch['events']:
@@ -180,7 +174,7 @@ class YATV:
     def get_id_by_name(self, name):
         names = [name.lower()]
         names.extend(CHANNEL_INFO.get(names[0], {}).get("aliases", []))
-        for p in itervalues(self.jdata):
+        for p in itervalues(self.get_jdata()):
             for sch in p['schedules']:
                 if sch['channel']['title'].lower() in names:
                     return sch['channel']['id']
@@ -192,7 +186,7 @@ class YATV:
     def get_logo_by_id(self, chid):
         if chid is None or chid not in self.availableChannels["availableChannelsIds"]:
             return ''
-        for p in itervalues(self.jdata):
+        for p in itervalues(self.get_jdata()):
             for sch in p['schedules']:
                 if sch['channel']['id'] == chid:
                     if 'logo' in sch['channel']:
