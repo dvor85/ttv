@@ -79,10 +79,6 @@ class YATV:
             self.update_yatv(page)
             yatv_file = os.path.join(self.yatv_path, "{0}.gz".format(page))
             if page not in self.jdata:
-                bt = time.time()
-                self.update_yatv(page)
-                log.d("Loading yatv {y} in {t} sec".format(y=yatv_file, t=time.time() - bt))
-
                 try:
                     bt = time.time()
                     with gzip.open(fs_str(yatv_file), 'rb') as fp:
@@ -92,7 +88,6 @@ class YATV:
                     log.e("Error while loading json from {y}: {e}".format(y=yatv_file, e=uni(e)))
                     if os.path.exists(fs_str(yatv_file)):
                         os.unlink(fs_str(yatv_file))
-                    raise e
 
         interval = (datetime.datetime.combine(datetime.date.today() + datetime.timedelta(days=1),
                                               datetime.time(3, 0)) - datetime.datetime.now()).seconds
