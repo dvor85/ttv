@@ -9,7 +9,7 @@ import json
 import os
 import re
 import time
-from threading import Event, Lock
+from threading import Event, Lock, Semaphore
 import requests
 import defines
 import logger
@@ -63,6 +63,7 @@ class YATV:
         self.yatv_logo_path = os.path.join(defines.CACHE_PATH, 'logo')
         self.sess = requests.Session()
         self.lock = Lock()
+        self.sema = Semaphore(8)
         makedirs(fs_str(self.yatv_path))
 
         self.availableChannels = self.get_availible_channels()
@@ -113,13 +114,14 @@ class YATV:
                 "lang": "ru"
             }
 
-            with gzip.open(fs_str(yatv_file), 'wb') as fp:
-                try:
-                    r = defines.request(url, params=_params, session=self.sess, headers={'Referer': 'https://tv.yandex.ru/'})
-                    fp.write(r.content)
-                    self.jdata[page] = r.json()
-                except Exception as e:
-                    log.error('update_yatv error: {0}'.format(e))
+            with self.sema:
+                with gzip.open(fs_str(yatv_file), 'wb') as fp:
+                    try:
+                        r = defines.request(url, params=_params, session=self.sess, headers={'Referer': 'https://tv.yandex.ru/'})
+                        fp.write(r.content)
+                        self.jdata[page] = r.json()
+                    except Exception as e:
+                        log.error('update_yatv error: {0}'.format(e))
         if page not in self.jdata:
             try:
                 bt = time.time()
