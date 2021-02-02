@@ -29,12 +29,12 @@ class Channels(TChannels):
     def __init__(self, lock):
         self.url = 'http://{pomoyka}/trash/ttv-list/allfon.json'.format(pomoyka=uni(defines.ADDON.getSetting('pomoyka_domain')))
         self._temp = self._temp = os.path.join(defines.CACHE_PATH, "allfon.json")
-        TChannels.__init__(self, name='allfon', reload_interval=1800, lock=lock)
+        TChannels.__init__(self, name='allfon', reload_interval=3600, lock=lock)
 
-    def _load_jdata(self):
+    def _load_jdata(self, avail=True):
         log.d('get {temp}'.format(temp=self._temp))
         if os.path.exists(fs_str(self._temp)):
-            if time.time() - os.path.getmtime(fs_str(self._temp)) <= self.reload_interval:
+            if not avail or (time.time() - os.path.getmtime(fs_str(self._temp)) <= self.reload_interval):
                 with open(fs_str(self._temp), 'r') as fp:
                     return json.load(fp)
 
