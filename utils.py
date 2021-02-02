@@ -80,9 +80,19 @@ def str2(s, to_encoding='utf8'):
     """
     PY2 - Кодирует :s: в :to_encoding:
     """
-    if PY2 and isinstance(s, unicode):
-        return s.encode(to_encoding, 'ignore')
-    return str(s)
+    try:
+        return six.ensure_str(s, to_encoding, errors='ignore')
+    except TypeError:
+        try:
+            return str(s)
+        except:
+            return s
+
+
+def fs_str(s):
+    if sys.platform.startswith('win'):
+        return uni(s)
+    return six.ensure_binary(s, encoding='utf8', errors='ignore')
 
 
 def fs_enc(path, from_encoding='utf8'):
@@ -95,3 +105,11 @@ def fs_enc(path, from_encoding='utf8'):
             enc = 'utf8'
         return uni(path, from_encoding).encode(enc, 'ignore')
     return uni(path, from_encoding)
+
+
+def makedirs(path, mode=0o0775):
+    try:
+        if not os.path.exists(path):
+            os.makedirs(path, mode)
+    except Exception as e:
+        print(e)

@@ -488,7 +488,7 @@ class WMainForm(xbmcgui.WindowXML):
         def LoadOther():
             for name, thr in iteritems(thrs):
                 if name not in ('yatv_epg',):
-                    thr.join(20)
+                    thr.join(60)
 
         #             dump_channel_groups()
 
@@ -515,7 +515,7 @@ class WMainForm(xbmcgui.WindowXML):
         if self.cur_category == WMainForm.FAVOURITE_GROUP:
             thrs['favourite'].join(20)
         else:
-            lo_thr.join(len(thrs) * 20)
+            lo_thr.join(len(thrs) * 60)
 
         if self.cur_category == WMainForm.SEARCH_GROUP:
             self.loadSearch(self.cur_channel)
@@ -832,8 +832,5 @@ class WMainForm(xbmcgui.WindowXML):
 
         if self.loop_play_thr:
             self.loop_play_thr.stop()
-
-        if self._yatv_instance:
-            self._yatv_instance.cancel()
 
         xbmcgui.WindowXML.close(self)
