@@ -20,7 +20,7 @@ class Channels(TChannels):
     def __init__(self, lock):
         self.url = 'http://{pomoyka}/trash/ttv-list/ace.json'.format(pomoyka=uni(defines.ADDON.getSetting('pomoyka_domain')))
         self._temp = os.path.join(defines.CACHE_PATH, "ace.json")
-        TChannels.__init__(self, name='acestream', reload_interval=1800, lock=lock)
+        TChannels.__init__(self, name='acestream', reload_interval=3600, lock=lock)
 
     def _load_jdata(self, avail=True):
         log.d('get {temp}'.format(temp=self._temp))
