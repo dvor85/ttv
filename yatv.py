@@ -75,6 +75,7 @@ class YATV:
 
     def get_jdata(self):
         threads = []
+        bt = time.time()
         with self.lock:
             for page in range(0, self.pages):
                 if defines.isCancel():
@@ -85,6 +86,7 @@ class YATV:
                 t.start()
             for t in threads:
                 t.join()
+        log.d("Loading yatv in {t} sec".format(t=time.time() - bt))
         return self.jdata
 
     def update_yatv(self, page=0):
@@ -127,7 +129,7 @@ class YATV:
                 bt = time.time()
                 with gzip.open(fs_str(yatv_file), 'rb') as fp:
                     self.jdata[page] = json.load(fp)
-                log.d("Loading yatv {y} from json in {t} sec".format(y=yatv_file, t=time.time() - bt))
+                log.d("Loading yatv json from {y} in {t} sec".format(y=yatv_file, t=time.time() - bt))
             except Exception as e:
                 log.e("Error while loading json from {y}: {e}".format(y=yatv_file, e=uni(e)))
                 if os.path.exists(fs_str(yatv_file)):
