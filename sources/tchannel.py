@@ -12,7 +12,7 @@ from utils import uni, fs_str
 
 import defines
 import logger
-import yatv
+import mailtv
 import six
 from .channel_info import CHANNEL_INFO
 from .grouplang import translate
@@ -116,9 +116,9 @@ class TChannel(UserDict):
             data = {}
         self.data.update(data)
         self.data.update(kwargs)
-        self.yatv_logo_path = os.path.join(defines.CACHE_PATH, 'logo')
-        if not os.path.exists(fs_str(self.yatv_logo_path)):
-            os.mkdir(fs_str(self.yatv_logo_path))
+        self.mailtv_logo_path = os.path.join(defines.CACHE_PATH, 'logo')
+        if not os.path.exists(fs_str(self.mailtv_logo_path)):
+            os.mkdir(fs_str(self.mailtv_logo_path))
 
     def src(self):
         return self.get('src', 'undefined')
@@ -141,7 +141,7 @@ class TChannel(UserDict):
 #         return self['url']
 
     def group(self):
-        name = yatv.get_name_offset(self.name().lower())[0]
+        name = mailtv.get_name_offset(self.name().lower())[0]
         gr = self.get('cat')
         if name in CHANNEL_INFO:
             gr = CHANNEL_INFO[name].get('cat')
@@ -150,14 +150,14 @@ class TChannel(UserDict):
         return uni(self.get('cat'))
 
     def logo(self, session=None):
-        logo = os.path.join(self.yatv_logo_path, "{name}.png".format(name=self.title().lower()))
+        logo = os.path.join(self.mailtv_logo_path, "{name}.png".format(name=self.title().lower()))
         logo_url = None
         epg = None
         if os.path.exists(fs_str(logo)):
             self.data['logo'] = logo
             return logo
         if not self.get('logo'):
-            epg = yatv.YATV.get_instance()
+            epg = mailtv.MAILTV.get_instance()
             if epg is not None:
                 logo_url = epg.get_logo_by_name(self.name())
         elif '://' in self.get('logo'):
@@ -165,7 +165,7 @@ class TChannel(UserDict):
 
         try:
             if logo_url:
-                _sess = epg.get_yatv_sess() if epg else session
+                _sess = epg.get_sess() if epg else session
                 r = defines.request(logo_url, session=_sess)
                 if len(r.content) > 0:
                     with open(fs_str(logo), 'wb') as fp:
@@ -184,7 +184,7 @@ class TChannel(UserDict):
 
     def title(self):
         if not self.get('title'):
-            name_offset = yatv.get_name_offset(self.name().lower())
+            name_offset = mailtv.get_name_offset(self.name().lower())
             ctime = datetime.datetime.now()
             offset = round((ctime - datetime.datetime.utcnow()).total_seconds() / 3600)
             if name_offset[0] in CHANNEL_INFO:
@@ -200,7 +200,7 @@ class TChannel(UserDict):
             #             if defines.platform()['os'] == 'linux':
             #                 epg = xmltv.XMLTV.get_instance()
             #             else:
-            epg = yatv.YATV.get_instance()
+            epg = mailtv.MAILTV.get_instance()
             if not self.get('epg') and epg is not None:
                 self.data['epg'] = []
                 for ep in epg.get_epg_by_name(self.name()):
