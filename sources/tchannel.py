@@ -4,6 +4,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import datetime
+import time
 import os
 
 from six.moves import UserDict
@@ -218,19 +219,26 @@ class TChannel(UserDict):
             thr.start()
             thr.join(4)
             ctime = datetime.datetime.now()
-            prev_bt = 0
-            prev_et = 0
+            prev_x = {}
             curepg = []
-            for x in self.get('epg', []):
+            for x in self.get('epg', {}):
                 try:
                     bt = datetime.datetime.fromtimestamp(float(x['btime']))
-                    et = datetime.datetime.fromtimestamp(float(x['etime']))
-                    if et > ctime and abs((bt - ctime).days) <= 1 and prev_et <= float(x['btime']) > prev_bt:
+                    # if 'etime' in x:
+                    # et = datetime.datetime.fromtimestamp(float(x['etime']))
+                    # else:
+                    if prev_x:
+                        prev_x['etime'] = x['btime']
+                    if abs((bt - ctime).days) <= 1 and float(x['btime']) >= float(prev_x.get('etime', 0)) and \
+                            (float(x.get('etime', 0)) >= time.time()):
                         curepg.append(x)
-                        prev_bt = float(x['btime'])
-                        prev_et = float(x['etime'])
+                    prev_x = x
+                    # prev_bt = float(x['btime'])
+                    # prev_et = float(x['etime'])
+
                 except Exception as e:
                     log.error(e)
+
             self.data['epg'] = curepg
         except Exception as e:
             log.e('epg error {0}'.format(e))
