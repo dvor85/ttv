@@ -13,7 +13,7 @@ from utils import uni, fs_str
 
 import defines
 import logger
-import mailtv
+from epgs import mailtv, epgtv
 import six
 from .channel_info import CHANNEL_INFO
 from .grouplang import translate
@@ -142,7 +142,7 @@ class TChannel(UserDict):
 #         return self['url']
 
     def group(self):
-        name = mailtv.get_name_offset(self.name().lower())[0]
+        name = epgtv.get_name_offset(self.name().lower())[0]
         gr = self.get('cat')
         if name in CHANNEL_INFO:
             gr = CHANNEL_INFO[name].get('cat')
@@ -185,9 +185,9 @@ class TChannel(UserDict):
 
     def title(self):
         if not self.get('title'):
-            name_offset = mailtv.get_name_offset(self.name().lower())
+            name_offset = epgtv.get_name_offset(self.name().lower())
             ctime = datetime.datetime.now()
-            offset = round((ctime - datetime.datetime.utcnow()).total_seconds() / 3600)
+            offset = round((ctime - datetime.datetime.utcnow()).total_seconds() // 3600)
             if name_offset[0] in CHANNEL_INFO:
                 self.data['title'] = CHANNEL_INFO[name_offset[0]].get('aliases', [name_offset[0]])[0].capitalize()
             else:
@@ -198,9 +198,7 @@ class TChannel(UserDict):
 
     def update_epglist(self):
         try:
-            #             if defines.platform()['os'] == 'linux':
-            #                 epg = xmltv.XMLTV.get_instance()
-            #             else:
+
             epg = mailtv.MAILTV.get_instance()
             if not self.get('epg') and epg is not None:
                 self.data['epg'] = []
@@ -224,17 +222,12 @@ class TChannel(UserDict):
             for x in self.get('epg', {}):
                 try:
                     bt = datetime.datetime.fromtimestamp(float(x['btime']))
-                    # if 'etime' in x:
-                    # et = datetime.datetime.fromtimestamp(float(x['etime']))
-                    # else:
-                    if prev_x:
+                    if prev_x and 'etime' not in prev_x:
                         prev_x['etime'] = x['btime']
                     if abs((bt - ctime).days) <= 1 and float(x['btime']) >= float(prev_x.get('etime', 0)) and \
                             (float(x.get('etime', 0)) >= time.time()):
                         curepg.append(x)
                     prev_x = x
-                    # prev_bt = float(x['btime'])
-                    # prev_et = float(x['etime'])
 
                 except Exception as e:
                     log.error(e)

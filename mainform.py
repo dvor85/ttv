@@ -17,7 +17,7 @@ import defines
 import favdb
 import logger
 import utils
-import mailtv
+from epgs import mailtv
 from menu import MenuForm
 from playerform import MyPlayer
 from sources.tchannel import TChannel, MChannel
@@ -500,7 +500,7 @@ class WMainForm(xbmcgui.WindowXML):
 
         thrs = OrderedDict()
         thrs['favourite'] = defines.MyThread(self.loadFavourites)
-        thrs['mailtv_epg'] = defines.MyThread(lambda: setattr(self, '_mailtv_instance', mailtv.MAILTV.get_instance()))
+        thrs['xmltv_epg'] = defines.MyThread(lambda: setattr(self, '_xmltv_instance', mailtv.MAILTV.get_instance()))
 
         for src in channel_sources:
             thrs[src.name] = defines.MyThread(self.loadChannels, src.name)

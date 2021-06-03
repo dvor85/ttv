@@ -7,37 +7,21 @@ import datetime
 import gzip
 import json
 import os
-import re
 import time
 from threading import Event, Lock, Semaphore
 import requests
 import defines
 import logger
 from sources.channel_info import CHANNEL_INFO
-from utils import uni, str2int, fs_str, makedirs
+from utils import uni, fs_str
 from six import itervalues
+from epgs.epgtv import EPGTV, strptime
 
 
 log = logger.Logger(__name__)
-_name_offset_regexp = re.compile(r'\s*(?P<name>.*?)\s*\((?P<offset>[\-+]+\d)\)\s*')
 
 
-def strptime(date_string):
-    try:
-        return datetime.datetime.strptime(uni(date_string), "%Y-%m-%dT%H:%M:%S")
-    except TypeError:
-        return datetime.datetime(*(time.strptime(uni(date_string), "%Y-%m-%dT%H:%M:%S")[0:6]))
-
-
-def get_name_offset(name):
-    name_offset = _name_offset_regexp.search(name)
-    if name_offset:
-        return name_offset.group('name'), str2int(name_offset.group('offset'))
-    else:
-        return name, None
-
-
-class YATV:
+class YATV(EPGTV):
     _instance = None
     _lock = Event()
 
@@ -56,15 +40,12 @@ class YATV:
         return YATV._instance
 
     def __init__(self):
-        log.d('start initialization')
+        EPGTV.__init__(self, 'yatv')
         self.jdata = {}
         self.update_timer = None
-        self.yatv_path = os.path.join(defines.CACHE_PATH, 'yatv')
-        self.yatv_logo_path = os.path.join(defines.CACHE_PATH, 'logo')
         self.sess = requests.Session()
         self.lock = Lock()
         self.sema = Semaphore(8)
-        makedirs(fs_str(self.yatv_path))
 
         self.availableChannels = self.get_availible_channels()
         self.limit_channels = 24
@@ -80,7 +61,7 @@ class YATV:
             for page in range(0, self.pages):
                 if defines.isCancel():
                     return
-                threads.append(defines.MyThread(self.update_yatv, page=page))
+                threads.append(defines.MyThread(self.update_epg, page=page))
 
             for t in threads:
                 t.start()
@@ -89,8 +70,8 @@ class YATV:
         log.d("Loading yatv in {t} sec".format(t=time.time() - bt))
         return self.jdata
 
-    def update_yatv(self, page=0):
-        yatv_file = os.path.join(self.yatv_path, "{0}.gz".format(page))
+    def update_epg(self, page=0):
+        yatv_file = os.path.join(self.epgtv_path, "{0}.gz".format(page))
         valid_date = os.path.exists(fs_str(yatv_file)) and \
             datetime.date.today() == datetime.date.fromtimestamp(os.path.getmtime(fs_str(yatv_file)))
         if not valid_date:
@@ -156,7 +137,7 @@ class YATV:
         if chid is None or chid not in self.availableChannels["availableChannelsIds"]:
             return
         ctime = datetime.datetime.now()
-        offset = round((ctime - datetime.datetime.utcnow()).total_seconds() / 3600) if epg_offset is None else epg_offset
+        offset = round((ctime - datetime.datetime.utcnow()).total_seconds() // 3600) if epg_offset is None else epg_offset
         for p in itervalues(self.get_jdata()):
             for sch in p['schedules']:
                 if sch['channel']['id'] == chid:
@@ -183,10 +164,6 @@ class YATV:
                 if sch['channel']['title'].lower() in names:
                     return sch['channel']['id']
 
-    def get_epg_by_name(self, name):
-        name_offset = get_name_offset(name)
-        return self.get_epg_by_id(self.get_id_by_name(name_offset[0]), name_offset[1])
-
     def get_logo_by_id(self, chid):
         if chid is None or chid not in self.availableChannels["availableChannelsIds"]:
             return ''
@@ -196,10 +173,6 @@ class YATV:
                     if 'logo' in sch['channel']:
                         return 'http:{src}'.format(src=sch['channel']['logo']['sizes']["160"]["src"])
         return ''
-
-    def get_logo_by_name(self, name):
-        name_offset = get_name_offset(name)
-        return self.get_logo_by_id(self.get_id_by_name(name_offset[0]))
 
 
 if __name__ == '__main__':
