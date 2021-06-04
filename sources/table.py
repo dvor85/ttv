@@ -4,7 +4,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import defines
-from . import allfon, acestream, ttv
+from . import allfon, acestream, ttv, iptv_restream
 from six.moves import UserList
 from threading import Lock
 from utils import str2int
@@ -34,4 +34,6 @@ if str2int(defines.ADDON.getSetting('acestream')) > 0:
     channel_sources.append(acestream.Channels(_lock))
 if str2int(defines.ADDON.getSetting('ttv')) > 0:
     channel_sources.append(ttv.Channels())
+if str2int(defines.ADDON.getSetting('iptv')) > 0:
+    channel_sources.append(iptv_restream.Channels(_lock))
 channel_sources.sort(key=lambda src: str2int(defines.ADDON.getSetting(src.name)))

@@ -191,6 +191,7 @@ class LoopPlay(threading.Thread):
 
             except Exception as e:
                 log.e('LoopPlay error: {0}'.format(uni(e)))
+            finally:
                 xbmc.sleep(1000)
 
         self.parent.player.close()
