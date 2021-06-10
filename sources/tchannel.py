@@ -13,7 +13,7 @@ from utils import uni, fs_str
 
 import defines
 import logger
-from epgs import mailtv, epgtv
+from epgs import epglist, epgtv
 import six
 from .channel_info import CHANNEL_INFO
 from .grouplang import translate
@@ -158,7 +158,7 @@ class TChannel(UserDict):
             self.data['logo'] = logo
             return logo
         if not self.get('logo'):
-            epg = mailtv.MAILTV.get_instance()
+            epg = epglist.Epg().link()
             if epg is not None:
                 logo_url = epg.get_logo_by_name(self.name())
         elif '://' in self.get('logo'):
@@ -199,7 +199,7 @@ class TChannel(UserDict):
     def update_epglist(self):
         try:
 
-            epg = mailtv.MAILTV.get_instance()
+            epg = epglist.Epg().link()
             if not self.get('epg') and epg is not None:
                 self.data['epg'] = []
                 for ep in epg.get_epg_by_name(self.name()):

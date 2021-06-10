@@ -1,4 +1,5 @@
 eclipse.preferences.version=1
+encoding//epgs/epglist.py=utf-8
 encoding//epgs/epgtv.py=utf-8
 encoding//epgs/mailtv.py=utf-8
 encoding//epgs/xmltv.py=utf-8

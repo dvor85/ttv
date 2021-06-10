@@ -17,7 +17,7 @@ import defines
 import favdb
 import logger
 import utils
-from epgs import mailtv
+from epgs import epglist
 from menu import MenuForm
 from playerform import MyPlayer
 from sources.tchannel import TChannel, MChannel
@@ -278,7 +278,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.timers = defines.Timers()
         self.rotate_screen_thr = None
         self.loop_play_thr = None
-        self.__instance = None
+        self._epgtv_instance = None
 
     def onInit(self):
         log.d('onInit')
@@ -488,7 +488,7 @@ class WMainForm(xbmcgui.WindowXML):
 
         def LoadOther():
             for name, thr in iteritems(thrs):
-                if name not in ('mailtv_epg',):
+                if name not in ('epgtv_epg',):
                     thr.join(60)
 
         #             dump_channel_groups()
@@ -501,7 +501,7 @@ class WMainForm(xbmcgui.WindowXML):
 
         thrs = OrderedDict()
         thrs['favourite'] = defines.MyThread(self.loadFavourites)
-        thrs['xmltv_epg'] = defines.MyThread(lambda: setattr(self, '_xmltv_instance', mailtv.MAILTV.get_instance()))
+        thrs['epgtv_epg'] = defines.MyThread(lambda: setattr(self, '_epgtv_instance', epglist.Epg().link()))
 
         for src in channel_sources:
             thrs[src.name] = defines.MyThread(self.loadChannels, src.name)
