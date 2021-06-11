@@ -28,7 +28,7 @@ class Channels(TChannels):
     def __init__(self, lock):
         self.url = 'https://iptv-org.github.io/iptv/channels.json'
         self._temp = os.path.join(defines.CACHE_PATH, "iptv_restream.json.gz")
-        TChannels.__init__(self, name='iptv', reload_interval=3600, lock=lock)
+        TChannels.__init__(self, name='iptv', reload_interval=43200, lock=lock)
 
     def _load_jdata(self, avail=True):
         log.d('get {temp}'.format(temp=self._temp))
