@@ -53,7 +53,7 @@ class Channels(TChannels):
             log.debug("load_json_temp error: {0}".format(uni(e)))
             try:
                 with self.lock:
-                    r = defines.request(self.url, proxies=defines.PROXIES, interval=3000)
+                    r = defines.request(self.url, interval=3000)
                 jdata = r.json()
                 self._save_jdata(jdata)
             except Exception as e:

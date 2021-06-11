@@ -14,7 +14,6 @@ import logger
 from sources.channel_info import CHANNEL_INFO
 from utils import uni,  fs_str
 from epgs.epgtv import EPGTV, strptime
-from bs4 import BeautifulSoup
 
 log = logger.Logger(__name__)
 

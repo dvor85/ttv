@@ -68,6 +68,9 @@ class EPGTV:
     def get_id_by_name(self, name):
         pass
 
+    def get_event_info(self, event_id):
+        pass
+
     def get_epg_by_name(self, name):
         name_offset = get_name_offset(name)
         return self.get_epg_by_id(self.get_id_by_name(name_offset[0]), name_offset[1])

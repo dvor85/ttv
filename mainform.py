@@ -422,10 +422,8 @@ class WMainForm(xbmcgui.WindowXML):
                     if i == 0:
                         if self.progress:
                             self.progress.setPercent((ctime - bt).seconds * 100 // (et - bt).seconds)
-                        if 'screens' not in ep:
-                            screens = ch.get_screenshots()
-                            if screens:
-                                ep['screens'] = screens
+                        if 'event_id' in ep and not('screens' in ep or 'desc' in ep):
+                            ep.update(epglist.Epg().link().get_event_info(ep['event_id']))
 
                         if 'screens' in ep:
                             self.showScreen(ep['screens'], 1)
