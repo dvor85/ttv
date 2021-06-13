@@ -181,7 +181,7 @@ class TChannel(UserDict):
         if not self.get('title'):
             name_offset = epgtv.get_name_offset(self.name().lower())
             ctime = datetime.datetime.now()
-            offset = round((ctime - datetime.datetime.utcnow()).total_seconds() // 3600)
+            offset = round((ctime - datetime.datetime.utcnow()).total_seconds() / 3600)
             if name_offset[0] in CHANNEL_INFO:
                 self.data['title'] = CHANNEL_INFO[name_offset[0]].get('aliases', [name_offset[0]])[0].capitalize()
             else:

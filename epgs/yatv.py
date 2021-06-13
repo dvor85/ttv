@@ -137,7 +137,7 @@ class YATV(EPGTV):
         if chid is None or chid not in self.availableChannels["availableChannelsIds"]:
             return
         ctime = datetime.datetime.now()
-        offset = round((ctime - datetime.datetime.utcnow()).total_seconds() // 3600) if epg_offset is None else epg_offset
+        offset = round((ctime - datetime.datetime.utcnow()).total_seconds() / 3600) if epg_offset is None else epg_offset
         for p in itervalues(self.get_jdata()):
             for sch in p['schedules']:
                 if sch['channel']['id'] == chid:

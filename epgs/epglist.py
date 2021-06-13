@@ -3,9 +3,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 import defines
-from six.moves import UserList
-from threading import Lock
-from utils import str2int, uni
+from utils import uni
 from . import mailtv, xmltv
 
 

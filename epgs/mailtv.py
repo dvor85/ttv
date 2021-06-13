@@ -8,7 +8,7 @@ import gzip
 import json
 import os
 import time
-from threading import Event, Lock, Semaphore
+from threading import Event, Lock
 import requests
 import defines
 import logger
@@ -17,10 +17,12 @@ from utils import uni, fs_str
 from six import itervalues
 from epgs.epgtv import EPGTV
 import re
+# from difflib import SequenceMatcher as SM
 
 
 log = logger.Logger(__name__)
 _tag_re = re.compile(r'(<!--.*?-->|<[^>]*>)')
+_spec_re = re.compile(r'&(nbsp|laquo|raquo|mdash|ndash|quot);')
 
 
 class MAILTV(EPGTV):
@@ -99,25 +101,36 @@ class MAILTV(EPGTV):
                        "ex": self.ex_channels
                        }
 
-            with gzip.open(fs_str(mailtv_file), 'wb') as fp:
+            with gzip.open(fs_str(mailtv_file), 'w') as fp:
                 try:
                     r = defines.request(url, method='post', params=_params, session=self.sess,
                                         headers={'Referer': 'https://tv.mail.ru/'})
-                    fp.write(r.content)
-                    self.jdata[page] = r.json()
+
                     self.need_update = r.ok
+                    if r.ok:
+                        self.jdata[page] = r.json()
+                        status = self.jdata[page].get('status', '').lower()
+                        log.d('status={}'.format(status))
+                        if status == 'ok':
+                            fp.write(r.content)
+                        else:
+                            del self.jdata[page]
+
                 except Exception as e:
                     log.error('update_mailtv error: {0}'.format(e))
 
-            for sch in self.jdata[page]['schedule']:
-                if sch['channel']['id'] not in self.ex_channels:
-                    self.ex_channels.append(sch['channel']['id'])
-            if not self.jdata[page]['pager']['next']['url']:
+            if page in self.jdata:
+                for sch in self.jdata[page]['schedule']:
+                    if sch['channel']['id'] not in self.ex_channels:
+                        self.ex_channels.append(sch['channel']['id'])
+                self.need_update = bool(self.jdata[page]['pager']['next']['url'])
+            else:
                 self.need_update = False
+
         if page not in self.jdata:
             try:
                 bt = time.time()
-                with gzip.open(fs_str(mailtv_file), 'rb') as fp:
+                with gzip.open(fs_str(mailtv_file), 'r') as fp:
                     self.jdata[page] = json.load(fp)
                 log.d("Loading mailtv json from {y} in {t} sec".format(y=mailtv_file, t=time.time() - bt))
             except Exception as e:
@@ -164,17 +177,26 @@ class MAILTV(EPGTV):
 
         if r.ok:
             j = r.json()
-            info['desc'] = _tag_re.sub('', j['tv_event']['descr'])
-            info['screens'] = [j['tv_event']['sm_image_url']]
-            return info
+            if j.get('status', '').lower() == 'ok':
+                if 'tv_event' in j:
+                    info['desc'] = _spec_re.sub(' ', _tag_re.sub('', j['tv_event'].get('descr', '')))
+                    info['screens'] = [j['tv_event'].get('sm_image_url', ''),
+                                       j['tv_event']['channel'].get('pic_url_64', '')]
+        return info
 
     def get_id_by_name(self, name):
-        names = [name.lower()]
+        names = [name.lower(), name.lower().replace('-', ' ')]
         names.extend(CHANNEL_INFO.get(names[0], {}).get("aliases", []))
         for p in itervalues(self.get_jdata()):
             for sch in p['schedule']:
+                # if SM(isjunk=None, a=name.lower(), b=sch['channel']['name'].lower(), autojunk=True).quick_ratio() > 0.85:
+                #     return sch['channel']['id']
                 if sch['channel']['name'].lower() in names:
                     return sch['channel']['id']
+                elif len(name) > 8:
+                    for n in names:
+                        if n in sch['channel']['name'].lower():
+                            return sch['channel']['id']
 
     def get_logo_by_id(self, chid):
         if chid is None:  # or chid not in self.availableChannels["availableChannelsIds"]:
@@ -182,8 +204,7 @@ class MAILTV(EPGTV):
         for p in itervalues(self.get_jdata()):
             for sch in p['schedule']:
                 if sch['channel']['id'] == chid:
-                    if 'pic_url' in sch['channel']:
-                        return sch['channel']['pic_url']
+                    return sch['channel'].get('pic_url', '')
         return ''
 
 

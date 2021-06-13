@@ -143,7 +143,7 @@ class RotateScreen(threading.Thread):
         self.active = True
         while self.active:
             for screen in self.screens:
-                if self.active:
+                if self.active and screen:
                     self.img_control.setImage(str2(screen))
                     if defines.monitor.waitForAbort(2):
                         self.stop()

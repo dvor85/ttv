@@ -14,7 +14,7 @@ translate = {
     'movies': "Фильмы",
     'documentaries': "Документальные",
     'documentary': "Документальные",
-    'travel': "Путешествия",
+    'travel': "Познавательные",
     'outdoor': "Познавательные",
     'sport': "Спорт",
     'sports': "Спорт",

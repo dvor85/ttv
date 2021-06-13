@@ -101,7 +101,7 @@ class XMLTV(EPGTV):
         if chid is None:
             return
         ctime = datetime.datetime.now()
-        offset = (ctime - datetime.datetime.utcnow()).total_seconds() // 3600 if epg_offset is None else epg_offset
+        offset = round((ctime - datetime.datetime.utcnow()).total_seconds() / 3600) if epg_offset is None else epg_offset
         for programme in self.xmltv_root.iter('programme'):
             if programme.get('channel') == chid:
                 ep = {}

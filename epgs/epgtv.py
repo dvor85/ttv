@@ -14,7 +14,7 @@ from utils import uni, str2int, fs_str, makedirs
 
 
 log = logger.Logger(__name__)
-_name_offset_regexp = re.compile(r'\s*(?P<name>.*?)\s*\((?P<offset>[\-+]+\d)\)\s*')
+_name_offset_regexp = re.compile(r'\s*(?P<name>.*?)\s*\(*(?P<offset>[\-+]+\d)\)*\s*')
 
 
 def strptime(date_string, _format="%Y-%m-%dT%H:%M:%S"):
