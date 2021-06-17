@@ -39,7 +39,7 @@ class Channels(TChannels):
                     return json.load(fp)
 
     def _save_jdata(self, jdata):
-        with open(fs_str(self._temp), 'wb') as fp:
+        with open(fs_str(self._temp), 'w') as fp:
             json.dump(jdata, fp)
 
     def update_channels(self):

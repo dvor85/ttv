@@ -14,7 +14,7 @@ class Logger:
         self.tag = uni(tag)
         self.minlevel = minlevel
 
-    def __call__(self, msg, level=xbmc.LOGNOTICE):
+    def __call__(self, msg, level=xbmc.LOGINFO):
         self.log(msg, level)
 
     def log(self, msg, level):
