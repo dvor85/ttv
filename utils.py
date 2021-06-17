@@ -84,7 +84,20 @@ def str2(s, to_encoding='utf8'):
         return six.ensure_str(s, to_encoding, errors='ignore')
     except TypeError:
         try:
-            return str(s)
+            return six.text_type(s)
+        except:
+            return s
+
+
+def to_bytes(s, to_encoding='utf8'):
+    """
+    PY2 - Кодирует :s: в :to_encoding:
+    """
+    try:
+        return six.ensure_binary(s, to_encoding, errors='ignore')
+    except TypeError:
+        try:
+            return six.binary_type(s)
         except:
             return s
 
