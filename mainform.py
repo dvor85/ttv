@@ -118,14 +118,13 @@ class ChannelGroups(OrderedDict):
                 pass
 
     def find_channel_by_name(self, groupname, name):
-        name = name.lower()
         for ch in self.getChannels(groupname):
             if ch.name().lower() == name.lower():
                 yield ch
 
     def find_channel_by_title(self, groupname, title):
         for ch in self.getChannels(groupname):
-            if title.lower() in ch.title().lower():
+            if title.lower() == ch.title().lower():
                 yield ch
 
 
@@ -223,7 +222,7 @@ class LoopPlay(threading.Thread):
 class WMainForm(xbmcgui.WindowXML):
     CANCEL_DIALOG = (9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448,)
     CONTEXT_MENU_IDS = (117, 101)
-    ARROW_ACTIONS = (1, 2, 3, 4)
+    NAVIGATE_ACTIONS = (1, 2, 3, 4, 5, 6, 159, 160)
     DIGIT_BUTTONS = list(range(58, 68))
     ACTION_MOUSE = 107
     BTN_VOD_ID = 113
@@ -671,7 +670,7 @@ class WMainForm(xbmcgui.WindowXML):
             self.list.selectItem(selitemid)
 
     def onAction(self, action):
-        #         log.d('Событие {0}'.format(action.getId()))
+        # log.d('Событие {0}'.format(action.getId()))
 
         if action in (xbmcgui.ACTION_NAV_BACK, xbmcgui.ACTION_BACKSPACE, xbmcgui.ACTION_PARENT_DIR):
             selItem = self.list.getListItem(0)
@@ -688,7 +687,7 @@ class WMainForm(xbmcgui.WindowXML):
         if not defines.isCancel():
             if action.getButtonCode() == 61513:
                 return
-            elif action in WMainForm.ARROW_ACTIONS:
+            elif action in WMainForm.NAVIGATE_ACTIONS:
                 self.onFocus(self.getFocusId())
             elif action in WMainForm.CONTEXT_MENU_IDS and self.getFocusId() == WMainForm.CONTROL_LIST:
                 if action == 101:
