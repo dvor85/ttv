@@ -153,7 +153,7 @@ class MAILTV(EPGTV):
                 if sch['channel']['id'] == chid:
                     for evt in sch['event']:
 
-                        bt = map(int, evt['start'].split(':'))
+                        bt = list(map(int, evt['start'].split(':')))
                         bt = datetime.datetime.fromordinal(
                             (ctime.date().toordinal())) + datetime.timedelta(hours=bt[0], minutes=bt[1]) + datetime.timedelta(hours=-3 + offset)
                         if ep is not None:
