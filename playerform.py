@@ -231,6 +231,7 @@ class MyPlayer(xbmcgui.WindowXML):
                                     if self.channel_stop_requested:
                                         return True
                                 log.d('End playing url "{0}"'.format(url_mode))
+                                xbmc.sleep(500)
 
                         except Exception as e:
                             log.e("Error play with {0} player: {1}".format(player, e))
