@@ -16,7 +16,7 @@ from requests.utils import quote, unquote
 import xbmc
 import xbmcgui
 from six import iteritems, itervalues
-from utils import uni, str2
+from utils import uni, str2, to_bytes, fs_str, fs_enc
 
 import defines
 import logger
@@ -127,7 +127,7 @@ class TPlayer(xbmc.Player):
         self.stop()
 
     def play_item(self, title='', icon='', thumb='', *args, **kwargs):
-        li = xbmcgui.ListItem(str2(title), iconImage=str2(icon), thumbnailImage=str2(thumb))
+        li = xbmcgui.ListItem(str2(title), offscreen=True)
         if kwargs.get('url'):
             self.link = kwargs['url']
         if not self.link:
@@ -267,8 +267,8 @@ class AcePlayer(TPlayer):
     def _getWinPort(self):
         log.d('Считываем порт')
         for i in range(15):
-            if os.path.exists(self.port_file):
-                with open(self.port_file, 'rb') as gf:
+            if os.path.exists(fs_str(self.port_file)):
+                with open(fs_str(self.port_file), 'rb') as gf:
                     return utils.str2int(gf.read())
             else:
                 self.parent.showStatus("Запуск AceEngine ({0})".format(i))
@@ -290,7 +290,7 @@ class AcePlayer(TPlayer):
                 subprocess.call(["taskkill", "/F", "/IM", os.path.basename(self.ace_engine)], shell=False,
                                 startupinfo=si)
                 log.d('Remove "{0}"'.format(self.port_file))
-                os.remove(self.port_file)
+                os.unlink(fs_str(self.port_file))
             except Exception as e:
                 log.d("_killEngine error: {0}".format(uni(e)))
 
@@ -303,7 +303,7 @@ class AcePlayer(TPlayer):
 
                     log('try to start AceEngine for windows')
                     self.parent.showStatus("Запуск AceEngine")
-                    p = subprocess.Popen([utils.fs_enc(self.ace_engine)] + acestream_params)
+                    p = subprocess.Popen([fs_enc(self.ace_engine)] + acestream_params)
                     log.d('pid = {0}'.format(p.pid))
 
                     self.aceport = self._getWinPort()
@@ -341,7 +341,7 @@ class AcePlayer(TPlayer):
         import hashlib
         pkey = 'n51LvQoTlJzNGaFxseRK-uvnvX-sD4Vm5Axwmc4UcoD-jruxmKsuJaH0eVgE'
         sha1 = hashlib.sha1()
-        sha1.update(key + pkey)
+        sha1.update(to_bytes(key + pkey))
         key = sha1.hexdigest()
         pk = pkey.split('-')[0]
         return "{pk}-{key}".format(pk=pk, key=key)
@@ -431,7 +431,7 @@ class AcePlayer(TPlayer):
                         self.waiting.msg = wait_msg
                         self.waiting.event.clear()
                         self.waiting.abort.clear()
-                        self.sock.send(cmd + '\r\n')
+                        self.sock.send(to_bytes(cmd + '\r\n'))
                         for t in range(AcePlayer.TIMEOUT_FREEZE * 3):  # @UnusedVariable
                             log.d("waiting message {msg} ({t})".format(msg=wait_msg, t=t))
                             if not self.waiting.msg or self.sock_thr.error or defines.isCancel():
@@ -450,7 +450,7 @@ class AcePlayer(TPlayer):
                         return
 
             else:
-                self.sock.send(str2(cmd + '\r\n'))
+                self.sock.send(to_bytes(cmd + '\r\n'))
                 return True
 
         except Exception as e:
@@ -755,7 +755,7 @@ class SockThread(threading.Thread):
         while not isCancel():
             try:
                 xbmc.sleep(32)
-                self.lastRecv += self.sock.recv(self.buffer)
+                self.lastRecv += uni(self.sock.recv(self.buffer))
                 if self.lastRecv.find('\r\n') > -1:
                     cmds = self.lastRecv.split('\r\n')
                     for cmd in cmds:

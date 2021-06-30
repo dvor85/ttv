@@ -4,6 +4,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import json
+import gzip
 import os
 import time
 from utils import uni, fs_str
@@ -15,22 +16,29 @@ from .tchannel import TChannel, TChannels
 log = logger.Logger(__name__)
 
 
+class Channel(TChannel):
+
+    def __init__(self, data={}):
+        TChannel.__init__(self, data=data, src='iptv', player='tsp')
+        self.data['cat'] = self.data.get('category')
+
+
 class Channels(TChannels):
 
     def __init__(self, lock):
-        self.url = 'http://{pomoyka}/trash/ttv-list/ace.json'.format(pomoyka=uni(defines.ADDON.getSetting('pomoyka_domain')))
-        self._temp = os.path.join(defines.CACHE_PATH, "ace.json")
-        TChannels.__init__(self, name='acestream', reload_interval=3600, lock=lock)
+        self.url = 'https://iptv-org.github.io/iptv/channels.json'
+        self._temp = os.path.join(defines.CACHE_PATH, "iptv_restream.json.gz")
+        TChannels.__init__(self, name='iptv', reload_interval=43200, lock=lock)
 
     def _load_jdata(self, avail=True):
         log.d('get {temp}'.format(temp=self._temp))
         if os.path.exists(fs_str(self._temp)):
             if not avail or (time.time() - os.path.getmtime(fs_str(self._temp)) <= self.reload_interval):
-                with open(fs_str(self._temp), 'r') as fp:
+                with gzip.open(fs_str(self._temp), 'r') as fp:
                     return json.load(fp)
 
     def _save_jdata(self, jdata):
-        with open(fs_str(self._temp), 'w') as fp:
+        with gzip.open(fs_str(self._temp), 'w') as fp:
             json.dump(jdata, fp)
 
     def update_channels(self):
@@ -45,7 +53,7 @@ class Channels(TChannels):
             log.debug("load_json_temp error: {0}".format(uni(e)))
             try:
                 with self.lock:
-                    r = defines.request(self.url, proxies=defines.PROXIES, interval=3000)
+                    r = defines.request(self.url, interval=3000)
                 jdata = r.json()
                 self._save_jdata(jdata)
             except Exception as e:
@@ -59,6 +67,6 @@ class Channels(TChannels):
                     log.error(uni(e))
 
         if jdata:
-            chs = jdata.get('channels', [])
-            for ch in chs:
-                self.channels.append(TChannel(ch, src='acestream', player='ace', mode='PID'))
+            for ch in jdata:
+                if len([c for c in ch.get('languages', []) if 'rus' == c.get('code')]) > 0:
+                    self.channels.append(Channel(ch))

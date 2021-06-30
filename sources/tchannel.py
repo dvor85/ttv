@@ -4,15 +4,17 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import datetime
+import time
 import os
 
 from six.moves import UserDict
 from six import itervalues
-from utils import uni
+from utils import uni, fs_str
 
 import defines
 import logger
-import yatv
+from epgs import epglist, epgtv
+import six
 from .channel_info import CHANNEL_INFO
 from .grouplang import translate
 
@@ -38,7 +40,7 @@ class MChannel(UserDict):
                 for u in itervalues(pu[1]):
                     if ch['url']:
                         for cu in itervalues(ch['url']):
-                            if isinstance(u[0], unicode) and isinstance(cu[0], unicode):
+                            if isinstance(u[0], six.text_type) and isinstance(cu[0], six.text_type):
                                 if u[0] == cu[0]:
                                     return
         if not isinstance(ch, self.__class__):
@@ -100,12 +102,6 @@ class MChannel(UserDict):
                     return ep
         return fep
 
-    def get_screenshots(self):
-        for ch in itervalues(self.data):
-            screens = ch.get_screenshots()
-            if screens:
-                return screens
-
 
 class TChannel(UserDict):
 
@@ -115,9 +111,9 @@ class TChannel(UserDict):
             data = {}
         self.data.update(data)
         self.data.update(kwargs)
-        self.yatv_logo_path = os.path.join(defines.CACHE_PATH, 'logo')
-        if not os.path.exists(self.yatv_logo_path):
-            os.mkdir(self.yatv_logo_path)
+        self.mailtv_logo_path = os.path.join(defines.CACHE_PATH, 'logo')
+        if not os.path.exists(fs_str(self.mailtv_logo_path)):
+            os.mkdir(fs_str(self.mailtv_logo_path))
 
     def src(self):
         return self.get('src', 'undefined')
@@ -140,7 +136,7 @@ class TChannel(UserDict):
 #         return self['url']
 
     def group(self):
-        name = yatv.get_name_offset(self.name().lower())[0]
+        name = epgtv.get_name_offset(self.name().lower())[0]
         gr = self.get('cat')
         if name in CHANNEL_INFO:
             gr = CHANNEL_INFO[name].get('cat')
@@ -149,14 +145,14 @@ class TChannel(UserDict):
         return uni(self.get('cat'))
 
     def logo(self, session=None):
-        logo = os.path.join(self.yatv_logo_path, "{name}.png".format(name=self.title().lower()))
+        logo = os.path.join(self.mailtv_logo_path, "{name}.png".format(name=self.title().lower()))
         logo_url = None
         epg = None
-        if os.path.exists(logo):
+        if os.path.exists(fs_str(logo)):
             self.data['logo'] = logo
             return logo
         if not self.get('logo'):
-            epg = yatv.YATV.get_instance()
+            epg = epglist.Epg().link()
             if epg is not None:
                 logo_url = epg.get_logo_by_name(self.name())
         elif '://' in self.get('logo'):
@@ -164,10 +160,10 @@ class TChannel(UserDict):
 
         try:
             if logo_url:
-                _sess = epg.get_yatv_sess() if epg else session
+                _sess = epg.get_sess() if epg else session
                 r = defines.request(logo_url, session=_sess)
                 if len(r.content) > 0:
-                    with open(logo, 'wb') as fp:
+                    with open(fs_str(logo), 'wb') as fp:
                         fp.write(r.content)
                     self.data['logo'] = logo
         except Exception as e:
@@ -183,7 +179,7 @@ class TChannel(UserDict):
 
     def title(self):
         if not self.get('title'):
-            name_offset = yatv.get_name_offset(self.name().lower())
+            name_offset = epgtv.get_name_offset(self.name().lower())
             ctime = datetime.datetime.now()
             offset = round((ctime - datetime.datetime.utcnow()).total_seconds() / 3600)
             if name_offset[0] in CHANNEL_INFO:
@@ -196,10 +192,8 @@ class TChannel(UserDict):
 
     def update_epglist(self):
         try:
-            #             if defines.platform()['os'] == 'linux':
-            #                 epg = xmltv.XMLTV.get_instance()
-            #             else:
-            epg = yatv.YATV.get_instance()
+
+            epg = epglist.Epg().link()
             if not self.get('epg') and epg is not None:
                 self.data['epg'] = []
                 for ep in epg.get_epg_by_name(self.name()):
@@ -217,27 +211,26 @@ class TChannel(UserDict):
             thr.start()
             thr.join(4)
             ctime = datetime.datetime.now()
-            prev_bt = 0
-            prev_et = 0
+            prev_x = {}
             curepg = []
-            for x in self.get('epg', []):
+            for x in self.get('epg', {}):
                 try:
                     bt = datetime.datetime.fromtimestamp(float(x['btime']))
-                    et = datetime.datetime.fromtimestamp(float(x['etime']))
-                    if et > ctime and abs((bt - ctime).days) <= 1 and prev_et <= float(x['btime']) > prev_bt:
+                    if prev_x and 'etime' not in prev_x:
+                        prev_x['etime'] = x['btime']
+                    if abs((bt - ctime).days) <= 1 and float(x['btime']) >= float(prev_x.get('etime', 0)) and \
+                            (float(x.get('etime', 0)) >= time.time()):
                         curepg.append(x)
-                        prev_bt = float(x['btime'])
-                        prev_et = float(x['etime'])
+                    prev_x = x
+
                 except Exception as e:
                     log.error(e)
+
             self.data['epg'] = curepg
         except Exception as e:
             log.e('epg error {0}'.format(e))
 
         return self.get('epg')
-
-    def get_screenshots(self):
-        pass
 
 
 class TChannels:

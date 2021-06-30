@@ -1,4 +1,5 @@
 six
 requests
 acestreamengine
+pysocks
 

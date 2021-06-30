@@ -17,7 +17,7 @@ import defines
 import favdb
 import logger
 import utils
-import yatv
+from epgs import epglist
 from menu import MenuForm
 from playerform import MyPlayer
 from sources.tchannel import TChannel, MChannel
@@ -118,14 +118,13 @@ class ChannelGroups(OrderedDict):
                 pass
 
     def find_channel_by_name(self, groupname, name):
-        name = name.lower()
         for ch in self.getChannels(groupname):
             if ch.name().lower() == name.lower():
                 yield ch
 
     def find_channel_by_title(self, groupname, title):
         for ch in self.getChannels(groupname):
-            if title.lower() in ch.title().lower():
+            if title.lower() == ch.title().lower():
                 yield ch
 
 
@@ -143,7 +142,7 @@ class RotateScreen(threading.Thread):
         self.active = True
         while self.active:
             for screen in self.screens:
-                if self.active:
+                if self.active and screen:
                     self.img_control.setImage(str2(screen))
                     if defines.monitor.waitForAbort(2):
                         self.stop()
@@ -191,6 +190,7 @@ class LoopPlay(threading.Thread):
 
             except Exception as e:
                 log.e('LoopPlay error: {0}'.format(uni(e)))
+            finally:
                 xbmc.sleep(1000)
 
         self.parent.player.close()
@@ -222,7 +222,7 @@ class LoopPlay(threading.Thread):
 class WMainForm(xbmcgui.WindowXML):
     CANCEL_DIALOG = (9, 10, 11, 92, 216, 247, 257, 275, 61467, 61448,)
     CONTEXT_MENU_IDS = (117, 101)
-    ARROW_ACTIONS = (1, 2, 3, 4)
+    NAVIGATE_ACTIONS = (1, 2, 3, 4, 5, 6, 159, 160)
     DIGIT_BUTTONS = list(range(58, 68))
     ACTION_MOUSE = 107
     BTN_VOD_ID = 113
@@ -277,7 +277,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.timers = defines.Timers()
         self.rotate_screen_thr = None
         self.loop_play_thr = None
-        self._yatv_instance = None
+        self._epgtv_instance = None
 
     def onInit(self):
         log.d('onInit')
@@ -421,10 +421,8 @@ class WMainForm(xbmcgui.WindowXML):
                     if i == 0:
                         if self.progress:
                             self.progress.setPercent((ctime - bt).seconds * 100 // (et - bt).seconds)
-                        if 'screens' not in ep:
-                            screens = ch.get_screenshots()
-                            if screens:
-                                ep['screens'] = screens
+                        if 'event_id' in ep and not('screens' in ep or 'desc' in ep):
+                            ep.update(epglist.Epg().link().get_event_info(ep['event_id']))
 
                         if 'screens' in ep:
                             self.showScreen(ep['screens'], 1)
@@ -487,8 +485,8 @@ class WMainForm(xbmcgui.WindowXML):
 
         def LoadOther():
             for name, thr in iteritems(thrs):
-                if name not in ('yatv_epg',):
-                    thr.join(20)
+                if name not in ('epgtv_epg',):
+                    thr.join(60)
 
         #             dump_channel_groups()
 
@@ -500,7 +498,7 @@ class WMainForm(xbmcgui.WindowXML):
 
         thrs = OrderedDict()
         thrs['favourite'] = defines.MyThread(self.loadFavourites)
-        thrs['yatv_epg'] = defines.MyThread(lambda: setattr(self, '_yatv_instance', yatv.YATV.get_instance()))
+        thrs['epgtv_epg'] = defines.MyThread(lambda: setattr(self, '_epgtv_instance', epglist.Epg().link()))
 
         for src in channel_sources:
             thrs[src.name] = defines.MyThread(self.loadChannels, src.name)
@@ -515,7 +513,7 @@ class WMainForm(xbmcgui.WindowXML):
         if self.cur_category == WMainForm.FAVOURITE_GROUP:
             thrs['favourite'].join(20)
         else:
-            lo_thr.join(len(thrs) * 20)
+            lo_thr.join(len(thrs) * 60)
 
         if self.cur_category == WMainForm.SEARCH_GROUP:
             self.loadSearch(self.cur_channel)
@@ -672,7 +670,7 @@ class WMainForm(xbmcgui.WindowXML):
             self.list.selectItem(selitemid)
 
     def onAction(self, action):
-        #         log.d('Событие {0}'.format(action.getId()))
+        # log.d('Событие {0}'.format(action.getId()))
 
         if action in (xbmcgui.ACTION_NAV_BACK, xbmcgui.ACTION_BACKSPACE, xbmcgui.ACTION_PARENT_DIR):
             selItem = self.list.getListItem(0)
@@ -689,7 +687,7 @@ class WMainForm(xbmcgui.WindowXML):
         if not defines.isCancel():
             if action.getButtonCode() == 61513:
                 return
-            elif action in WMainForm.ARROW_ACTIONS:
+            elif action in WMainForm.NAVIGATE_ACTIONS:
                 self.onFocus(self.getFocusId())
             elif action in WMainForm.CONTEXT_MENU_IDS and self.getFocusId() == WMainForm.CONTROL_LIST:
                 if action == 101:
@@ -832,8 +830,5 @@ class WMainForm(xbmcgui.WindowXML):
 
         if self.loop_play_thr:
             self.loop_play_thr.stop()
-
-        if self._yatv_instance:
-            self._yatv_instance.cancel()
 
         xbmcgui.WindowXML.close(self)

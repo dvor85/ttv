@@ -8,6 +8,7 @@ import threading
 
 import xbmcgui
 import xbmc
+import six
 from six import iteritems, iterkeys
 from utils import uni, str2
 
@@ -190,7 +191,7 @@ class MyPlayer(xbmcgui.WindowXML):
                     for player, url_mode in iteritems(player_url):
                         try:
                             url, mode = url_mode
-                            if not isinstance(url, unicode):
+                            if not isinstance(url, six.text_type):
                                 url = url()
                             log.d('Try to play with {0} player'.format(player))
                             logo = channel.logo()
@@ -230,6 +231,7 @@ class MyPlayer(xbmcgui.WindowXML):
                                     if self.channel_stop_requested:
                                         return True
                                 log.d('End playing url "{0}"'.format(url_mode))
+                                xbmc.sleep(500)
 
                         except Exception as e:
                             log.e("Error play with {0} player: {1}".format(player, e))
