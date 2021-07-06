@@ -111,9 +111,9 @@ class TChannel(UserDict):
             data = {}
         self.data.update(data)
         self.data.update(kwargs)
-        self.mailtv_logo_path = os.path.join(defines.CACHE_PATH, 'logo')
-        if not os.path.exists(fs_str(self.mailtv_logo_path)):
-            os.mkdir(fs_str(self.mailtv_logo_path))
+        self.logo_path = os.path.join(defines.CACHE_PATH, 'logo')
+        if not os.path.exists(fs_str(self.logo_path)):
+            os.mkdir(fs_str(self.logo_path))
 
     def src(self):
         return self.get('src', 'undefined')
@@ -145,7 +145,7 @@ class TChannel(UserDict):
         return uni(self.get('cat'))
 
     def logo(self, session=None):
-        logo = os.path.join(self.mailtv_logo_path, "{name}.png".format(name=self.title().lower()))
+        logo = os.path.join(self.logo_path, "{name}.png".format(name=self.title().lower()))
         logo_url = None
         epg = None
         if os.path.exists(fs_str(logo)):

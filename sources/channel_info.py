@@ -308,7 +308,8 @@ CHANNEL_INFO = {
         "cat": "Детские"
     },
     "канал disney": {
-        "cat": "Детские"
+        "cat": "Детские",
+        "aliases": ["disney"]
     },
     "bollywood hd": {
         "cat": "Фильмы"
@@ -1188,6 +1189,10 @@ CHANNEL_INFO = {
         "cat": "Детские",
         "aliases": ["tiji"]
     },
+    "tiji russia": {
+        "cat": "Детские",
+        "aliases": ["tiji"]
+    },
     "tv 1000 русское кино": {
         "cat": "Фильмы"
     },
@@ -1716,6 +1721,14 @@ CHANNEL_INFO = {
     },
     "jimjam": {
         "cat": "Детские"
+    },
+    "jimjam россия": {
+        "cat": "Детские",
+        "aliases": ["jimjam"]
+    },
+    "jimjam russia": {
+        "cat": "Детские",
+        "aliases": ["jimjam"]
     },
     "russia today hd": {
         "cat": "Новостные"
