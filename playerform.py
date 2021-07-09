@@ -255,9 +255,7 @@ class MyPlayer(xbmcgui.WindowXML):
         return True
 
     def run_selected_channel(self, timeout=0):
-
         def run():
-            self.channel_number = utils.str2int(self.channel_number_str)
             log.d('CHANNEL NUMBER IS: {0}'.format(self.channel_number))
             if 0 < self.channel_number < self.parent.list.size() and self.parent.selitem_id != self.channel_number:
                 self.parent.selitem_id = self.channel_number
@@ -337,7 +335,6 @@ class MyPlayer(xbmcgui.WindowXML):
         if action in MyPlayer.CANCEL_DIALOG or action.getId() == MyPlayer.ACTION_RBC:
             log.d('Close player {0} {1}'.format(action.getId(), action.getButtonCode()))
             if self.timers.get(MyPlayer.TIMER_RUN_SEL_CHANNEL):
-                self.channel_number_str = str2(self.parent.selitem_id)
                 self.run_selected_channel()
                 self.UpdateEpg(self.channel)
             else:
@@ -356,7 +353,6 @@ class MyPlayer(xbmcgui.WindowXML):
             else:
                 self.dec_channel_number()
 
-            self.channel_number_str = str2(self.channel_number)
             if viewEPG():
                 self.run_selected_channel(timeout=5)
 

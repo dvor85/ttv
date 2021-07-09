@@ -3,11 +3,9 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import json
-import gzip
 import os
 import time
-from utils import uni, fs_str, to_bytes
+from utils import uni, fs_str
 import m3u8
 
 import defines
@@ -30,6 +28,7 @@ class Channels(TChannels):
 
         self.urls = uni(defines.ADDON.getSetting('playlists_urls')).split(';')
         self._temp = os.path.join(defines.CACHE_PATH, "playlist.m3u")
+        self.proxies = defines.PROXIES if defines.ADDON.getSetting('playlists_use_proxy') == 'true' else None
         TChannels.__init__(self, name='playlists', reload_interval=43200)
 
     def _load_playlist(self, avail=True):
@@ -52,11 +51,12 @@ class Channels(TChannels):
                     raise Exception("{temp} is empty".format(temp=self._temp))
 
             except Exception as e:
-                log.debug("load_json_temp error: {0}".format(uni(e)))
+                log.debug("load error: {0}".format(uni(e)))
                 try:
                     data = m3u8.load(url)
-                    # data = m3u8.loads(r.content)
-                    # r = defines.request(self.url, interval=3000)
+                    r = defines.request(url, interval=3000, proxies=self.proxies)
+                    r.raise_for_status()
+                    data = m3u8.loads(r.content)
                     self._save_jdata(data)
 
                 except Exception as e:

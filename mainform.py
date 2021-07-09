@@ -526,7 +526,7 @@ class WMainForm(xbmcgui.WindowXML):
         else:
             self.fillChannels()
             if self.init:
-                self.select_channel()
+                self.select_channel(self.player.channel_number)
                 self.init = False
             if self.list and (0 < self.selitem_id < self.list.size()):
                 if self.first_init:  # автостарт канала
@@ -546,7 +546,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.select_channel()
         self.Play()
 
-    def select_channel(self, sch='', timeout=0):
+    def select_channel(self, sch=0, timeout=0):
 
         def clear():
             self.channel_number_str = ''
@@ -554,7 +554,7 @@ class WMainForm(xbmcgui.WindowXML):
         if not self.list_type == 'channels':
             return
         if self.channel_number_str == '':
-            self.channel_number_str = sch if sch != '' else self.selitem_id
+            self.channel_number_str = str2(sch) if sch != 0 else str2(self.selitem_id)
         log('CHANNEL NUMBER IS: {0}'.format(self.channel_number_str))
         chnum = utils.str2int(self.channel_number_str)
 

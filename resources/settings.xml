@@ -27,6 +27,7 @@
 		<setting id="iptv" label="IPTV (Порядоковый номер. Если <= 0, то выключен)" type="number" default="1" />
 		<setting id="playlists" label="IPTV (Порядоковый номер. Если <= 0, то выключен)" type="number" default="1" />
 		<setting default="" id="playlists_urls" label="Ссылки на плэйлисты (разделитель ;)" type="text" enable="gt(-1,0)" subsetting="true" />
+		<setting default="false" id="playlists_use_proxy" label="Использовать прокси" type="bool" enable="gt(-2,0)" subsetting="true" />
 		
 	</category>
 	<category label="AceStream">
