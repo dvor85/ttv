@@ -124,7 +124,7 @@ class ChannelGroups(OrderedDict):
 
     def find_channel_by_title(self, groupname, title):
         for ch in self.getChannels(groupname):
-            if title.lower() == ch.title().lower():
+            if title.lower() in ch.title().lower():
                 yield ch
 
 

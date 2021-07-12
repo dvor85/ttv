@@ -98,7 +98,8 @@ class MChannel(UserDict):
 #             Если нет описания, посмотреть в другом источнике
             if ep:
                 fep = ep
-                if 'desc' in ep[0]:
+                if 'event_id' in ep[0] or 'screens' in ep[0] or 'desc' in ep[0]:
+                    # if 'desc' in ep[0]:
                     return ep
         return fep
 

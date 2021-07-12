@@ -4,7 +4,8 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import defines
-from . import allfon, acestream, ttv, iptv_restream
+from . import acestream, ttv, iptv_restream
+from sources import acetv
 from sources import playlists
 from six.moves import UserList
 from threading import Lock
@@ -29,8 +30,8 @@ class ChannelSources(UserList):
 
 channel_sources = ChannelSources()
 _lock = Lock()
-if str2int(defines.ADDON.getSetting('allfon')) > 0:
-    channel_sources.append(allfon.Channels(_lock))
+if str2int(defines.ADDON.getSetting('acetv')) > 0:
+    channel_sources.append(acetv.Channels(_lock))
 if str2int(defines.ADDON.getSetting('acestream')) > 0:
     channel_sources.append(acestream.Channels(_lock))
 if str2int(defines.ADDON.getSetting('ttv')) > 0:

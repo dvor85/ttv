@@ -4,7 +4,10 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import defines
-from utils import uni, str2, str2int
+import time
+import os
+import json
+from utils import uni, str2, str2int, fs_str
 import requests
 import logger
 import uuid
@@ -100,6 +103,7 @@ class Channel(TChannel):
             log.w('_get_tsproxy_url error: {0}'.format(uni(e)))
 
     def update_epglist(self):
+        TChannel.update_epglist(self)
         if not self.get('epg'):
             try:
                 params = dict(
@@ -144,7 +148,19 @@ class Channels(TChannels):
     def __init__(self):
         self.user = {}
         self.ttv_session = None
-        TChannels.__init__(self, name='ttv', reload_interval=-1, lock=None)
+        self._temp = os.path.join(defines.CACHE_PATH, "ttv.json")
+        TChannels.__init__(self, name='ttv', reload_interval=86400, lock=None)
+
+    def _load_jdata(self, avail=True):
+        log.d('get {temp}'.format(temp=self._temp))
+        if os.path.exists(fs_str(self._temp)):
+            if not avail or (time.time() - os.path.getmtime(fs_str(self._temp)) <= self.reload_interval):
+                with open(fs_str(self._temp), 'r') as fp:
+                    return json.load(fp)
+
+    def _save_jdata(self, jdata):
+        with open(fs_str(self._temp), 'w') as fp:
+            json.dump(jdata, fp)
 
     def _initTTV(self):
         try:
@@ -154,18 +170,6 @@ class Channels(TChannels):
                 guid = str(uuid.uuid1())
                 defines.ADDON.setSetting("uuid", str2(guid))
             guid = guid.replace('-', '')
-
-#             for server in _servers:
-#                 try:
-#                     params = dict(application='xbmc', version=defines.TTV_VERSION)
-#                     r = defines.request(fmt('http://{server}/v3/version.php', server=server),
-#                                         params=params, trys=1)
-#                     jdata = r.json()
-#                     if utils.str2int(jdata.get('success')) == 0:
-#                         raise Exception(fmt("Check version error: {0}", jdata.get('error')))
-#                     break
-#                 except Exception as e:
-#                     log.e(e)
 
             try:
                 params = dict(
@@ -181,7 +185,7 @@ class Channels(TChannels):
                 if str2int(jdata.get('success')) == 0:
                     raise Exception("Auth error: {0}".format(uni(jdata.get('error'))))
             except Exception as e:
-                log.e(e)
+                log.e(uni(e))
 
             self.user = {"login": uni(defines.ADDON.getSetting('ttv_login')),
                          "balance": jdata.get("balance"),
@@ -200,30 +204,46 @@ class Channels(TChannels):
     def update_channels(self):
         TChannels.update_channels(self)
         self._initTTV()
-        if self.ttv_session:
-            try:
-                params = dict(
-                    session=self.ttv_session,
-                    type='channel',
-                    typeresult='json')
-                r = defines.request('http://{server}/v3/translation_list.php'.format(server='api.{0}'.format(_server)),
-                                    params=params, session=_sess, trys=1)
+        jdata = dict()
+        try:
+            jdata = self._load_jdata()
+            if not jdata:
+                raise Exception("{temp} is empty".format(temp=self._temp))
 
-                jdata = r.json()
+        except Exception as e:
+            log.debug("load_json_temp error: {0}".format(uni(e)))
+            if self.ttv_session:
+                try:
+                    params = dict(
+                        session=self.ttv_session,
+                        type='channel',
+                        typeresult='json')
+                    r = defines.request('http://{server}/v3/translation_list.php'.format(server='api.{0}'.format(_server)),
+                                        params=params, session=_sess, trys=1)
 
-                if str2int(jdata.get('success')) == 0:
-                    raise Exception(jdata.get('error'))
-            except Exception as e:
-                log.e('get_channels error: {0}'.format(uni(e)))
+                    jdata = r.json()
 
-            if jdata.get('channels'):
-                for ch in jdata['channels']:
-                    try:
-                        if not (ch.get("name") or ch.get("id")):
-                            continue
+                    if str2int(jdata.get('success')) == 0:
+                        raise Exception(jdata.get('error'))
+                    self._save_jdata(jdata)
+                except Exception as e:
+                    log.e('get_channels error: {0}'.format(uni(e)))
+                    # log.i('Try to load previos channels, if availible')
+                    # try:
+                    #     jdata = self._load_jdata(False)
+                    #     if not jdata:
+                    #         raise Exception("Channels are not avalible")
+                    # except Exception as e:
+                    #     log.error(uni(e))
 
-                        channel = ch
-                        channel['cat'] = self._get_groupname_by_id(jdata.get("categories"), ch['group'])
-                        self.channels.append(Channel(channel, self.ttv_session))
-                    except Exception as e:
-                        log.e('Add channel error: {0}'.format(uni(e)))
+        if jdata.get('channels'):
+            for ch in jdata['channels']:
+                try:
+                    if not (ch.get("name") or ch.get("id")):
+                        continue
+
+                    channel = ch
+                    channel['cat'] = self._get_groupname_by_id(jdata.get("categories"), ch['group'])
+                    self.channels.append(Channel(channel, self.ttv_session))
+                except Exception as e:
+                    log.e('Add channel error: {0}'.format(uni(e)))

@@ -1515,7 +1515,7 @@ CHANNEL_INFO = {
     },
     "disney channel": {
         "cat": "Детские",
-        "aliases": ["канал disney"]
+        "aliases": ["disney", "канал disney"]
     },
     "плюсплюс": {
         "cat": "Детские"
