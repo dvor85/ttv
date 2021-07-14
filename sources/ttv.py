@@ -124,23 +124,23 @@ class Channel(TChannel):
             self.data['logo'] = 'http://{server}/uploads/{logo}'.format(server=_server, logo=uni(self.get('logo')))
         return TChannel.logo(self, session=_sess)
 
-    def get_screenshots(self):
+    def get_info(self):
         # Скрины пока не работают в ttv
-        return
-        try:
-            params = dict(
-                session=self.ttv_session,
-                channel_id=self.id(),
-                count=2,
-                typeresult='json')
-            r = defines.request('http://{server}/v3/translation_screen.php'.format(server='api.{0}'.format(_server)),
-                                params=params, session=_sess, trys=1)
-
+        # return
+        info = {}
+        params = dict(
+            session=self.ttv_session,
+            channel_id=self.id(),
+            count=2,
+            typeresult='json')
+        r = defines.request('http://{server}/v3/translation_screen.php'.format(server='api.{0}'.format(_server)),
+                            params=params, session=_sess, trys=1)
+        if r.ok:
             jdata = r.json()
             if str2int(jdata.get('success')) != 0 and not jdata.get('error'):
-                return [x['filename'].replace('web1.1ttv.org', 'shot.{0}'.format(_server)) for x in jdata['screens']]
-        except Exception as e:
-            log.w('get_screenshots error: {0}'.format(uni(e)))
+                info['screens'] = [x['filename'].replace('web1.1ttv.org', 'shot.{0}'.format(_server)) for x in jdata['screens']]
+
+        return info
 
 
 class Channels(TChannels):
@@ -149,7 +149,7 @@ class Channels(TChannels):
         self.user = {}
         self.ttv_session = None
         self._temp = os.path.join(defines.CACHE_PATH, "ttv.json")
-        TChannels.__init__(self, name='ttv', reload_interval=86400, lock=None)
+        TChannels.__init__(self, name='ttv', reload_interval=86400)
 
     def _load_jdata(self, avail=True):
         log.d('get {temp}'.format(temp=self._temp))

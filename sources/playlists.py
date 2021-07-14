@@ -29,7 +29,7 @@ class Channels(TChannels):
         self.urls = uni(defines.ADDON.getSetting('playlists_urls')).split(';')
         self._temp = os.path.join(defines.CACHE_PATH, "playlist.m3u")
         self.proxies = defines.PROXIES if defines.ADDON.getSetting('playlists_use_proxy') == 'true' else None
-        TChannels.__init__(self, name='playlists', reload_interval=43200)
+        TChannels.__init__(self, name='playlists', reload_interval=86400)
 
     def _load_playlist(self, avail=True):
         log.d('get {temp}'.format(temp=self._temp))

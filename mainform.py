@@ -17,7 +17,7 @@ import defines
 import favdb
 import logger
 import utils
-from epgs import epglist
+from epgs.epglist import Epg
 from menu import MenuForm
 from playerform import MyPlayer
 from sources.tchannel import TChannel, MChannel
@@ -422,7 +422,7 @@ class WMainForm(xbmcgui.WindowXML):
                         if self.progress:
                             self.progress.setPercent((ctime - bt).seconds * 100 // (et - bt).seconds)
                         if 'event_id' in ep and not('screens' in ep or 'desc' in ep):
-                            ep.update(epglist.Epg().link().get_event_info(ep['event_id']))
+                            ep.update(Epg().link.get_event_info(ep['event_id']))
 
                         if 'screens' in ep:
                             self.showScreen(ep['screens'], 1)
@@ -476,11 +476,11 @@ class WMainForm(xbmcgui.WindowXML):
             namedb = {}
             for cat, val in iteritems(self.channel_groups):
                 for ch in val['channels']:
-                    namedb[ch.name().lower()] = {'logo': ch.logo(), 'cat': cat}
+                    namedb[ch.name().lower()] = {'cat': cat}
                     break
             import os
             s = json.dumps(namedb, indent=4, ensure_ascii=False)
-            with open(os.path.join(defines.DATA_PATH, 'namedb.json'), 'wb') as fp:
+            with open(os.path.join(defines.CACHE_PATH, 'namedb.json'), 'wb') as fp:
                 fp.write(s)
 
         def LoadOther():
@@ -498,7 +498,7 @@ class WMainForm(xbmcgui.WindowXML):
 
         thrs = OrderedDict()
         thrs['favourite'] = defines.MyThread(self.loadFavourites)
-        thrs['epgtv_epg'] = defines.MyThread(lambda: setattr(self, '_epgtv_instance', epglist.Epg().link()))
+        thrs['epgtv_epg'] = defines.MyThread(lambda: setattr(self, '_epgtv_instance', Epg().link))
 
         for src in channel_sources:
             thrs[src.name] = defines.MyThread(self.loadChannels, src.name)

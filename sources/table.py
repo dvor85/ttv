@@ -37,7 +37,8 @@ if str2int(defines.ADDON.getSetting('acestream')) > 0:
 if str2int(defines.ADDON.getSetting('ttv')) > 0:
     channel_sources.append(ttv.Channels())
 if str2int(defines.ADDON.getSetting('iptv')) > 0:
-    channel_sources.append(iptv_restream.Channels(_lock))
+    channel_sources.append(iptv_restream.Channels())
 if str2int(defines.ADDON.getSetting('playlists')) > 0:
     channel_sources.append(playlists.Channels())
+
 channel_sources.sort(key=lambda src: str2int(defines.ADDON.getSetting(src.name)))

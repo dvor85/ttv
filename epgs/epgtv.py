@@ -52,12 +52,9 @@ class EPGTV:
 
     def __init__(self, name):
         log.d('start initialization')
-        self.jdata = {}
-        self.update_timer = None
         self.epgtv_path = os.path.join(defines.CACHE_PATH, name)
         self.epgtv_logo_path = os.path.join(defines.CACHE_PATH, 'logo')
         makedirs(fs_str(self.epgtv_path))
-        self.limit_channels = 24
 
     def update_epg(self, page=0):
         pass

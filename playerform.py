@@ -35,6 +35,7 @@ class MyPlayer(xbmcgui.WindowXML):
     PAGE_UP_DOWN = (5, 6)
     DIGIT_BUTTONS = list(range(58, 68))
     CH_NAME_ID = 399
+    EPG_END_ID = 300
     DLG_SWITCH_ID = 299
     PLAYER_WINDOW_ID = 12346
 
@@ -191,7 +192,7 @@ class MyPlayer(xbmcgui.WindowXML):
                     for player, url_mode in iteritems(player_url):
                         try:
                             url, mode = url_mode
-                            if not isinstance(url, six.text_type):
+                            if callable(url):
                                 url = url()
                             log.d('Try to play with {0} player'.format(player))
                             logo = channel.logo()
@@ -335,6 +336,7 @@ class MyPlayer(xbmcgui.WindowXML):
         if action in MyPlayer.CANCEL_DIALOG or action.getId() == MyPlayer.ACTION_RBC:
             log.d('Close player {0} {1}'.format(action.getId(), action.getButtonCode()))
             if self.timers.get(MyPlayer.TIMER_RUN_SEL_CHANNEL):
+                self.channel_number = self.parent.selitem_id
                 self.run_selected_channel()
                 self.UpdateEpg(self.channel)
             else:

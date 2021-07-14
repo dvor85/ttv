@@ -13,7 +13,8 @@ from utils import uni, fs_str
 
 import defines
 import logger
-from epgs import epglist, epgtv
+from epgs import epgtv
+from epgs.epglist import Epg
 import six
 from .channel_info import CHANNEL_INFO
 from .grouplang import translate
@@ -73,6 +74,12 @@ class MChannel(UserDict):
             if lo:
                 return lo
 
+    def id(self):
+        for ch in itervalues(self.data):
+            _id = ch.id()
+            if _id:
+                return _id
+
     def name(self):
         for ch in itervalues(self.data):
             nm = ch.name()
@@ -99,7 +106,6 @@ class MChannel(UserDict):
             if ep:
                 fep = ep
                 if 'event_id' in ep[0] or 'screens' in ep[0] or 'desc' in ep[0]:
-                    # if 'desc' in ep[0]:
                     return ep
         return fep
 
@@ -138,9 +144,11 @@ class TChannel(UserDict):
 
     def group(self):
         name = epgtv.get_name_offset(self.name().lower())[0]
-        gr = self.get('cat')
+        gr = uni(self.get('cat'))
         if name in CHANNEL_INFO:
             gr = CHANNEL_INFO[name].get('cat')
+        # else:
+        #     CHANNEL_INFO[name] = dict(cat=gr)
         if gr:
             self.data['cat'] = translate.get(gr.lower(), gr)
         return uni(self.get('cat'))
@@ -153,7 +161,7 @@ class TChannel(UserDict):
             self.data['logo'] = logo
             return logo
         if not self.get('logo'):
-            epg = epglist.Epg().link()
+            epg = Epg().link
             if epg is not None:
                 logo_url = epg.get_logo_by_name(self.name())
         elif '://' in self.get('logo'):
@@ -193,8 +201,7 @@ class TChannel(UserDict):
 
     def update_epglist(self):
         try:
-
-            epg = epglist.Epg().link()
+            epg = Epg().link
             if not self.get('epg') and epg is not None:
                 self.data['epg'] = []
                 for ep in epg.get_epg_by_name(self.name()):
