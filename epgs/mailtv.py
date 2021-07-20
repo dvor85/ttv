@@ -173,7 +173,7 @@ class MAILTV(EPGTV):
                    "id": event_id
                    }
         r = defines.request(url, method='post', params=_params, session=self.sess,
-                            headers={'Referer': 'https://tv.mail.ru/'})
+                            headers={'Referer': 'https://tv.mail.ru/'}, trys=1, timeout=1)
 
         if r.ok:
             j = r.json()

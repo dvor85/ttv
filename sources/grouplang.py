@@ -12,6 +12,7 @@ translate = {
     'entertainment': "Развлекательные",
     'educational': "Познавательные",
     'movies': "Фильмы",
+    'кино': "Фильмы",
     'documentaries': "Документальные",
     'documentary': "Документальные",
     'travel': "Познавательные",
