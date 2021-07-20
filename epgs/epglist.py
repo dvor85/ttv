@@ -9,10 +9,11 @@ from . import mailtv, xmltv
 
 class Epg():
     def __init__(self):
-        self.epg_source = uni(defines.ADDON.getSetting('epg_source'))
+        self.source = uni(defines.ADDON.getSetting('epg_source'))
 
+    @property
     def link(self):
-        if self.epg_source == "mailtv":
+        if self.source == "mailtv":
             return mailtv.MAILTV.get_instance()
         else:
             return xmltv.XMLTV.get_instance()

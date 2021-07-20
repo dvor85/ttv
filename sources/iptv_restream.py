@@ -25,10 +25,10 @@ class Channel(TChannel):
 
 class Channels(TChannels):
 
-    def __init__(self, lock):
+    def __init__(self):
         self.url = 'https://iptv-org.github.io/iptv/channels.json'
         self._temp = os.path.join(defines.CACHE_PATH, "iptv_restream.json.gz")
-        TChannels.__init__(self, name='iptv', reload_interval=43200, lock=lock)
+        TChannels.__init__(self, name='iptv', reload_interval=86400)
 
     def _load_jdata(self, avail=True):
         log.d('get {temp}'.format(temp=self._temp))
@@ -52,8 +52,7 @@ class Channels(TChannels):
         except Exception as e:
             log.debug("load_json_temp error: {0}".format(uni(e)))
             try:
-                with self.lock:
-                    r = defines.request(self.url, interval=3000)
+                r = defines.request(self.url, interval=3000)
                 jdata = r.json()
                 self._save_jdata(jdata)
             except Exception as e:
