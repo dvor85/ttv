@@ -17,7 +17,7 @@ import defines
 import favdb
 import logger
 import utils
-from epgs import epglist
+from epgs.epglist import Epg
 from menu import MenuForm
 from playerform import MyPlayer
 from sources.tchannel import TChannel, MChannel
@@ -124,7 +124,7 @@ class ChannelGroups(OrderedDict):
 
     def find_channel_by_title(self, groupname, title):
         for ch in self.getChannels(groupname):
-            if title.lower() == ch.title().lower():
+            if title.lower() in ch.title().lower():
                 yield ch
 
 
@@ -422,7 +422,7 @@ class WMainForm(xbmcgui.WindowXML):
                         if self.progress:
                             self.progress.setPercent((ctime - bt).seconds * 100 // (et - bt).seconds)
                         if 'event_id' in ep and not('screens' in ep or 'desc' in ep):
-                            ep.update(epglist.Epg().link().get_event_info(ep['event_id']))
+                            ep.update(Epg().link.get_event_info(ep['event_id']))
 
                         if 'screens' in ep:
                             self.showScreen(ep['screens'], 1)
@@ -476,11 +476,11 @@ class WMainForm(xbmcgui.WindowXML):
             namedb = {}
             for cat, val in iteritems(self.channel_groups):
                 for ch in val['channels']:
-                    namedb[ch.name().lower()] = {'logo': ch.logo(), 'cat': cat}
+                    namedb[ch.name().lower()] = {'cat': cat}
                     break
             import os
             s = json.dumps(namedb, indent=4, ensure_ascii=False)
-            with open(os.path.join(defines.DATA_PATH, 'namedb.json'), 'wb') as fp:
+            with open(os.path.join(defines.CACHE_PATH, 'namedb.json'), 'wb') as fp:
                 fp.write(s)
 
         def LoadOther():
@@ -498,7 +498,7 @@ class WMainForm(xbmcgui.WindowXML):
 
         thrs = OrderedDict()
         thrs['favourite'] = defines.MyThread(self.loadFavourites)
-        thrs['epgtv_epg'] = defines.MyThread(lambda: setattr(self, '_epgtv_instance', epglist.Epg().link()))
+        thrs['epgtv_epg'] = defines.MyThread(lambda: setattr(self, '_epgtv_instance', Epg().link))
 
         for src in channel_sources:
             thrs[src.name] = defines.MyThread(self.loadChannels, src.name)
@@ -526,7 +526,7 @@ class WMainForm(xbmcgui.WindowXML):
         else:
             self.fillChannels()
             if self.init:
-                self.select_channel()
+                self.select_channel(self.player.channel_number)
                 self.init = False
             if self.list and (0 < self.selitem_id < self.list.size()):
                 if self.first_init:  # автостарт канала
@@ -546,7 +546,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.select_channel()
         self.Play()
 
-    def select_channel(self, sch='', timeout=0):
+    def select_channel(self, sch=0, timeout=0):
 
         def clear():
             self.channel_number_str = ''
@@ -554,7 +554,7 @@ class WMainForm(xbmcgui.WindowXML):
         if not self.list_type == 'channels':
             return
         if self.channel_number_str == '':
-            self.channel_number_str = sch if sch != '' else self.selitem_id
+            self.channel_number_str = str2(sch) if sch != 0 else str2(self.selitem_id)
         log('CHANNEL NUMBER IS: {0}'.format(self.channel_number_str))
         chnum = utils.str2int(self.channel_number_str)
 
