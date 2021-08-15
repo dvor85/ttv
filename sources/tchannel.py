@@ -203,9 +203,7 @@ class TChannel(UserDict):
         try:
             epg = Epg().link
             if not self.get('epg') and epg is not None:
-                self.data['epg'] = []
-                for ep in epg.get_epg_by_name(self.name()):
-                    self.data['epg'].append(ep)
+                self.data['epg'] = list(epg.get_epg_by_name(self.name()))
         except Exception as e:
             log.e('update_epglist error {0}'.format(e))
 
@@ -215,9 +213,7 @@ class TChannel(UserDict):
         """
 
         try:
-            thr = defines.MyThread(self.update_epglist)
-            thr.start()
-            thr.join(4)
+            defines.MyThread(self.update_epglist).start().join(4)
             ctime = datetime.datetime.now()
             prev_x = {}
             curepg = []
