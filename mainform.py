@@ -386,16 +386,17 @@ class WMainForm(xbmcgui.WindowXML):
             log.d('loadChannels {0} error: {1}'.format(src_name, e))
 
     def getEpg(self, ch, timeout=0, callback=None):
+        chnum = self.player.channel_number
 
         def get():
-            chnum = self.player.channel_number
+
             try:
                 epg = None
                 log.d('getEpg->get')
                 self.showStatus('Загрузка программы')
                 if ch:
                     epg = ch.epg()
-                    if callback is not None and chnum == self.player.channel_number:
+                    if callable(callback) and chnum == self.player.channel_number:
                         callback(ch, epg)
                     self.getEpg(ch, 60, callback)
             except Exception as e:

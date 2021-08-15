@@ -53,6 +53,10 @@ class MyThread(threading.Thread):
         threading.Thread.__init__(self, target=func, name=func.__name__, args=args, kwargs=kwargs)
         self.daemon = False
 
+    def start(self):
+        threading.Thread.start(self)
+        return self
+
 
 class Timers(UserDict):
     def __init__(self, *args, **kwargs):
