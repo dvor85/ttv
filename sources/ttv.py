@@ -103,7 +103,7 @@ class Channel(TChannel):
             log.w('_get_tsproxy_url error: {0}'.format(uni(e)))
 
     def update_epglist(self):
-        TChannel.update_epglist(self)
+        defines.MyThread(TChannel.update_epglist, self).start().join(4)
         if not self.get('epg'):
             try:
                 params = dict(
