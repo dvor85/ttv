@@ -202,8 +202,9 @@ class TChannel(UserDict):
     def update_epglist(self):
         try:
             epg = Epg().link
-            if not self.get('epg') and epg is not None:
-                self.data['epg'] = list(epg.get_epg_by_name(self.name()))
+            if epg is not None:
+                if not self.get('epg') or 'event_id' not in self['epg'][0]:
+                    self.data['epg'] = list(epg.get_epg_by_name(self.name()))
         except Exception as e:
             log.e('update_epglist error {0}'.format(e))
 
