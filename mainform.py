@@ -97,9 +97,7 @@ class ChannelGroups(OrderedDict):
             return []
 
     def find_channel_by_id(self, groupname, chid):
-        for ch in self.getChannels(groupname):
-            if ch.id() == chid:
-                yield ch
+        return (ch for ch in self.getChannels(groupname) if ch.id() == chid)
 
     def find_group_by_name(self, name):
         for groupname in (x for x in self.getGroups() if x not in (WMainForm.FAVOURITE_GROUP, WMainForm.SEARCH_GROUP)):
@@ -118,14 +116,10 @@ class ChannelGroups(OrderedDict):
                 pass
 
     def find_channel_by_name(self, groupname, name):
-        for ch in self.getChannels(groupname):
-            if ch.name().lower() == name.lower():
-                yield ch
+        return (ch for ch in self.getChannels(groupname) if ch.name().lower() == name.lower())
 
     def find_channel_by_title(self, groupname, title):
-        for ch in self.getChannels(groupname):
-            if title.lower() in ch.title().lower():
-                yield ch
+        return (ch for ch in self.getChannels(groupname) if title.lower() in ch.title().lower())
 
 
 class RotateScreen(threading.Thread):
@@ -778,8 +772,9 @@ class WMainForm(xbmcgui.WindowXML):
 
         def set_logo():
             with sema:
-                chli.setArt({"icon": str2(ch.logo())})
-                chli.setProperty("icon", str2(ch.logo()))
+                log.debug(f"{type(ch.logo())=}")
+                chli.setArt({"icon": ch.logo()})
+                chli.setProperty("icon", ch.logo())
 
         if not defines.isCancel():
             slthread = threading.Thread(target=set_logo)
@@ -807,10 +802,7 @@ class WMainForm(xbmcgui.WindowXML):
         log.d('fillCategory: Clear list')
         self.list.reset()
         self.list_type = 'groups'
-        for gr in self.channel_groups.getGroups():
-            if defines.isCancel():
-                return
-            AddItem(gr)
+        [AddItem(gr) for gr in self.channel_groups.getGroups()]
 
         if self.list.size() > 0:
             self.setFocus(self.list)

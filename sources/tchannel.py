@@ -1,23 +1,19 @@
 # -*- coding: utf-8 -*-
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-from __future__ import absolute_import, division, unicode_literals
-
 import datetime
 import time
 import os
-
-from six.moves import UserDict
-from six import itervalues
-from utils import uni, fs_str
+from pathlib import Path
+from collections import UserDict
 
 import defines
 import logger
 from epgs import epgtv
 from epgs.epglist import Epg
-import six
 from .channel_info import CHANNEL_INFO
 from .grouplang import translate
+import utils
 
 
 log = logger.Logger(__name__)
@@ -38,12 +34,11 @@ class MChannel(UserDict):
     def insert(self, index, ch):
         if self.title() != ch.title():
             for pu in self.xurl():
-                for u in itervalues(pu[1]):
+                for u in pu[1].values():
                     if ch['url']:
-                        for cu in itervalues(ch['url']):
-                            if isinstance(u[0], six.text_type) and isinstance(cu[0], six.text_type):
-                                if u[0] == cu[0]:
-                                    return
+                        for cu in ch['url'].values():
+                            if isinstance(u[0], str) and isinstance(cu[0], str) and u[0] == cu[0]:
+                                return
         if not isinstance(ch, self.__class__):
             while index in self.data:
                 index += 1
@@ -51,56 +46,33 @@ class MChannel(UserDict):
         else:
             UserDict.update(ch)
 
-    def group(self):
-        for ch in itervalues(self.data):
-            gr = ch.group()
-            if gr:
-                return gr
-
     def xurl(self):
         """
         [src_name, {player: (url, mode)}]
         """
-        ret = []
+        return [(ch.src(), ch['url']) for ch in self.data.values() if ch['url']]
 
-        for ch in itervalues(self.data):
-            if ch['url']:
-                ret.append([ch.src(), ch['url']])
-        return ret
+    def group(self):
+        return next((ch.group() for ch in self.data.values() if ch.group()), None)
 
     def logo(self):
-        for ch in itervalues(self.data):
-            lo = ch.logo()
-            if lo:
-                return lo
+        return next((ch.logo() for ch in self.data.values() if ch.logo()), None)
 
     def id(self):
-        for ch in itervalues(self.data):
-            _id = ch.id()
-            if _id:
-                return _id
+        return next((ch.id() for ch in self.data.values() if ch.id()), None)
 
     def name(self):
-        for ch in itervalues(self.data):
-            nm = ch.name()
-            if nm:
-                return nm
+        return next((ch.name() for ch in self.data.values() if ch.name()), None)
 
     def pin(self):
-        for ch in itervalues(self.data):
-            p = ch.get('pin')
-            if p:
-                return p
+        return next((ch.get('pin') for ch in self.data.values() if ch.get('pin')), None)
 
     def title(self):
-        for ch in itervalues(self.data):
-            tit = ch.title()
-            if tit:
-                return tit
+        return next((ch.title() for ch in self.data.values() if ch.title()), None)
 
     def epg(self):
         fep = None
-        for ch in itervalues(self.data):
+        for ch in self.data.values():
             ep = ch.epg()
 #             Если нет описания, посмотреть в другом источнике
             if ep:
@@ -118,9 +90,8 @@ class TChannel(UserDict):
             data = {}
         self.data.update(data)
         self.data.update(kwargs)
-        self.logo_path = os.path.join(defines.CACHE_PATH, 'logo')
-        if not os.path.exists(fs_str(self.logo_path)):
-            os.mkdir(fs_str(self.logo_path))
+        self.logo_path = Path(defines.CACHE_PATH, 'logo')
+        self.logo_path.mkdir(parents=True, exist_ok=True)
 
     def src(self):
         return self.get('src', 'undefined')
@@ -131,7 +102,7 @@ class TChannel(UserDict):
     def __getitem__(self, key):
         if key == 'url':
             if not isinstance(self.data.get(key), dict):
-                self.data[key] = {self.player(): (uni(self.data.get(key)), self.get('mode', 'PID'))}
+                self.data[key] = {self.player(): (self.data.get(key), self.get('mode', 'PID'))}
 
         return UserDict.__getitem__(self, key)
 
@@ -144,22 +115,22 @@ class TChannel(UserDict):
 
     def group(self):
         name = epgtv.get_name_offset(self.name().lower())[0]
-        gr = uni(self.get('cat'))
+        gr = self.get('cat')
         if name in CHANNEL_INFO:
             gr = CHANNEL_INFO[name].get('cat')
         # else:
         #     CHANNEL_INFO[name] = dict(cat=gr)
         if gr:
             self.data['cat'] = translate.get(gr.lower(), gr)
-        return uni(self.get('cat'))
+        return self.get('cat')
 
     def logo(self, session=None):
-        logo = os.path.join(self.logo_path, "{name}.png".format(name=self.title().lower()))
+        f_logo = Path(self.logo_path, f"{self.title().lower()}.png")
         logo_url = None
         epg = None
-        if os.path.exists(fs_str(logo)):
-            self.data['logo'] = logo
-            return logo
+        if f_logo.exists():
+            self.data['logo'] = str(f_logo)
+            return str(f_logo)
         if not self.get('logo'):
             epg = Epg().link
             if epg is not None:
@@ -171,20 +142,22 @@ class TChannel(UserDict):
             if logo_url:
                 _sess = epg.get_sess() if epg else session
                 r = defines.request(logo_url, session=_sess)
-                if len(r.content) > 0:
-                    with open(fs_str(logo), 'wb') as fp:
+                if r.ok > 0:
+                    with open(utils.fs_str(str(f_logo)), mode='wb') as fp:
                         fp.write(r.content)
-                    self.data['logo'] = logo
+#                     Path(utils.fs_enc(f_logo)).write_bytes(r.content)
+                    self.data['logo'] = str(f_logo)
         except Exception as e:
-            log.e('update_logo error {0}'.format(e))
+            log.e(f'update_logo error {e}')
+            log.d(f"{f_logo=}")
 
-        return uni(self.get('logo'))
+        return str(self.get('logo'))
 
     def id(self):
-        return uni(self.get('id', self.name()))
+        return self.get('id', self.name())
 
     def name(self):
-        return uni(self.get('name'))
+        return self.get('name')
 
     def title(self):
         if not self.get('title'):
@@ -197,7 +170,7 @@ class TChannel(UserDict):
                 self.data['title'] = name_offset[0].capitalize()
             if name_offset[1] and name_offset[1] != offset and sign(name_offset[1]):
                 self.data['title'] += " ({sign}{offset})".format(sign=sign(name_offset[1]), offset=name_offset[1])
-        return uni(self.data["title"])
+        return self.data["title"]
 
     def update_epglist(self):
         try:
@@ -205,7 +178,7 @@ class TChannel(UserDict):
             if not self.get('epg') and epg is not None:
                 self.data['epg'] = list(epg.get_epg_by_name(self.name()))
         except Exception as e:
-            log.e('update_epglist error {0}'.format(e))
+            log.e(f'update_epglist error {e}')
 
     def epg(self):
         """
@@ -232,7 +205,7 @@ class TChannel(UserDict):
 
             self.data['epg'] = curepg
         except Exception as e:
-            log.e('epg error {0}'.format(e))
+            log.e(f'epg error {e}')
 
         return self.get('epg')
 

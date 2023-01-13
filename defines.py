@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-from __future__ import absolute_import, division, unicode_literals
 
 import os
 import sys

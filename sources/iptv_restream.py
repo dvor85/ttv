@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-from __future__ import absolute_import, division, unicode_literals
-
 import json
-import gzip
-import os
 import time
-from utils import uni, fs_str
+import utils
+from pathlib import Path
 
 import defines
 import logger
@@ -20,52 +17,62 @@ class Channel(TChannel):
 
     def __init__(self, data={}):
         TChannel.__init__(self, data=data, src='iptv', player='tsp')
-        self.data['cat'] = self.data.get('category')
+        self.data['cat'] = self.data['categories'][0] if self.data.get('categories') else 'iptv'
+        if self.data.get('alt_names'):
+            self.data['name'] = self.data['alt_names'][0]
 
 
 class Channels(TChannels):
 
     def __init__(self):
-        self.url = 'https://iptv-org.github.io/iptv/channels.json'
-        self._temp = os.path.join(defines.CACHE_PATH, "iptv_restream.json.gz")
+        self.url = {'channels': 'https://iptv-org.github.io/api/channels.json',
+                    'streams': 'https://iptv-org.github.io/api/streams.json'}
+        self._temp = Path(defines.CACHE_PATH, "iptv_org.json")
         TChannels.__init__(self, name='iptv', reload_interval=86400)
 
     def _load_jdata(self, avail=True):
-        log.d('get {temp}'.format(temp=self._temp))
-        if os.path.exists(fs_str(self._temp)):
-            if not avail or (time.time() - os.path.getmtime(fs_str(self._temp)) <= self.reload_interval):
-                with gzip.open(fs_str(self._temp), 'r') as fp:
+        log.d(f'get {self._temp}')
+        if self._temp.exists():
+            if not avail or (time.time() - self._temp.stat().st_mtime <= self.reload_interval):
+                with self._temp.open(mode='r') as fp:
                     return json.load(fp)
 
     def _save_jdata(self, jdata):
-        with gzip.open(fs_str(self._temp), 'w') as fp:
+        with self._temp.open(mode='w') as fp:
             json.dump(jdata, fp)
 
     def update_channels(self):
         TChannels.update_channels(self)
-        jdata = dict()
+        jdata = []
         try:
             jdata = self._load_jdata()
             if not jdata:
-                raise Exception("{temp} is empty".format(temp=self._temp))
+                raise Exception(f"{self._temp} is empty")
 
         except Exception as e:
-            log.debug("load_json_temp error: {0}".format(uni(e)))
+            log.debug(f"load_json_temp error: {e}")
+            jdata = []
             try:
-                r = defines.request(self.url, interval=3000)
-                jdata = r.json()
+                r = defines.request(self.url['channels'], interval=3000)
+                jchannels = r.json()
+                r = defines.request(self.url['streams'], interval=3000)
+                jstreams = r.json()
+                for ch in jchannels:
+                    if "rus" in ch.get('languages', []):
+                        [ch.update(st) for st in jstreams if st['channel'] == ch['id']]
+                        if 'url' in ch:
+                            jdata.append(ch)
+
                 self._save_jdata(jdata)
             except Exception as e:
-                log.error("get_channels error: {0}".format(uni(e)))
+                log.error(f"get_channels error: {e}")
                 log.i('Try to load previos channels, if availible')
                 try:
                     jdata = self._load_jdata(False)
                     if not jdata:
                         raise Exception("Channels are not avalible")
                 except Exception as e:
-                    log.error(uni(e))
+                    log.error(e)
 
         if jdata:
-            for ch in jdata:
-                if len([c for c in ch.get('languages', []) if 'rus' == c.get('code')]) > 0:
-                    self.channels.append(Channel(ch))
+            self.channels.extend(Channel(_j) for _j in jdata)

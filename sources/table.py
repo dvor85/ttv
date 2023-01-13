@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-from __future__ import absolute_import, division, unicode_literals
-
 import defines
 from . import acestream, ttv, iptv_restream
 from sources import acetv
