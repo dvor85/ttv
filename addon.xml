@@ -4,11 +4,11 @@
        version="10.2.0+matrix1"
        provider-name="dvor85">
     <requires>
-		<import addon="xbmc.python" version="3.0.0" />
-		<import addon="script.module.requests" version="2.12.4" /> 
-		<import addon="script.module.win_inet_pton" version="1.1.0" optional="true" />
-		<import addon="script.module.pysocks" version="1.6.8" /> 
-		<import addon="script.module.six" version="1.12.0" />
+        <import addon="xbmc.python" version="3.0.0" />
+        <import addon="script.module.requests" version="2.12.4" />
+        <import addon="script.module.win_inet_pton" version="1.1.0" optional="true" />
+        <import addon="script.module.pysocks" version="1.6.8" />
+        <import addon="script.module.six" version="1.12.0" />        
     </requires>
     <extension point="xbmc.python.script" library="default.py">
         <provides>video</provides>
@@ -21,7 +21,7 @@
         <forum>http://xbmc.ru/forum/showthread.php?p=76182</forum>
         <website>http://xbmc.ru/forum/showthread.php?p=76182</website>
         <assets>
-			<icon>icon.png</icon>
-		</assets>
+            <icon>icon.png</icon>
+        </assets>
     </extension>
 </addon>

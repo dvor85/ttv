@@ -2,6 +2,7 @@
 
 from __future__ import absolute_import, division, unicode_literals, print_function
 
+
 import platform
 import sys
 import os
@@ -12,13 +13,13 @@ import os
 # Make pydev debugger works for auto reload.
 if platform.system() == 'Linux':
     print("Append pydevd for Linux")
-    sys.path.insert(0, os.path.expanduser('~/eclipse/plugins/org.python.pydev.core_8.3.0.202104101217/pysrc'))
+    sys.path.insert(0, os.path.expanduser('~/eclipse/plugins/org.python.pydev.core_10.0.2.202212101256/pysrc'))
 elif platform.system() == 'Windows':
     print("Append pydevd for Windows")
     sys.path.insert(0, 'd:\\python\\eclipse\\plugins\\org.python.pydev.core_8.3.0.202104101217\\pysrc')
 
 import pydevd  # @UnresolvedImport @IgnorePep8
-pydevd.settrace('localhost', stdoutToServer=True, stderrToServer=True, suspend=False)
+pydevd.settrace('localhost', port=5678, stdoutToServer=True, stderrToServer=True, suspend=False)
 
 
 """

@@ -17,7 +17,7 @@ class Channel(TChannel):
 
     def __init__(self, data={}):
         TChannel.__init__(self, data=data, src='iptv', player='tsp')
-        self.data['cat'] = self.data['categories'][0] if self.data.get('categories') else 'iptv'
+        self.data['cat'] = self.data['categories'][0] if self.data.get('categories') else self.src()
         if self.data.get('alt_names'):
             self.data['name'] = self.data['alt_names'][0]
 
@@ -60,7 +60,7 @@ class Channels(TChannels):
                 for ch in jchannels:
                     if "rus" in ch.get('languages', []):
                         [ch.update(st) for st in jstreams if st['channel'] == ch['id']]
-                        if 'url' in ch:
+                        if 'url' in ch and ch['status'] in {"online", "timeout"}:
                             jdata.append(ch)
 
                 self._save_jdata(jdata)

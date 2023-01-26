@@ -6,11 +6,11 @@
 import defines
 
 
-try:
-    if defines.DEBUG:
-        import debug  # @UnusedImport
-except Exception as e:
-    defines.log.error(e)
+# try:
+if defines.DEBUG:
+    import debug  # @UnusedImport
+# except Exception as e:
+#     defines.log.error(e)
 
 
 def main():

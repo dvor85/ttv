@@ -772,7 +772,6 @@ class WMainForm(xbmcgui.WindowXML):
 
         def set_logo():
             with sema:
-                log.debug(f"{type(ch.logo())=}")
                 chli.setArt({"icon": ch.logo()})
                 chli.setProperty("icon", ch.logo())
 

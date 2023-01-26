@@ -12,6 +12,7 @@ import six
 import xbmcaddon
 import xbmc
 import xbmcgui
+from xbmcvfs import translatePath
 from six import iteritems
 from utils import uni, str2, fs_str
 from six.moves import UserDict
@@ -24,8 +25,8 @@ ADDON = xbmcaddon.Addon()
 ADDON_ID = uni(ADDON.getAddonInfo('id'))
 ADDON_ICON = uni(ADDON.getAddonInfo('icon'))
 ADDON_PATH = uni(ADDON.getAddonInfo('path'))
-DATA_PATH = uni(xbmc.translatePath(str2(os.path.join("special://profile/addon_data", ADDON_ID))))
-CACHE_PATH = uni(xbmc.translatePath(str2(os.path.join("special://temp", ADDON_ID))))
+DATA_PATH = uni(translatePath(str2(os.path.join("special://profile/addon_data", ADDON_ID))))
+CACHE_PATH = uni(translatePath(str2(os.path.join("special://temp", ADDON_ID))))
 PTR_FILE = uni(ADDON.getSetting('port_path'))
 AUTOSTART = uni(ADDON.getSetting('autostart')) == 'true'
 AUTOSTART_LASTCH = uni(ADDON.getSetting('autostart_lastch')) == 'true'

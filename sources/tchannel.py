@@ -149,7 +149,6 @@ class TChannel(UserDict):
                     self.data['logo'] = str(f_logo)
         except Exception as e:
             log.e(f'update_logo error {e}')
-            log.d(f"{f_logo=}")
 
         return str(self.get('logo'))
 
