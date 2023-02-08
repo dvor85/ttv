@@ -1,16 +1,11 @@
 # -*- coding: utf-8 -*-
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-from __future__ import absolute_import, division, unicode_literals
-
 import datetime
 import threading
 
 import xbmcgui
 import xbmc
-import six
-from six import iteritems, iterkeys
-from utils import uni, str2
 
 import defines
 import logger
@@ -74,18 +69,18 @@ class MyPlayer(xbmcgui.WindowXML):
         if logo:
             self.cicon.setVisible(True)
 
-        self.cicon.setImage(str2(logo))
+        self.cicon.setImage(logo)
         self.control_window = self.getControl(MyPlayer.CONTROL_WINDOW_ID)
         self.chinfo = self.getControl(MyPlayer.CH_NAME_ID)
-        self.chinfo.setLabel(str2(self.title))
+        self.chinfo.setLabel(self.title)
         self.swinfo = self.getControl(MyPlayer.DLG_SWITCH_ID)
         self.hideStatus()
 
         if not self.timers.get(MyPlayer.TIMER_RUN_SEL_CHANNEL):
             self.init_channel_number()
 
-        log.d("channel_number = {0}".format(self.channel_number))
-        log.d("selitem_id = {0}".format(self.parent.selitem_id))
+        log.d(f"channel_number = {self.channel_number}")
+        log.d(f"selitem_id = {self.parent.selitem_id}")
         self.UpdateEpg(self.channel)
 
         self.control_window.setVisible(True)
@@ -124,11 +119,11 @@ class MyPlayer(xbmcgui.WindowXML):
             log.d('UpdateEpg')
             logo = ch.logo()
             if self.cicon:
-                self.cicon.setImage(str2(logo))
+                self.cicon.setImage(logo)
             self.parent.getEpg(ch, callback=self.showEpg, timeout=0.5)
 
         except Exception as e:
-            log.w('UpdateEpg error: {0}'.format(uni(e)))
+            log.w(f'UpdateEpg error: {e}')
 
     def showEpg(self, ch, curepg):
         try:
@@ -141,9 +136,7 @@ class MyPlayer(xbmcgui.WindowXML):
                     ce = self.getControl(MyPlayer.CONTROL_FIRST_EPG_ID + i)
                     bt = datetime.datetime.fromtimestamp(float(ep['btime']))
                     et = datetime.datetime.fromtimestamp(float(ep['etime']))
-                    ce.setLabel(str2("{0} - {1} {2}".format(bt.strftime("%H:%M"),
-                                                            et.strftime("%H:%M"),
-                                                            ep['name'].replace('&quot;', '"'))))
+                    ce.setLabel(f"{bt:%H:%M} - {et:%H:%M} {ep['name']}")
                     if self.progress and i == 0:
                         self.progress.setPercent((ctime - bt).seconds * 100 // (et - bt).seconds)
                 except Exception:
@@ -152,23 +145,19 @@ class MyPlayer(xbmcgui.WindowXML):
             return True
 
         except Exception as e:
-            log.e('showEpg error {0}'.format(uni(e)))
+            log.e(f'showEpg error {e}')
 
     def showNoEpg(self):
         for i in range(99):
             try:
                 ce = self.getControl(MyPlayer.CONTROL_FIRST_EPG_ID + i)
+                ce.setLabel('')
                 if i == 0:
                     ce.setLabel('Нет программы')
-                else:
-                    ce.setLabel('')
             except Exception:
                 break
         if self.progress:
             self.progress.setPercent(0)
-
-    #     def isVisible(self):
-    #         return xbmc.getCondVisibility("Window.IsVisible({window})".format(window=MyPlayer.PLAYER_WINDOW_ID))
 
     def Show(self):
         log.d('Show')
@@ -186,18 +175,18 @@ class MyPlayer(xbmcgui.WindowXML):
         self.channel = channel
         self.channel_number = self.parent.selitem_id
         try:
-            self.title = "{0}. {1}".format(self.channel_number, channel.title())
+            self.title = f"{self.channel_number}. {channel.title()}"
             if len(channel.xurl()) > 0:
                 for src_name, player_url in channel.xurl():
-                    for player, url_mode in iteritems(player_url):
+                    for player, url_mode in player_url.items():
                         try:
                             url, mode = url_mode
                             if callable(url):
                                 url = url()
-                            log.d('Try to play with {0} player'.format(player))
+                            log.d(f'Try to play with {player} player')
                             logo = channel.logo()
                             if self.cicon:
-                                self.cicon.setImage(str2(logo))
+                                self.cicon.setImage(logo)
                             if player == 'ace':
                                 if self._player and self._player.last_error:
                                     players.AcePlayer.clear_instance()
@@ -218,24 +207,24 @@ class MyPlayer(xbmcgui.WindowXML):
                             if self._player:
                                 self.parent.add_recent_channel(channel, 300)
                                 try:
-                                    log.d('play "{0}" from source "{1}"'.format(url, src_name))
+                                    log.d(f'play "{url}" from source "{src_name}"')
                                     self._player.play_item(index=0, title=self.title,
                                                            iconImage=logo,
                                                            thumbnailImage=logo,
                                                            url=url, mode=mode)
                                 except Exception as e:
-                                    log.e("Error play {0}: {1}".format(url_mode, e))
+                                    log.e(f"Error play {url_mode}: {e}")
                                 finally:
                                     if self.manual_stop_requested or defines.isCancel():
                                         self.close()
                                         return
                                     if self.channel_stop_requested:
                                         return True
-                                log.d('End playing url "{0}"'.format(url_mode))
+                                log.d(f'End playing url "{url_mode}"')
                                 xbmc.sleep(500)
 
                         except Exception as e:
-                            log.e("Error play with {0} player: {1}".format(player, e))
+                            log.e(f"Error play with {player} player: {e}")
                         finally:
                             if self.manual_stop_requested or defines.isCancel():
                                 self.close()
@@ -247,7 +236,7 @@ class MyPlayer(xbmcgui.WindowXML):
                 self.manualStop()
 
         except Exception as e:
-            log.e('Start error: {0}'.format(uni(e)))
+            log.e(f'Start error: {e}')
 
         if self.manual_stop_requested or defines.isCancel():
             self.close()
@@ -257,7 +246,7 @@ class MyPlayer(xbmcgui.WindowXML):
 
     def run_selected_channel(self, timeout=0):
         def run():
-            log.d('CHANNEL NUMBER IS: {0}'.format(self.channel_number))
+            log.d(f'CHANNEL NUMBER IS: {self.channel_number}')
             if 0 < self.channel_number < self.parent.list.size() and self.parent.selitem_id != self.channel_number:
                 self.parent.selitem_id = self.channel_number
                 self.channelStop()
@@ -283,19 +272,19 @@ class MyPlayer(xbmcgui.WindowXML):
 
     def showStatus(self, text):
         try:
-            log.d("showStatus: {0}".format(uni(text)))
+            log.d(f"showStatus: {text}")
             if self.swinfo:
-                self.swinfo.setLabel(str2(text))
+                self.swinfo.setLabel(text)
                 self.swinfo.setVisible(True)
         except Exception as e:
-            log.w("showStatus error: {0}".format(uni(e)))
+            log.w(f"showStatus error: {e}")
 
     def hideStatus(self):
         try:
             if self.swinfo:
                 self.swinfo.setVisible(False)
         except Exception as e:
-            log.w("hideStatus error: {0}".format(uni(e)))
+            log.w(f"hideStatus error: {e}")
 
     def autoStop(self):
         if self._player:
@@ -323,18 +312,18 @@ class MyPlayer(xbmcgui.WindowXML):
 
         def viewEPG():
             selItem = self.parent.list.getListItem(self.channel_number)
-            if selItem and uni(selItem.getProperty("type")) == 'channel':
+            if selItem and selItem.getProperty("type") == 'channel':
                 self.chinfo.setLabel(selItem.getLabel())
                 self.showStatus('Переключение...')
 
-                sel_ch = self.parent.get_channel_by_title(uni(selItem.getProperty("title")))
+                sel_ch = self.parent.get_channel_by_title(selItem.getProperty("title"))
                 if sel_ch:
                     self.UpdateEpg(sel_ch)
                 return True
 
 #         log.d('Action {0} | ButtonCode {1}'.format(action.getId(), action.getButtonCode()))
         if action in MyPlayer.CANCEL_DIALOG or action.getId() == MyPlayer.ACTION_RBC:
-            log.d('Close player {0} {1}'.format(action.getId(), action.getButtonCode()))
+            log.d(f'Close player {action.getId()} {action.getButtonCode()}')
             if self.timers.get(MyPlayer.TIMER_RUN_SEL_CHANNEL):
                 self.channel_number = self.parent.selitem_id
                 self.run_selected_channel()
@@ -363,10 +352,10 @@ class MyPlayer(xbmcgui.WindowXML):
             digit_pressed = action.getId() - 58
             if digit_pressed < self.parent.list.size():
 
-                self.channel_number_str += str2(digit_pressed)
+                self.channel_number_str += str(digit_pressed)
                 self.channel_number = utils.str2int(self.channel_number_str)
                 if not 0 < self.channel_number < self.parent.list.size():
-                    self.channel_number_str = uni(digit_pressed)
+                    self.channel_number_str = str(digit_pressed)
                     self.channel_number = utils.str2int(self.channel_number_str)
 
                 if viewEPG():
@@ -396,7 +385,7 @@ class MyPlayer(xbmcgui.WindowXML):
             self.autoStop()
 
     def close(self):
-        for name in iterkeys(self.timers):
+        for name in self.timers:
             self.timers.stop(name)
         if self.visible.is_set():
             xbmcgui.WindowXML.close(self)

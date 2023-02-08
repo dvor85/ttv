@@ -3,7 +3,6 @@
 
 import datetime
 import time
-import os
 from pathlib import Path
 from collections import UserDict
 
@@ -105,13 +104,6 @@ class TChannel(UserDict):
                 self.data[key] = {self.player(): (self.data.get(key), self.get('mode', 'PID'))}
 
         return UserDict.__getitem__(self, key)
-
-#     def xurl(self):
-#         if self.get('url') and not isinstance(self.get('url'), dict):
-#             self.data['url'] = {
-#                 self.player(): (uni(self.get('url')), self.get('mode'))
-#             }
-#         return self['url']
 
     def group(self):
         name = epgtv.get_name_offset(self.name().lower())[0]

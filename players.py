@@ -1,22 +1,19 @@
 # -*- coding: utf-8 -*-
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-from __future__ import absolute_import, division, unicode_literals
-
 import json
-import os
 import socket
 import subprocess
 import threading
 import time
 import random
-from requests.utils import quote, unquote
+from pathlib import Path
+from requests.utils import unquote
 
 # imports
 import xbmc
 import xbmcgui
-from six import iteritems, itervalues
-from utils import uni, str2, to_bytes, fs_str, fs_enc
+from utils import to_bytes
 
 import defines
 import logger
@@ -34,19 +31,16 @@ class FlagsControl:
         self.channel_stop = threading.Event()
 
     def clear(self):
-        for f in itervalues(self.__dict__):
+        for f in self.__dict__.values():
             f.clear()
 
     def is_any_flag_set(self):
-        for f in itervalues(self.__dict__):
+        for f in self.__dict__.values():
             if f.is_set():
                 return True
 
     def log_status(self):
-        log_string = ''
-        for k, f in iteritems(self.__dict__):
-            log_string += '{k}: {v}; '.format(k=k, v=f.is_set())
-        log.d(log_string)
+        log.d(''.join([f"{k}: {f.is_set()}; " for k, f in self.__dict__.items()]))
 
     def autoStop(self):
         self.clear()
@@ -76,7 +70,7 @@ class TPlayer(xbmc.Player):
                     if cls._instance is None:
                         cls._instance = cls(parent=parent, *args)
         except Exception as e:
-            log.e('get_instance error: {0}'.format(uni(e)))
+            log.e(f'get_instance error: {e}')
             cls._instance = None
         finally:
             return cls._instance
@@ -120,20 +114,20 @@ class TPlayer(xbmc.Player):
             try:
                 xbmc.sleep(250)
             except Exception as e:
-                log.e('ERROR SLEEPING: {0}'.format(uni(e)))
+                log.e(f'ERROR SLEEPING: {e}')
                 self.parent.close()
                 raise
 
         self.stop()
 
     def play_item(self, title='', icon='', thumb='', *args, **kwargs):
-        li = xbmcgui.ListItem(str2(title), offscreen=True)
+        li = xbmcgui.ListItem(title, offscreen=True)
         if kwargs.get('url'):
             self.link = kwargs['url']
         if not self.link:
             self.parent.showStatus('Нечего проигрывать')
             return
-        self.play(str2(self.link), li, windowed=True)
+        self.play(self.link, li, windowed=True)
         log.debug('play_item {title}'.format(title=title))
         self.parent.player.Show()
         self.loop()
@@ -173,7 +167,7 @@ class AcePlayer(TPlayer):
     MODE_NONE = None
 
     TIMEOUT_FREEZE = utils.str2num(defines.ADDON.getSetting('freeze_timeout'), 20)
-    ACE_PATH = uni(defines.ADDON.getSetting('ace_path'))
+    ACE_PATH = Path(defines.ADDON.getSetting('ace_path'))
 
     _instance = None
     _lock = threading.RLock()
@@ -194,7 +188,7 @@ class AcePlayer(TPlayer):
     def __init__(self, parent=None, *args):
         TPlayer.__init__(self, parent=parent, *args)
         log("Init AceEngine")
-        if uni(defines.ADDON.getSetting('use_ace')) == "false":
+        if defines.ADDON.getSetting('use_ace') == "false":
             raise Exception("Acestream player is disabled")
         self.quid = 0
         self.ace_engine = ''
@@ -204,22 +198,22 @@ class AcePlayer(TPlayer):
         self.msg_params = {"last_update": time.time()}
         self.waiting = Waiting()
 
-        log.d(uni(defines.ADDON.getSetting('ip_addr')))
+        log.d(defines.ADDON.getSetting('ip_addr'))
         if defines.ADDON.getSetting('ip_addr'):
-            self.server_ip = uni(defines.ADDON.getSetting('ip_addr'))
+            self.server_ip = defines.ADDON.getSetting('ip_addr')
         else:
             self.server_ip = '127.0.0.1'
         if defines.ADDON.getSetting('web_port'):
-            self.webport = uni(defines.ADDON.getSetting('webport'))
+            self.webport = defines.ADDON.getSetting('webport')
         else:
             self.webport = '6878'
 
         self.ace_engine = self._getAceEngine_path()
-        log.d('AceEngine path: "{0}"'.format(self.ace_engine))
+        log.d(f'AceEngine path: "{self.ace_engine}"')
 
         if sys_platform == "windows":
-            self.port_file = os.path.join(os.path.dirname(self.ace_engine), 'acestream.port')
-            log.d('AceEngine port file: "{0}"'.format(self.port_file))
+            self.port_file = self.ace_engine.parent / 'acestream.port'
+            log.d(f'AceEngine port file: "{self.port_file}"')
             self.aceport = self._getWinPort()
 
         if not defines.ADDON.getSetting('age'):
@@ -231,18 +225,18 @@ class AcePlayer(TPlayer):
         self._connectToTS()
 
     def _sockConnect(self):
-        self.sock.connect((str2(self.server_ip), self.aceport))
+        self.sock.connect((self.server_ip, self.aceport))
         self.sock.setblocking(0)
         self.sock.settimeout(10)
 
     def _checkConnect(self):
         for i in range(15):
             try:
-                self.parent.showStatus("Подключение к AceEngine ({0})".format(i))
+                self.parent.showStatus(f"Подключение к AceEngine ({i})")
                 self._sockConnect()
                 return True
             except Exception as e:
-                log.e("Подключение не удалось {0}".format(uni(e)))
+                log.e(f"Подключение не удалось {e}")
                 if not defines.isCancel():
                     xbmc.sleep(995)
                 else:
@@ -251,25 +245,24 @@ class AcePlayer(TPlayer):
     def _getAceEngine_path(self):
         log.d('Считываем путь к ace_engine.exe')
         if AcePlayer.ACE_PATH:
-            return AcePlayer.ACE_PATH
+            return Path(AcePlayer.ACE_PATH)
         if sys_platform == 'windows':
             from six.moves import winreg  # @UnresolvedImport
             t = winreg.OpenKey(winreg.HKEY_CURRENT_USER, 'Software\\ACEStream')  # @UndefinedVariable
             try:
-                return uni(winreg.QueryValueEx(t, 'EnginePath')[0])  # @UndefinedVariable
+                return Path(winreg.QueryValueEx(t, 'EnginePath')[0])  # @UndefinedVariable
             finally:
                 winreg.CloseKey(t)  # @UndefinedVariable
         elif sys_platform == 'linux':
-            return "acestreamengine"
+            return Path("acestreamengine")
         else:
-            return ""
+            return Path("")
 
     def _getWinPort(self):
         log.d('Считываем порт')
         for i in range(15):
-            if os.path.exists(fs_str(self.port_file)):
-                with open(fs_str(self.port_file), 'rb') as gf:
-                    return utils.str2int(gf.read())
+            if Path(self.port_file).exists():
+                return utils.str2int(self.port_file.read_bytes())
             else:
                 self.parent.showStatus("Запуск AceEngine ({0})".format(i))
                 if not defines.isCancel():
@@ -282,17 +275,16 @@ class AcePlayer(TPlayer):
     def _killEngine(self):
         if sys_platform == "windows":
             try:
-                log.d('Kill "{0}"'.format(os.path.basename(self.ace_engine)))
-                si = subprocess.STARTUPINFO()
-                si.dwFlags = subprocess.STARTF_USESHOWWINDOW
-                si.wShowWindow = subprocess.SW_HIDE
+                log.d(f'Kill "{self.ace_engine.name}"')
+                si = subprocess.STARTUPINFO()  # @UndefinedVariable
+                si.dwFlags = subprocess.STARTF_USESHOWWINDOW  # @UndefinedVariable
+                si.wShowWindow = subprocess.SW_HIDE  # @UndefinedVariable
 
-                subprocess.call(["taskkill", "/F", "/IM", os.path.basename(self.ace_engine)], shell=False,
-                                startupinfo=si)
-                log.d('Remove "{0}"'.format(self.port_file))
-                os.unlink(fs_str(self.port_file))
+                subprocess.call(["taskkill", "/F", "/IM", self.ace_engine.name], shell=False,   startupinfo=si)
+                log.d(f'Remove "{self.port_file}"')
+                self.port_file.unlink(missing_ok=True)
             except Exception as e:
-                log.d("_killEngine error: {0}".format(uni(e)))
+                log.d(f"_killEngine error: {e}")
 
     def _startEngine(self):
         acestream_params = ["--live-cache-type", "memory"]
@@ -303,15 +295,15 @@ class AcePlayer(TPlayer):
 
                     log('try to start AceEngine for windows')
                     self.parent.showStatus("Запуск AceEngine")
-                    p = subprocess.Popen([fs_enc(self.ace_engine)] + acestream_params)
-                    log.d('pid = {0}'.format(p.pid))
+                    p = subprocess.Popen([self.ace_engine] + acestream_params)
+                    log.d(f'pid = {p.pid}')
 
                     self.aceport = self._getWinPort()
                     if self.aceport <= 0:
                         return
 
                 except Exception as e:
-                    log.e('Cannot start AceEngine {0}'.format(uni(e)))
+                    log.e(f'Cannot start AceEngine {e}')
                     return
             elif sys_platform == 'linux':
                 log('try to start AceEngine for linux')
@@ -319,14 +311,14 @@ class AcePlayer(TPlayer):
                 try:
                     self.parent.showStatus("Запуск acestreamengine")
                     p = subprocess.Popen([self.ace_engine] + acestream_params)
-                    log.d('pid = {0}'.format(p.pid))
+                    log.d(f'pid = {p.pid}')
                 except Exception as e:
-                    log.e('Cannot start AceEngine {0}'.format(uni(e)))
+                    log.e(f'Cannot start AceEngine {e}')
                     return
             elif sys_platform == 'android':
                 log('try to start AceEngine for Android')
-                xbmc.executebuiltin(str2('XBMC.StartAndroidActivity("org.acestream.engine")'))
-                xbmc.executebuiltin(str2('XBMC.StartAndroidActivity("org.xbmc.kodi")'))
+                xbmc.executebuiltin('XBMC.StartAndroidActivity("org.acestream.engine")')
+                xbmc.executebuiltin('XBMC.StartAndroidActivity("org.xbmc.kodi")')
             else:
                 return False
         return True
@@ -344,19 +336,19 @@ class AcePlayer(TPlayer):
         sha1.update(to_bytes(key + pkey))
         key = sha1.hexdigest()
         pk = pkey.split('-')[0]
-        return "{pk}-{key}".format(pk=pk, key=key)
+        return f"{pk}-{key}"
 
     def _connectToTS(self):
-        log.d('Подключение к AceEngine {0} {1}'.format(self.server_ip, self.aceport))
+        log.d(f'Подключение к AceEngine {self.server_ip} {self.aceport}')
         for t in range(3):
             try:
-                log.d("Попытка подлючения ({0})".format(t))
+                log.d(f"Попытка подлючения ({t})")
                 self._sockConnect()
                 break
             except Exception as e:
                 if self._startEngine():
                     if not self._checkConnect():
-                        msg = 'Ошибка подключения к AceEngine: {0}'.format(uni(e))
+                        msg = f'Ошибка подключения к AceEngine: {e}'
                         log.f(msg)
                         self.parent.showStatus('Ошибка подключения к AceEngine!')
                     else:
@@ -393,17 +385,17 @@ class AcePlayer(TPlayer):
                     raise IOError('Incorrect msg from AceEngine')
 
         except IOError as io:
-            log.e('Error while auth: {0}'.format(io))
+            log.e(f'Error while auth: {io}')
             self.last_error = io
             self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
             return
         except ValueError as ve:
-            log.e('AceStream version error: {0}'.format(ve))
+            log.e(f'AceStream version error: {ve}')
             self.last_error = ve
             self.parent.showStatus("Необходимо обновить AceStream до версии 3")
             return
         except Exception as e:
-            log.e('_connectToTS error: {0}'.format(uni(e)))
+            log.e(f'_connectToTS error: {e}')
 
         log.d('End Init AceEngine')
         self.parent.hideStatus()
@@ -423,19 +415,19 @@ class AcePlayer(TPlayer):
                 else:
                     return
             # Waiting message if need
-            log.d('>> "{0}"'.format(cmd))
+            log.d(f'>> "{cmd}"')
             if wait_msg:
                 with self.waiting.lock:
-                    log.d('wait message: {0}'.format(wait_msg))
+                    log.d(f'wait message: {wait_msg}')
                     try:
                         self.waiting.msg = wait_msg
                         self.waiting.event.clear()
                         self.waiting.abort.clear()
                         self.sock.send(to_bytes(cmd + '\r\n'))
                         for t in range(AcePlayer.TIMEOUT_FREEZE * 3):  # @UnusedVariable
-                            log.d("waiting message {msg} ({t})".format(msg=wait_msg, t=t))
+                            log.d(f"waiting message {wait_msg} ({t})")
                             if not self.waiting.msg or self.sock_thr.error or defines.isCancel():
-                                raise ValueError('Abort waiting message: "{0}"'.format(wait_msg))
+                                raise ValueError(f'Abort waiting message: "{wait_msg}"')
                             if self.waiting.wait(1):
                                 return self.waiting.msg
 
@@ -443,7 +435,7 @@ class AcePlayer(TPlayer):
                         raise ValueError('AceEngine is freeze')
 
                     except Exception as e:
-                        log.e('_wait_message error: {0}'.format(uni(e)))
+                        log.e(f'_wait_message error: {e}')
                         self.waiting.msg = None
                         if not Flags.manual_stopped.is_set():
                             self.autoStop()
@@ -454,7 +446,7 @@ class AcePlayer(TPlayer):
                 return True
 
         except Exception as e:
-            log.e('_send_command error: "{0}" cmd: "{1}"'.format(uni(e), cmd))
+            log.e(f'_send_command error: "{e}" cmd: "{cmd}"')
 
         if self.sock_thr and self.sock_thr.is_active():
             self.sock_thr.end()
@@ -466,14 +458,14 @@ class AcePlayer(TPlayer):
         :return: TSMessage object if wait was successfully, else None
         """
         with self.waiting.lock:
-            log.d('wait message: {0}'.format(msg))
+            log.d(f'wait message: {msg}')
             try:
                 self.waiting.msg = msg
                 self.waiting.event.clear()
                 for t in range(AcePlayer.TIMEOUT_FREEZE * 3):  # @UnusedVariable
-                    log.d("waiting message {msg} ({t})".format(msg=msg, t=t))
+                    log.d(f"waiting message {msg} ({t})")
                     if not self.waiting.msg or self.sock_thr.error or defines.isCancel():
-                        raise ValueError('Abort waiting message: "{0}"'.format(msg))
+                        raise ValueError(f'Abort waiting message: "{msg}"')
                     if self.waiting.event.wait(1):
                         return self.waiting.msg
 
@@ -481,7 +473,7 @@ class AcePlayer(TPlayer):
                 raise ValueError('AceEngine is freeze')
 
             except Exception as e:
-                log.e('_wait_message error: {0}'.format(uni(e)))
+                log.e(f'_wait_message error: {e}')
                 self.waiting.msg = None
                 if not Flags.manual_stopped.is_set():
                     self.autoStop()
@@ -493,36 +485,23 @@ class AcePlayer(TPlayer):
         self.sock_thr.start()
 
     def _load_torrent(self, torrent, mode):
-        log("Load Torrent: {0}, mode: {1}".format(torrent, mode))
+        log(f"Load Torrent: {torrent}, mode: {mode}")
         cmdparam = ''
         if mode != AcePlayer.MODE_PID:
             cmdparam = ' 0 0 0'
         self.quid = str(random.randint(0, 0x7fffffff))
-        comm = 'LOADASYNC {req_id} {mode} {url} {param}'.format(req_id=self.quid, mode=mode, url=torrent, param=cmdparam)
+        comm = f'LOADASYNC {self.quid} {mode} {torrent} {cmdparam}'
         self.parent.showStatus("Загрузка торрента")
 
         if self._send_command(comm):
             msg = self._send_command(comm, TSMessage.LOADRESP)
             if msg:
                 try:
-                    log.d('_load_torrent - {0}'.format(msg.getType()))
+                    log.d(f'_load_torrent - {msg.getType()}')
                     log.d('Compile file list')
-#                     jsonfile = uni(msg.getParams()['json'])
-#                     if 'files' not in jsonfile:
-#                         self.parent.showStatus(uni(jsonfile['message']))
-#                         self.last_error = Exception(jsonfile['message'])
-#                         log.e('Compile file list {0}'.format(uni(self.last_error)))
-#                         return
-#                     self.count = len(jsonfile['files'])
-#                     self.files = {}
-#                     for f in jsonfile['files']:
-#                         self.files[f[1]] = unquote(quote(f[0]))
-#                     log.d('End Compile file list')
 
                 except Exception as e:
-                    log.e('_load_torrent error: {0}'.format(uni(e)))
-#                     self.last_error = uni(e)
-#                     self.end()
+                    log.e(f'_load_torrent error: {e}')
             else:
                 self.last_error = 'Incorrect msg from AceEngine'
                 self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
@@ -551,16 +530,16 @@ class AcePlayer(TPlayer):
                             self.msg_params['last_update'] = state.getTime()
                             self.msg_params['prebuf'] = _descr[1]
                             log.d('_stateHandler: Пытаюсь показать состояние')
-                            self.parent.showStatus('Пребуферизация {0}'.format(self.msg_params['prebuf']))
-                            self.parent.player.showStatus('Пребуферизация {0}'.format(self.msg_params['prebuf']))
+                            self.parent.showStatus(f"Пребуферизация {self.msg_params['prebuf']}")
+                            self.parent.player.showStatus(f"Пребуферизация {self.msg_params['prebuf']}")
 
                         if time.time() - self.msg_params['last_update'] >= AcePlayer.TIMEOUT_FREEZE:
                             log.w('AceEngine is freeze')
                             self.autoStop()
 
                     elif _descr[0] == 'check':
-                        log.d('_stateHandler: Проверка {0}'.format(_descr[1]))
-                        self.parent.showStatus('Проверка {0}'.format(_descr[1]))
+                        log.d(f'_stateHandler: Проверка {_descr[1]}')
+                        self.parent.showStatus(f'Проверка {_descr[1]}')
                     #                     elif _descr[0] == 'dl':
                     #                         self.parent.showInfoStatus('Total:%s DL:%s UL:%s' % (_descr[1], _descr[3], _descr[5]))
                     elif _descr[0] == 'buf':
@@ -572,7 +551,7 @@ class AcePlayer(TPlayer):
                             self.msg_params['buf'] = _descr[1]
                         #                             self.parent.player.showStatus('Буферизация {0}'.format(self.msg_params['value']))
                         if time.time() - self.msg_params['last_update'] >= AcePlayer.TIMEOUT_FREEZE:
-                            self.parent.player.showStatus('Пребуферизация {0}'.format(self.msg_params['buf']))
+                            self.parent.player.showStatus(f"Пребуферизация {self.msg_params['buf']}")
                             log.w('AceEngine is freeze')
                             self.autoStop()
             #                     elif _descr[0] == 'dl':
@@ -612,7 +591,7 @@ class AcePlayer(TPlayer):
                     self.waiting.abort.set()
 
         except Exception as e:
-            log.e('_stateHandler error: "{0}"'.format(uni(e)))
+            log.e(f'_stateHandler error: "{e}"')
         finally:
             try:
                 if self.waiting.msg == state.getType():
@@ -620,7 +599,7 @@ class AcePlayer(TPlayer):
                     self.waiting.event.set()
 
             except Exception as e:
-                log.e('_stateHandler error: "{0}"'.format(uni(e)))
+                log.e(f'_stateHandler error: "{e}"')
 
     def play_item(self, title='', icon='', thumb='', *args, **kwargs):
         if self.last_error:
@@ -632,10 +611,7 @@ class AcePlayer(TPlayer):
             self.parent.showStatus('Нечего проигрывать')
             return
         oparams = '0 0 0' if mode != AcePlayer.MODE_PID else ''
-        comm = 'START {mode} {torrent} {index} {oparams}'.format(mode=mode,
-                                                                 torrent=url,
-                                                                 index=index,
-                                                                 oparams=oparams)
+        comm = f'START {mode} {url} {index} {oparams}'
         log.d("Запуск торрента")
         xbmc.sleep(4)
         self.parent.showStatus("Запуск торрента")
@@ -645,13 +621,13 @@ class AcePlayer(TPlayer):
                 _params = msg.getParams()
                 if not _params.get('url'):
                     self.parent.showStatus("Неверный ответ от AceEngine. Операция прервана")
-                    raise Exception('Incorrect msg from AceEngine {0}'.format(msg.getType()))
+                    raise Exception(f'Incorrect msg from AceEngine {msg.getType()}')
 
                 self.link = _params['url'].replace('127.0.0.1', self.server_ip).replace('6878', self.webport)
-                log.d('Преобразование ссылки: {0}'.format(self.link))
+                log.d(f'Преобразование ссылки: {self.link}')
                 TPlayer.play_item(self, title, icon, thumb)
             except Exception as e:
-                log.e('play_item error: {0}'.format(uni(e)))
+                log.e(f'play_item error: {e}')
                 self.last_error = e
                 self.parent.showStatus("Ошибка. Операция прервана")
         else:
@@ -716,7 +692,7 @@ class TSMessage:
     def __init__(self, tstype='', params=''):
         self.type = tstype
         self.update_time = time.time()
-        self.params = uni(params)
+        self.params = params
 
     def getTime(self):
         return self.update_time
@@ -745,7 +721,7 @@ class SockThread(threading.Thread):
         self.owner = None
 
     def run(self):
-        log.d("run SockThread{0}".format(self.ident))
+        log.d(f"run SockThread{self.ident}")
         self.active = True
 
         def isCancel():
@@ -755,19 +731,19 @@ class SockThread(threading.Thread):
         while not isCancel():
             try:
                 xbmc.sleep(32)
-                self.lastRecv += uni(self.sock.recv(self.buffer))
+                self.lastRecv += self.sock.recv(self.buffer)
                 if self.lastRecv.find('\r\n') > -1:
                     cmds = self.lastRecv.split('\r\n')
                     for cmd in cmds:
                         if len(cmd.replace(' ', '')) > 0 and not isCancel():
-                            log.d('<< "{0}"'.format(cmd))
+                            log.d(f'<< "{cmd}"')
                             self._constructMsg(cmd)
                     self.lastRecv = ''
             except Exception as e:
                 self.isRecv = True
                 self.end()
                 self.error = e
-                log.e('RECV THREADING {0}'.format(uni(e)))
+                log.e(f'RECV THREADING {e}')
                 _msg = TSMessage(TSMessage.ERROR)
                 _msg.params = 'Ошибка соединения с AceEngine'
                 self.state_handler(_msg)
@@ -775,7 +751,7 @@ class SockThread(threading.Thread):
         self.error = None
 
     def _constructMsg(self, strmsg):
-        strmsg = uni(strmsg)
+        strmsg = strmsg
         posparam = strmsg.find(' ')
         if posparam == -1:
             _msg = strmsg
@@ -839,24 +815,11 @@ class NoxPlayer(TPlayer):
     def __init__(self, parent=None, *args):
         TPlayer.__init__(self, parent=parent, *args)
         log('Init noxbit player')
-        if uni(defines.ADDON.getSetting('use_nox')) == "false":
+        if defines.ADDON.getSetting('use_nox') == "false":
             raise Exception("Noxbit player is disabled")
-        self.ip = uni(defines.ADDON.getSetting('nox_ip'))
+        self.ip = defines.ADDON.getSetting('nox_ip')
         self.port = utils.str2int(defines.ADDON.getSetting('nox_port'))
         self._checkNox()
-
-#     @staticmethod
-#     def get_instance(parent=None, *args):
-#         try:
-#             if NoxPlayer._instance is None:
-#                 with NoxPlayer._lock:
-#                     if NoxPlayer._instance is None:
-#                         NoxPlayer._instance = NoxPlayer(parent=parent, *args)
-#         except Exception as e:
-#             log.e('get_instance error: {0}'.format(uni(e)))
-#             NoxPlayer._instance = False
-#         finally:
-#             return NoxPlayer._instance
 
     def _checkNox(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
