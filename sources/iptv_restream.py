@@ -3,7 +3,6 @@
 
 import json
 import time
-import utils
 from pathlib import Path
 
 import defines

@@ -3,10 +3,7 @@
 # Writer (c) 2013, Welicobratov K.A., E-mail: 07pov23@gmail.com
 # Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-from __future__ import absolute_import, division, unicode_literals
-
 import xbmcgui
-from utils import uni, str2
 
 import favdb
 import logger
@@ -37,10 +34,10 @@ class MenuForm(xbmcgui.WindowXMLDialog):
         log.d('OnInit')
         if not self.li or not self.parent:
             return
-        self.channel = tchannel.TChannel({"name": uni(self.li.getProperty("title"))})
-        log.d("li = {0}".format(uni(self.li.getProperty("commands"))))
+        self.channel = tchannel.TChannel({"name": self.li.getProperty("title")})
+        log.d(f"li = {self.li.getProperty('commands')}")
         try:
-            cmds = uni(self.li.getProperty('commands')).split(',')
+            cmds = self.li.getProperty('commands').split(',')
             lst = self.getControl(MenuForm.CONTROL_CMD_LIST)
             lst.reset()
             title = None
@@ -60,23 +57,23 @@ class MenuForm(xbmcgui.WindowXMLDialog):
                 elif c == MenuForm.CMD_SET_FALSE_PIN:
                     title = 'Разблокировать'
                 if title:
-                    lst.addItem(xbmcgui.ListItem(str2(title), str2(c)))
+                    lst.addItem(xbmcgui.ListItem(title, c))
 
             self.getControl(999).setHeight(len(cmds) * 40 + 55)
             lst.setHeight(len(cmds) * 40 + 55)
             lst.selectItem(0)
             self.setFocusId(MenuForm.CONTROL_CMD_LIST)
-            log.d('Focus ControlId {0}'.format(uni(self.getFocusId())))
+            log.d(f'Focus ControlId {self.getFocusId()}')
         except Exception as e:
-            log.e("В списке нет комманд {0}".format(uni(e)))
+            log.e(f"В списке нет комманд {e}")
             self.close()
 
     def onClick(self, controlId):
         if controlId == MenuForm.CONTROL_CMD_LIST:
             lt = self.getControl(MenuForm.CONTROL_CMD_LIST)
             li = lt.getSelectedItem()
-            cmd = uni(li.getLabel2())
-            log.d("cmd={0}".format(cmd))
+            cmd = li.getLabel2()
+            log.d(f"cmd={cmd}")
 
             self.result = self.exec_cmd(cmd)
             self.close()
@@ -90,7 +87,7 @@ class MenuForm(xbmcgui.WindowXMLDialog):
             elif cmd == MenuForm.CMD_DEL_FAVOURITE:
                 return fdb.delete(self.channel.title())
             elif cmd == MenuForm.CMD_MOVE_FAVOURITE:
-                to_num = int(xbmcgui.Dialog().numeric(0, heading=str2('Введите позицию')))
+                to_num = int(xbmcgui.Dialog().numeric(0, heading='Введите позицию'))
                 return fdb.moveTo(self.channel.title(), to_num)
             elif cmd == MenuForm.CMD_DOWN_FAVOURITE:
                 return fdb.down(self.channel.title())
@@ -101,7 +98,7 @@ class MenuForm(xbmcgui.WindowXMLDialog):
             elif cmd == MenuForm.CMD_SET_FALSE_PIN:
                 return fdb.set_pin(self.channel.title(), False)
         except Exception as e:
-            log.e('Error: {0} in exec_cmd "{1}"'.format(uni(e), cmd))
+            log.e(f'Error: {e} in exec_cmd "{cmd}"')
             self.close()
 
     def GetResult(self):

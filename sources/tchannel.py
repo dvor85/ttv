@@ -12,7 +12,6 @@ from epgs import epgtv
 from epgs.epglist import Epg
 from .channel_info import CHANNEL_INFO
 from .grouplang import translate
-import utils
 
 
 log = logger.Logger(__name__)
@@ -135,9 +134,9 @@ class TChannel(UserDict):
                 _sess = epg.get_sess() if epg else session
                 r = defines.request(logo_url, session=_sess)
                 if r.ok > 0:
-                    with open(utils.fs_str(str(f_logo)), mode='wb') as fp:
-                        fp.write(r.content)
-#                     Path(utils.fs_enc(f_logo)).write_bytes(r.content)
+                    #                     with open(utils.fs_str(str(f_logo)), mode='wb') as fp:
+                    #                         fp.write(r.content)
+                    f_logo.write_bytes(r.content)
                     self.data['logo'] = str(f_logo)
         except Exception as e:
             log.e(f'update_logo error {e}')

@@ -13,36 +13,33 @@ import xbmcaddon
 import xbmc
 import xbmcgui
 from xbmcvfs import translatePath
-from six import iteritems
-from utils import uni, str2, fs_str
 from six.moves import UserDict
+from pathlib import Path
 
 import logger
 
 log = logger.Logger(__name__)
 
 ADDON = xbmcaddon.Addon()
-ADDON_ID = uni(ADDON.getAddonInfo('id'))
-ADDON_ICON = uni(ADDON.getAddonInfo('icon'))
-ADDON_PATH = uni(ADDON.getAddonInfo('path'))
-DATA_PATH = uni(translatePath(str2(os.path.join("special://profile/addon_data", ADDON_ID))))
-CACHE_PATH = uni(translatePath(str2(os.path.join("special://temp", ADDON_ID))))
-PTR_FILE = uni(ADDON.getSetting('port_path'))
-AUTOSTART = uni(ADDON.getSetting('autostart')) == 'true'
-AUTOSTART_LASTCH = uni(ADDON.getSetting('autostart_lastch')) == 'true'
-GENDER = uni(ADDON.getSetting('gender'))
-AGE = uni(ADDON.getSetting('age'))
-FAVOURITE = uni(ADDON.getSetting('favourite'))
-DEBUG = uni(ADDON.getSetting('debug')) == 'true'
-PROXY_TYPE, _proxy_addr, _port = urllib3.get_host(uni(ADDON.getSetting('pomoyka_proxy')))
-PROXY_TYPE = uni(ADDON.getSetting('proxy_type'))
+ADDON_ID = ADDON.getAddonInfo('id')
+ADDON_ICON = ADDON.getAddonInfo('icon')
+ADDON_PATH = ADDON.getAddonInfo('path')
+DATA_PATH = Path(translatePath("special://profile/addon_data"), ADDON_ID)
+CACHE_PATH = Path(translatePath("special://temp"), ADDON_ID)
+PTR_FILE = ADDON.getSetting('port_path')
+AUTOSTART = ADDON.getSetting('autostart') == 'true'
+AUTOSTART_LASTCH = ADDON.getSetting('autostart_lastch') == 'true'
+GENDER = ADDON.getSetting('gender')
+AGE = ADDON.getSetting('age')
+FAVOURITE = ADDON.getSetting('favourite')
+DEBUG = ADDON.getSetting('debug') == 'true'
+PROXY_TYPE, _proxy_addr, _port = urllib3.get_host(ADDON.getSetting('pomoyka_proxy'))
+PROXY_TYPE = ADDON.getSetting('proxy_type')
 if PROXY_TYPE == 'socks5':
     PROXY_TYPE = 'socks5h'
-PROXIES = {"http": "{t}://{a}:{p}".format(t=PROXY_TYPE, a=_proxy_addr, p=_port),
-           "https": "{t}://{a}:{p}".format(t=PROXY_TYPE, a=_proxy_addr, p=_port)}
-if not os.path.exists(fs_str(CACHE_PATH)):
-    os.makedirs(fs_str(CACHE_PATH))
-
+PROXIES = {"http": f"{PROXY_TYPE}://{_proxy_addr}:{_port}",
+           "https": f"{PROXY_TYPE}://{_proxy_addr}:{_port}"}
+Path(CACHE_PATH).mkdir(parents=True, exist_ok=True)
 closeRequested = threading.Event()
 monitor = xbmc.Monitor()
 
@@ -81,9 +78,9 @@ class Timers(UserDict):
 
 def showNotification(msg, icon=ADDON_ICON):
     try:
-        xbmcgui.Dialog().notification(str2(ADDON.getAddonInfo('name')), str2(msg), str2(icon))
+        xbmcgui.Dialog().notification(ADDON.getAddonInfo('name'), msg, icon)
     except Exception as e:
-        log.e('showNotification error: "{0}"'.format(uni(e)))
+        log.e(f'showNotification error: "{e}"')
 
 
 def isCancel():
@@ -92,16 +89,14 @@ def isCancel():
 
 
 def request(url, method='get', params=None, trys=3, interval=0, session=None, proxies=None, **kwargs):
-    params_str = "?" + "&".join(("{0}={1}".format(*i)
-                                 for i in iteritems(params))) if params is not None and method == 'get' else ""
+    params_str = "?" + "&".join(f"{k}={v}" for k, v in params.items()) if params is not None and method == 'get' else ""
     if proxies is None and ADDON.getSetting('pomoyka_proxy_for_all') == 'true':
         proxies = PROXIES
-    log.d('try to get: {url}{params}'.format(url=url, params=params_str))
-    log.d('proxies: {proxies}'.format(proxies=proxies))
+    log.d(f'try to get: {url}{params_str}')
+    log.d(f'proxies: {proxies}')
     if not url:
         return
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) \
-Chrome/45.0.2454.99 Safari/537.36'}
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.99 Safari/537.36'}
     if 'headers' in kwargs:
         headers.update(kwargs['headers'])
         del kwargs['headers']
@@ -122,7 +117,7 @@ Chrome/45.0.2454.99 Safari/537.36'}
             r.raise_for_status()
             return r
         except Exception as e:
-            log.error('Request error ({t}): {e}'.format(t=t, e=e))
+            log.error(f'Request error ({t}): {e}')
             xbmc.sleep(interval + 1000)
 
 

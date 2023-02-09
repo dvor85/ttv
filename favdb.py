@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
 # Writer (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-from __future__ import absolute_import, division, unicode_literals
 
 import json
-import os
-
 import defines
 import logger
-from utils import uni, cmp, fs_str
+from utils import cmp
+from pathlib import Path
 
 
 log = logger.Logger(__name__)
@@ -101,29 +99,29 @@ class LocalFDB(FDB):
     def __init__(self):
         FDB.__init__(self)
         log.d('init LocalFDB')
-        self.DB = os.path.join(defines.DATA_PATH, 'favdb.json')
+        self.DB = Path(defines.DATA_PATH, 'favdb.json')
 
     def get(self):
         log.d('get channels')
-        if os.path.exists(fs_str(self.DB)):
-            with open(fs_str(self.DB), 'r') as fp:
+        if self.DB.exists():
+            with self.DB.open(mode='r') as fp:
                 try:
                     self.channels = json.load(fp)
                 except Exception as e:
-                    log.w('get error: {0}'.format(uni(e)))
+                    log.w(f'get error: {e}')
         return self.channels
 
     def save(self, obj=None):
         log.d('save channels')
         try:
-            with open(fs_str(self.DB), 'w+') as fp:
+            with self.DB.open(mode='w+') as fp:
                 if not obj:
                     obj = self.channels
                 json.dump(obj, fp)
                 self.channels = obj
                 return True
         except Exception as e:
-            log.w('save error: {0}'.format(uni(e)))
+            log.w(f'save error: {e}')
             return FDB.API_ERROR_NOCONNECT
 
     def add(self, name):

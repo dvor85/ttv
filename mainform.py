@@ -6,6 +6,7 @@ import json
 import threading
 import xbmcgui
 import xbmc
+import time
 from operator import methodcaller
 from collections import UserDict
 import defines
@@ -141,6 +142,7 @@ class LoopPlay(threading.Thread):
         self.active = False
         self.daemon = False
         self.parent = parent
+        self.starttime = 0
         self.name = 'LoopPlay'
 
     def stop(self):
@@ -150,7 +152,7 @@ class LoopPlay(threading.Thread):
 
     def run(self):
         self.active = True
-        while self.active and not defines.isCancel():
+        while self.active and not defines.isCancel() and (time.time() - self.starttime) > 60:
             try:
                 selItem = self.parent.list.getListItem(self.parent.selitem_id)
                 if selItem and selItem.getProperty('type') == "channel":
@@ -159,10 +161,12 @@ class LoopPlay(threading.Thread):
                     if not sel_ch:
                         msg = "Канал временно не доступен"
                         self.parent.showStatus(msg)
-                        raise Exception("{msg}. Возможно не все каналы загрузились...".format(msg=msg))
+                        raise Exception(f"{msg}. Возможно не все каналы загрузились...")
 
                     defines.ADDON.setSetting('cur_category', self.parent.cur_category)
                     defines.ADDON.setSetting('cur_channel', self.parent.cur_channel)
+                    # defence from loop
+                    self.starttime = time.time()
                     if not self.parent.player.Start(sel_ch):
                         break
                     self.parent.player.close()

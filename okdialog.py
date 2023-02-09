@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import, division, unicode_literals
 
 import xbmcgui
-from utils import str2
-
 
 # Copyright (c) 2010-2011 Torrent-TV.RU
 # Writer (c) 2011, Welicobratov K.A., E-mail: 07pov23@gmail.com
@@ -25,7 +22,7 @@ class OkDialog(xbmcgui.WindowXMLDialog):
         self.text = ""
 
     def onInit(self):
-        self.getControl(1).setText(str2(self.text))
+        self.getControl(1).setText(self.text)
 
     def setText(self, text):
         self.text = text

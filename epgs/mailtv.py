@@ -1,23 +1,17 @@
 # -*- coding: utf-8 -*-
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-from __future__ import absolute_import, division, unicode_literals
-
 import datetime
 import gzip
 import json
-import os
 import time
 from threading import Event, Lock
 import requests
 import defines
 import logger
 from sources.channel_info import CHANNEL_INFO
-from utils import uni, fs_str
-from six import itervalues
 from epgs.epgtv import EPGTV
 import re
-# from difflib import SequenceMatcher as SM
 
 
 log = logger.Logger(__name__)
@@ -50,7 +44,7 @@ class MAILTV(EPGTV):
 
         self.sess = requests.Session()
         self.lock = Lock()
-        self.ex_channels = []
+        self.ex_channels = set()
         self.need_update = True
 
         self.get_jdata()
@@ -62,17 +56,15 @@ class MAILTV(EPGTV):
         page = 0
 
         with self.lock:
-            for p in os.listdir(self.epgtv_path):
+            for _f in self.epgtv_path.glob('*.gz'):
                 if defines.isCancel():
                     return
-                _f = os.path.join(self.epgtv_path, p)
-                valid_date = os.path.exists(fs_str(_f)) and datetime.date.today() == datetime.date.fromtimestamp(os.path.getmtime(fs_str(_f)))
+                valid_date = _f.exists() and datetime.date.today() == datetime.date.fromtimestamp(_f.stat().st_mtime)
                 self.need_update = self.need_update and not valid_date
                 if not self.need_update:
-                    page = p.replace('.gz', '')
-                    self.update_epg(page)
+                    self.update_epg(_f.stem)
                 else:
-                    os.unlink(_f)
+                    _f.unlink()
 
             while self.need_update:
                 if defines.isCancel():
@@ -80,19 +72,15 @@ class MAILTV(EPGTV):
                 self.update_epg(page)
                 page += 1
 
-        log.d("Loading mailtv in {t} sec".format(t=time.time() - bt))
+        log.d(f"Loading mailtv in {time.time() - bt} sec")
         return self.jdata
 
     def update_epg(self, page=0):
-
-        mailtv_file = os.path.join(self.epgtv_path, "{0}.gz".format(page))
-        valid_date = os.path.exists(fs_str(mailtv_file)) and \
-            datetime.date.today() == datetime.date.fromtimestamp(os.path.getmtime(fs_str(mailtv_file)))
+        mailtv_file = self.epgtv_path / f"{page}.gz"
+        valid_date = mailtv_file.exists() and datetime.date.today() == datetime.date.fromtimestamp(mailtv_file.stat().st_mtime)
         if not valid_date:
-            dtm = uni(time.strftime('%Y-%m-%d'))
-
+            dtm = time.strftime('%Y-%m-%d')
             url = 'https://tv.mail.ru/ajax/index/'
-
             _params = {"region_id": 70,
                        "channel_type": "all",
                        "appearance": "list",
@@ -101,28 +89,24 @@ class MAILTV(EPGTV):
                        "ex": self.ex_channels
                        }
 
-            with gzip.open(fs_str(mailtv_file), 'w') as fp:
+            with gzip.open(mailtv_file, 'w+') as fp:
                 try:
-                    r = defines.request(url, method='post', params=_params, session=self.sess,
-                                        headers={'Referer': 'https://tv.mail.ru/'})
-
+                    r = defines.request(url, method='post', params=_params, session=self.sess, headers={'Referer': 'https://tv.mail.ru/'})
                     self.need_update = r.ok
                     if r.ok:
                         self.jdata[page] = r.json()
                         status = self.jdata[page].get('status', '').lower()
-                        log.d('status={}'.format(status))
+                        log.d(f'status={status}')
                         if status == 'ok':
                             fp.write(r.content)
                         else:
                             del self.jdata[page]
 
                 except Exception as e:
-                    log.error('update_mailtv error: {0}'.format(e))
+                    log.error(f'update_mailtv error: {e}')
 
             if page in self.jdata:
-                for sch in self.jdata[page]['schedule']:
-                    if sch['channel']['id'] not in self.ex_channels:
-                        self.ex_channels.append(sch['channel']['id'])
+                self.ex_channels.update(sch['channel']['id'] for sch in self.jdata[page]['schedule'])
                 self.need_update = bool(self.jdata[page]['pager']['next']['url'])
             else:
                 self.need_update = False
@@ -130,13 +114,12 @@ class MAILTV(EPGTV):
         if page not in self.jdata:
             try:
                 bt = time.time()
-                with gzip.open(fs_str(mailtv_file), 'r') as fp:
+                with gzip.open(mailtv_file, 'r') as fp:
                     self.jdata[page] = json.load(fp)
-                log.d("Loading mailtv json from {y} in {t} sec".format(y=mailtv_file, t=time.time() - bt))
+                log.d(f"Loading mailtv json from {mailtv_file} in {time.time() - bt} sec")
             except Exception as e:
-                log.e("Error while loading json from {y}: {e}".format(y=mailtv_file, e=uni(e)))
-                if os.path.exists(fs_str(mailtv_file)):
-                    os.unlink(fs_str(mailtv_file))
+                log.e(f"Error while loading json from {mailtv_file}: {e}")
+                mailtv_file.unlink(missing_ok=True)
 
     def get_sess(self):
         return self.sess
@@ -148,7 +131,7 @@ class MAILTV(EPGTV):
         offset = round((ctime - datetime.datetime.utcnow()).total_seconds() / 3600) if epg_offset is None else epg_offset
         bt = None
         ep = None
-        for p in itervalues(self.get_jdata()):
+        for p in self.get_jdata().values():
             for sch in p['schedule']:
                 if sch['channel']['id'] == chid:
                     for evt in sch['event']:
@@ -172,8 +155,7 @@ class MAILTV(EPGTV):
         _params = {"region_id": 70,
                    "id": event_id
                    }
-        r = defines.request(url, method='post', params=_params, session=self.sess,
-                            headers={'Referer': 'https://tv.mail.ru/'}, trys=1, timeout=1)
+        r = defines.request(url, method='post', params=_params, session=self.sess, headers={'Referer': 'https://tv.mail.ru/'}, trys=1, timeout=1)
 
         if r.ok:
             j = r.json()
@@ -187,21 +169,17 @@ class MAILTV(EPGTV):
     def get_id_by_name(self, name):
         names = [name.lower(), name.lower().replace('-', ' ')]
         names.extend(CHANNEL_INFO.get(names[0], {}).get("aliases", []))
-        for p in itervalues(self.get_jdata()):
+        for p in self.get_jdata().values():
             for sch in p['schedule']:
-                # if SM(isjunk=None, a=name.lower(), b=sch['channel']['name'].lower(), autojunk=True).quick_ratio() > 0.85:
-                #     return sch['channel']['id']
                 if sch['channel']['name'].lower() in names:
                     return sch['channel']['id']
                 elif len(name) > 8:
-                    for n in names:
-                        if n in sch['channel']['name'].lower():
-                            return sch['channel']['id']
+                    return next((sch['channel']['id'] for n in names if n in sch['channel']['name'].lower()), None)
 
     def get_logo_by_id(self, chid):
         if chid is None:  # or chid not in self.availableChannels["availableChannelsIds"]:
             return ''
-        for p in itervalues(self.get_jdata()):
+        for p in self.get_jdata().values():
             for sch in p['schedule']:
                 if sch['channel']['id'] == chid:
                     return sch['channel'].get('pic_url', '')

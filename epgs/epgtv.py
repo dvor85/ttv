@@ -1,16 +1,14 @@
 # -*- coding: utf-8 -*-
 # Writer (c) 2021, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-from __future__ import absolute_import, division, unicode_literals
-
 import datetime
-import os
 import re
 import time
 from threading import Event
 import defines
 import logger
-from utils import uni, str2int, fs_str, makedirs
+from pathlib import Path
+from utils import str2int
 
 
 log = logger.Logger(__name__)
@@ -19,9 +17,9 @@ _name_offset_regexp = re.compile(r'\s*(?P<name>.*?)\s*\(+(?P<offset>[\-+]+\d)\)+
 
 def strptime(date_string, _format="%Y-%m-%dT%H:%M:%S"):
     try:
-        return datetime.datetime.strptime(uni(date_string), _format)
+        return datetime.datetime.strptime(date_string, _format)
     except TypeError:
-        return datetime.datetime(*(time.strptime(uni(date_string), _format)[0:6]))
+        return datetime.datetime(*(time.strptime(date_string, _format)[0:6]))
 
 
 def get_name_offset(name):
@@ -52,9 +50,9 @@ class EPGTV:
 
     def __init__(self, name):
         log.d('start initialization')
-        self.epgtv_path = os.path.join(defines.CACHE_PATH, name)
-        self.epgtv_logo_path = os.path.join(defines.CACHE_PATH, 'logo')
-        makedirs(fs_str(self.epgtv_path))
+        self.epgtv_path = Path(defines.CACHE_PATH, name)
+        self.epgtv_logo_path = Path(defines.CACHE_PATH, 'logo')
+        self.epgtv_path.mkdir(parents=True, exist_ok=True)
 
     def update_epg(self, page=0):
         pass

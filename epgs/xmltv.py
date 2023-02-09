@@ -1,18 +1,15 @@
 # -*- coding: utf-8 -*-
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-from __future__ import absolute_import, division, unicode_literals
 
 import datetime
 import gzip
-import os
 import time
 from threading import Event
-from six import iteritems
 import defines
 import logger
+from pathlib import Path
 from sources.channel_info import CHANNEL_INFO
-from utils import uni,  fs_str
 from epgs.epgtv import EPGTV, strptime
 
 log = logger.Logger(__name__)
@@ -59,11 +56,10 @@ class XMLTV(EPGTV):
 
         self.channels = {}
         self.xmltv_root = None
-        self.xmltv_file = os.path.join(self.epgtv_path, "xmltv.xml.gz")
-        self.epg_url = uni(defines.ADDON.getSetting('epg_url'))
+        self.xmltv_file = Path(self.epgtv_path, "xmltv.xml.gz")
+        self.epg_url = defines.ADDON.getSetting('epg_url')
 
-        valid_date = os.path.exists(self.xmltv_file) \
-            and datetime.date.today() == datetime.date.fromtimestamp(os.path.getmtime(self.xmltv_file))
+        valid_date = self.xmltv_file.exists() and datetime.date.today() == datetime.date.fromtimestamp(self.xmltv_file.stat().st_mtime)
 
         if not valid_date:
             self.update_epg()
@@ -72,10 +68,10 @@ class XMLTV(EPGTV):
         при многократном запуске плагина возможно возникновение утечки памяти.
         Решение: weakref, но возникает ошибка создания ссылки
         """
-        with gzip.open(fs_str(self.xmltv_file), 'r') as fp:
+        with gzip.open(self.xmltv_file, 'r') as fp:
             bt = time.time()
             self.xmltv_root = etree.parse(fp)
-            log.d("Parse xmltv in {t} sec".format(t=time.time() - bt))
+            log.d(f"Parse xmltv in {time.time() - bt} sec")
 
         log.d('stop initialization')
 
@@ -84,17 +80,16 @@ class XMLTV(EPGTV):
             #url = 'http://www.teleguide.info/download/new3/xmltv.xml.gz'
             url = self.epg_url
             r = defines.request(url)
-            with open(fs_str(self.xmltv_file), 'w') as fp:
+            with gzip.open(self.xmltv_file, 'w') as fp:
                 fp.write(r.content)
             return True
         except Exception as e:
-            log.error('update_xmltv error: {0}'.format(e))
+            log.error(f'update_xmltv error: {e}')
 
     def get_channels(self):
         if not self.channels:
-            for chid in self.xmltv_root.iter('channel'):
-                for name in chid.iter('display-name'):
-                    self.channels[chid.get('id')] = {'name': name.text}
+            [[self.channels.setdefault(chid.get('id'), {'name': name.text}) for name in chid.iter('display-name')] for chid in self.xmltv_root.iter('channel')]
+
         return self.channels
 
     def get_epg_by_id(self, chid, epg_offset=None):
@@ -121,9 +116,7 @@ class XMLTV(EPGTV):
     def get_id_by_name(self, name):
         names = [name.lower()]
         names.extend(CHANNEL_INFO.get(names[0], {}).get("aliases", []))
-        for chid, ch in iteritems(self.get_channels()):
-            if ch['name'].lower() in names:
-                return chid
+        return next((chid for chid, ch in self.get_channels().items() if ch['name'].lower() in names), None)
 
 
 if __name__ == '__main__':

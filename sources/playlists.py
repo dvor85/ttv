@@ -2,7 +2,6 @@
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 import time
-from utils import uni
 import m3u8  # @UnresolvedImport
 from pathlib import Path
 
@@ -24,7 +23,7 @@ class Channels(TChannels):
 
     def __init__(self):
 
-        self.urls = uni(defines.ADDON.getSetting('playlists_urls')).split(';')
+        self.urls = defines.ADDON.getSetting('playlists_urls').split(';')
         self._temp = Path(defines.CACHE_PATH, "playlist.m3u")
         self.proxies = defines.PROXIES if defines.ADDON.getSetting('playlists_use_proxy') == 'true' else None
         TChannels.__init__(self, name='playlists', reload_interval=86400)
@@ -67,7 +66,7 @@ class Channels(TChannels):
                         if not data:
                             raise Exception("Channels are not avalible")
                     except Exception as e:
-                        log.error(uni(e))
+                        log.error(e)
 
             if data:
                 ch = {}

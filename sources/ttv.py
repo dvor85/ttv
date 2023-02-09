@@ -47,6 +47,9 @@ class Channel(TChannel):
 
             r = defines.request(f"http://api.{_server}/v3/translation_stream.php", params=params, session=_sess, trys=1)
             jdata = r.json()
+            if not jdata["success"]:
+                return
+
             self.data['mode'] = jdata["type"].upper().replace("CONTENTID", "PID")
             return jdata['source']
         except Exception as e:
@@ -65,8 +68,7 @@ class Channel(TChannel):
             jdata = r.json()
             if not jdata["success"]:
                 return
-            if jdata["success"] == 0:
-                return
+
             cid = jdata["cid"]
             streamtype = defines.ADDON.getSetting('nox_streamtype')
             return f"http://{nox_ip}:{nox_port}/{streamtype}?cid={cid}"
@@ -88,8 +90,7 @@ class Channel(TChannel):
             jdata = r.json()
             if not jdata["success"]:
                 return
-            if jdata["success"] == 0:
-                return
+
             return jdata['source']
         except Exception as e:
             log.w(f'_get_tsproxy_url error: {e}')

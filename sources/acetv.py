@@ -1,16 +1,14 @@
 # -*- coding: utf-8 -*-
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-from __future__ import absolute_import, division, unicode_literals
 
 import json
-import os
 import time
 
 import defines
 import logger
+from pathlib import Path
 from .tchannel import TChannel, TChannels
-from utils import uni, fs_str
 
 log = logger.Logger(__name__)
 
@@ -27,19 +25,19 @@ class Channel(TChannel):
 class Channels(TChannels):
 
     def __init__(self, lock):
-        self.url = 'http://{pomoyka}/trash/ttv-list/acetv.json'.format(pomoyka=uni(defines.ADDON.getSetting('pomoyka_domain')))
-        self._temp = os.path.join(defines.CACHE_PATH, os.path.basename(self.url))
+        self.url = 'http://{pomoyka}/trash/ttv-list/acetv.json'.format(pomoyka=defines.ADDON.getSetting('pomoyka_domain'))
+        self._temp = Path(defines.CACHE_PATH, Path(self.url).name)
         TChannels.__init__(self, name='acetv', reload_interval=3600, lock=lock)
 
     def _load_jdata(self, avail=True):
-        log.d('get {temp}'.format(temp=self._temp))
-        if os.path.exists(fs_str(self._temp)):
-            if not avail or (time.time() - os.path.getmtime(fs_str(self._temp)) <= self.reload_interval):
-                with open(fs_str(self._temp), 'r') as fp:
+        log.d(f'get {self._temp}')
+        if self._temp.exists():
+            if not avail or (time.time() - self._temp.stat().st_mtime <= self.reload_interval):
+                with self._temp.open(mode='r') as fp:
                     return json.load(fp)
 
     def _save_jdata(self, jdata):
-        with open(fs_str(self._temp), 'w') as fp:
+        with self._temp.open(mode='w+') as fp:
             json.dump(jdata, fp)
 
     def update_channels(self):
@@ -48,26 +46,24 @@ class Channels(TChannels):
         try:
             jdata = self._load_jdata()
             if not jdata:
-                raise Exception("{temp} is empty".format(temp=self._temp))
+                raise Exception(f"{self._temp} is empty")
 
         except Exception as e:
-            log.debug("load_json_temp error: {0}".format(uni(e)))
+            log.debug(f"load_json_temp error: {e}")
             try:
                 with self.lock:
                     r = defines.request(self.url, proxies=defines.PROXIES, interval=3000)
                 jdata = r.json()
                 self._save_jdata(jdata)
             except Exception as e:
-                log.error("get_channels error: {0}".format(uni(e)))
+                log.error(f"get_channels error: {e}")
                 log.i('Try to load previos channels, if availible')
                 try:
                     jdata = self._load_jdata(False)
                     if not jdata:
                         raise Exception("Channels are not avalible")
                 except Exception as e:
-                    log.error(uni(e))
+                    log.error(e)
 
         if jdata:
-            chs = jdata.get('channels', [])
-            for ch in chs:
-                self.channels.append(Channel(ch))
+            self.channels.extend(Channel(ch) for ch in jdata.get('channels', []))

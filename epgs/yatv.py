@@ -1,20 +1,16 @@
 # -*- coding: utf-8 -*-
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-from __future__ import absolute_import, division, unicode_literals
-
 import datetime
 import gzip
 import json
-import os
 import time
 from threading import Event, Lock, Semaphore
 import requests
 import defines
 import logger
+from pathlib import Path
 from sources.channel_info import CHANNEL_INFO
-from utils import uni, fs_str
-from six import itervalues
 from epgs.epgtv import EPGTV, strptime
 
 
@@ -71,12 +67,11 @@ class YATV(EPGTV):
         return self.jdata
 
     def update_epg(self, page=0):
-        yatv_file = os.path.join(self.epgtv_path, "{0}.gz".format(page))
-        valid_date = os.path.exists(fs_str(yatv_file)) and \
-            datetime.date.today() == datetime.date.fromtimestamp(os.path.getmtime(fs_str(yatv_file)))
+        yatv_file = Path(self.epgtv_path, f"{page}.gz")
+        valid_date = yatv_file.exists() and datetime.date.today() == datetime.date.fromtimestamp(yatv_file.stat().st_mtime)
         if not valid_date:
-            ncrd = uni(int(time.time()) * 1000 + 1080)
-            dtm = uni(time.strftime('%Y-%m-%d'))
+            ncrd = str(int(time.time()) * 1000 + 1080)
+            dtm = str(time.strftime('%Y-%m-%d'))
 
             url = 'https://m.tv.yandex.ru/ajax/i-tv-region/get'
             """
@@ -98,7 +93,7 @@ class YATV(EPGTV):
             }
 
             with self.sema:
-                with gzip.open(fs_str(yatv_file), 'wb') as fp:
+                with gzip.open(yatv_file, 'wb') as fp:
                     try:
                         r = defines.request(url, params=_params, session=self.sess, headers={'Referer': 'https://tv.yandex.ru/'})
                         fp.write(r.content)
@@ -108,19 +103,18 @@ class YATV(EPGTV):
         if page not in self.jdata:
             try:
                 bt = time.time()
-                with gzip.open(fs_str(yatv_file), 'rb') as fp:
+                with gzip.open(yatv_file, 'rb') as fp:
                     self.jdata[page] = json.load(fp)
-                log.d("Loading yatv json from {y} in {t} sec".format(y=yatv_file, t=time.time() - bt))
+                log.d(f"Loading yatv json from {yatv_file} in {time.time() - bt} sec")
             except Exception as e:
-                log.e("Error while loading json from {y}: {e}".format(y=yatv_file, e=uni(e)))
-                if os.path.exists(fs_str(yatv_file)):
-                    os.unlink(fs_str(yatv_file))
+                log.e(f"Error while loading json from {yatv_file}: {e}")
+                yatv_file.unlink(missing_ok=True)
 
     def get_yatv_sess(self):
         return self.sess
 
     def get_availible_channels(self):
-        ncrd = uni(int(time.time()) * 1000 + 1080)
+        ncrd = str(int(time.time()) * 1000 + 1080)
         url = 'https://m.tv.yandex.ru/ajax/i-tv-region/get'
         _yparams = {"fields": "availableChannels,availableChannelsIds"}
         _params = {
@@ -138,7 +132,7 @@ class YATV(EPGTV):
             return
         ctime = datetime.datetime.now()
         offset = round((ctime - datetime.datetime.utcnow()).total_seconds() / 3600) if epg_offset is None else epg_offset
-        for p in itervalues(self.get_jdata()):
+        for p in self.get_jdata().values():
             for sch in p['schedules']:
                 if sch['channel']['id'] == chid:
                     for evt in sch['events']:
@@ -159,15 +153,12 @@ class YATV(EPGTV):
     def get_id_by_name(self, name):
         names = [name.lower()]
         names.extend(CHANNEL_INFO.get(names[0], {}).get("aliases", []))
-        for p in itervalues(self.get_jdata()):
-            for sch in p['schedules']:
-                if sch['channel']['title'].lower() in names:
-                    return sch['channel']['id']
+        return next((sch['channel']['id'] for p in self.get_jdata().values() for sch in p['schedules'] and sch['channel']['title'].lower() in names), None)
 
     def get_logo_by_id(self, chid):
         if chid is None or chid not in self.availableChannels["availableChannelsIds"]:
             return ''
-        for p in itervalues(self.get_jdata()):
+        for p in self.get_jdata().values():
             for sch in p['schedules']:
                 if sch['channel']['id'] == chid:
                     if 'logo' in sch['channel']:

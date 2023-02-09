@@ -128,8 +128,9 @@ class TPlayer(xbmc.Player):
             self.parent.showStatus('Нечего проигрывать')
             return
         self.play(self.link, li, windowed=True)
-        log.debug('play_item {title}'.format(title=title))
+        log.debug(f'play_item {title}')
         self.parent.player.Show()
+        self.starttime = time.time()
         self.loop()
         Flags.log_status()
 

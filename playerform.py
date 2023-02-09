@@ -249,7 +249,9 @@ class MyPlayer(xbmcgui.WindowXML):
             log.d(f'CHANNEL NUMBER IS: {self.channel_number}')
             if 0 < self.channel_number < self.parent.list.size() and self.parent.selitem_id != self.channel_number:
                 self.parent.selitem_id = self.channel_number
-                self.channelStop()
+                self.parent.Play()
+#                 self.channelStop()
+#                 self.close()
             else:
                 self.hideStatus()
             self.channel_number = self.parent.selitem_id
