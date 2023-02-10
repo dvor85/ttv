@@ -2,21 +2,26 @@
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 import time
-import m3u8  # @UnresolvedImport
 from pathlib import Path
+import re
 
 import defines
 import logger
 from .tchannel import TChannel, TChannels
 
 log = logger.Logger(__name__)
+_re_m3u = re.compile(r'(?P<tag>[^\s="]+)="(?P<val>[^"]+)"')
+_re_notprintable = re.compile(r'[^A-Za-zА-Яа-я0-9\+\-\_\(\)\s\.\:\/\*\\|\\\&\%\$\@\!\~\;]')
 
 
 class Channel(TChannel):
 
     def __init__(self, data={}):
         TChannel.__init__(self, data=data, src='playlists', player='tsp')
-        # self.data['cat'] = self.data.get('category')
+        if self.data.get('group-title'):
+            self.data['cat'] = self.data['group-title']
+        self.data['title'] = _re_notprintable.sub('', self.data['title']).strip()
+        self.data['name'] = _re_notprintable.sub('', self.data['name']).strip()
 
 
 class Channels(TChannels):
@@ -32,10 +37,35 @@ class Channels(TChannels):
         log.d(f'get {self._temp}')
         if self._temp.exists():
             if not avail or (time.time() - self._temp.stat().st_mtime <= self.reload_interval):
-                return m3u8.load(str(self._temp))
+                return self.parse_m3u(self._temp)
 
     def _save_jdata(self, data):
         data.dump(str(self._temp))
+
+    def parse_m3u(self, filename):
+        filename = Path(filename)
+        ret = []
+        lines = []
+        if filename.exists():
+            lines = filename.read_text().splitlines()
+        else:
+            r = defines.request(filename, interval=3000, proxies=self.proxies)
+            if r.ok:
+                lines = r.text.splitlines()
+
+        for line in lines:
+            if line.startswith("#"):
+                if line != "#EXTM3U":
+                    log.d(_re_m3u.findall(line))
+                    seg = {k.replace('tvg-', ''): v for k, v in _re_m3u.findall(line)}
+                    seg['title'] = line.rsplit(',', 1)[-1]
+
+                    if 'name' in seg:
+                        ret.append(seg)
+            elif ret:
+                ret[-1]['url'] = line
+                ret[-1].setdefault('name', Path(line).name)
+        return ret
 
     def update_channels(self):
         TChannels.update_channels(self)
@@ -50,13 +80,7 @@ class Channels(TChannels):
             except Exception as e:
                 log.debug(f"load error: {e}")
                 try:
-                    if not Path(url).exists():
-                        r = defines.request(url, interval=3000, proxies=self.proxies)
-                        if r.ok:
-                            data = m3u8.loads(r.text)
-                            self._save_jdata(data)
-                    else:
-                        data = m3u8.load(url)
+                    data = self.parse_m3u(url)
 
                 except Exception as e:
                     log.error(f"get_channels error: {e}")
@@ -69,10 +93,4 @@ class Channels(TChannels):
                         log.error(e)
 
             if data:
-                ch = {}
-                for seg in data.segments:
-                    ch["url"] = seg.uri
-                    ch["name"] = seg.title
-                    ch["cat"] = seg.group
-
-                    self.channels.append(Channel(ch))
+                self.channels.extend(Channel(ch) for ch in data)

@@ -13,7 +13,7 @@ import os
 # Make pydev debugger works for auto reload.
 if platform.system() == 'Linux':
     print("Append pydevd for Linux")
-    sys.path.insert(0, os.path.expanduser('~/eclipse/plugins/org.python.pydev.core_10.0.2.202212101256/pysrc'))
+    sys.path.insert(0, os.path.expanduser('~/eclipse/plugins/org.python.pydev.core_10.1.3.202301231743/pysrc'))
 elif platform.system() == 'Windows':
     print("Append pydevd for Windows")
     sys.path.insert(0, 'd:\\python\\eclipse\\plugins\\org.python.pydev.core_8.3.0.202104101217\\pysrc')

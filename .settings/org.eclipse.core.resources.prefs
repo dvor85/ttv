@@ -4,7 +4,6 @@ encoding//epgs/epgtv.py=utf-8
 encoding//epgs/mailtv.py=utf-8
 encoding//epgs/xmltv.py=utf-8
 encoding//epgs/yatv.py=utf-8
-encoding//m3u8/__init__.py=utf-8
 encoding//sources/acestream.py=utf-8
 encoding//sources/acetv.py=utf-8
 encoding//sources/channel_info.py=utf-8
