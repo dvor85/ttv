@@ -148,6 +148,8 @@ class Channels(TChannels):
             if not avail or (time.time() - self._temp.stat().st_mtime <= self.reload_interval):
                 with self._temp.open(mode='r') as fp:
                     return json.load(fp)
+        else:
+            log.w(f"{self._temp} not exists")
 
     def _save_jdata(self, jdata):
         with self._temp.open(mode='w+') as fp:
@@ -192,31 +194,28 @@ class Channels(TChannels):
     def update_channels(self):
         TChannels.update_channels(self)
         self._initTTV()
-        jdata = dict()
+        jdata = {}
         try:
             jdata = self._load_jdata()
             if not jdata:
-                raise Exception(f"{self._temp} is empty")
-
-        except Exception as e:
-            log.debug(f"load_json_temp error: {e}")
-            if self.ttv_session:
-                try:
+                if self.ttv_session:
                     params = dict(
                         session=self.ttv_session,
                         type='channel',
                         typeresult='json')
                     r = defines.request(f'http://api.{_server}/v3/translation_list.php', params=params, session=_sess, trys=1)
+                    if r.ok:
+                        jdata = r.json()
 
-                    jdata = r.json()
+                        if str2int(jdata.get('success')) == 0:
+                            log.e(jdata.get('error'))
+                            return
+                        else:
+                            self._save_jdata(jdata)
+        except Exception as e:
+            log.e(f'get_channels error: {e}')
 
-                    if str2int(jdata.get('success')) == 0:
-                        raise Exception(jdata.get('error'))
-                    self._save_jdata(jdata)
-                except Exception as e:
-                    log.e(f'get_channels error: {e}')
-
-        if jdata.get('channels'):
+        if jdata and jdata.get('channels'):
             for ch in jdata['channels']:
                 try:
                     if ch.get("name") or ch.get("id"):

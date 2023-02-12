@@ -24,6 +24,8 @@ class Channels(TChannels):
             if not avail or (time.time() - self._temp.stat().st_mtime <= self.reload_interval):
                 with self._temp.open(mode='r') as fp:
                     return json.load(fp)
+        else:
+            log.w(f"{self._temp} not exists")
 
     def _save_jdata(self, jdata):
         with self._temp.open(mode='w+') as fp:
@@ -35,24 +37,17 @@ class Channels(TChannels):
         try:
             jdata = self._load_jdata()
             if not jdata:
-                raise Exception(f"{self._temp} is empty")
-
-        except Exception as e:
-            log.debug(f"load_json_temp error: {e}")
-            try:
                 with self.lock:
                     r = defines.request(self.url, proxies=defines.PROXIES, interval=3000)
                 jdata = r.json()
                 self._save_jdata(jdata)
-            except Exception as e:
-                log.error(f"get_channels error: {e}")
+            if not jdata:
                 log.i('Try to load previos channels, if availible')
-                try:
-                    jdata = self._load_jdata(False)
-                    if not jdata:
-                        raise Exception("Channels are not avalible")
-                except Exception as e:
-                    log.error(e)
+                jdata = self._load_jdata(False)
+            if not jdata:
+                log.w("Channels are not avalible")
+        except Exception as e:
+            log.error(e)
 
         if jdata:
             self.channels.extend(TChannel(ch, src='acestream', player='ace', mode='PID') for ch in jdata.get('channels', []))
