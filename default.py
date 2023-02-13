@@ -16,7 +16,7 @@ if defines.DEBUG:
 def main():
     import mainform
 
-    w = mainform.WMainForm("mainform.xml", defines.ADDON_PATH, "st.anger")
+    w = mainform.WMainForm("mainform.xml", defines.ADDON_PATH)
     w.doModal()
     defines.log('Close plugin')
     del w

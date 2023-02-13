@@ -7,6 +7,7 @@ import threading
 import xbmcgui
 import xbmc
 import time
+from pathlib import Path
 from operator import methodcaller
 from collections import UserDict
 import defines
@@ -34,11 +35,7 @@ class ChannelGroups(UserDict):
     """
 
     def addGroup(self, groupname, title=None):
-
-        self[groupname] = {}
-        if not title:
-            title = groupname
-        self[groupname]['title'] = title
+        self[groupname] = {'title': title if title else groupname}
         self.clearGroup(groupname)
 
     def clearGroup(self, groupname):
@@ -48,7 +45,7 @@ class ChannelGroups(UserDict):
         del self[groupname]
 
     def getGroups(self):
-        return list(self.keys())
+        return list(self)
 
     def addChannels(self, channels, src_name):
         [self.addChannel(ch, src_name) for ch in channels]
@@ -65,10 +62,7 @@ class ChannelGroups(UserDict):
             if groupname not in self:
                 self.addGroup(groupname)
             src_index = channel_sources.index_by_name(src_name)
-            try:
-                c = next(self.find_channel_by_title(groupname, ch.title()))
-            except StopIteration:
-                c = None
+            c = next(self.find_channel_by_title(groupname, ch.title()), None)
             if c:
                 c.insert(src_index, ch)
             else:
@@ -250,7 +244,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.progress = None
         self.list = None
         self.list_type = ''
-        self.player = MyPlayer("player.xml", defines.ADDON_PATH, "st.anger")
+        self.player = MyPlayer("player.xml", defines.ADDON_PATH)
         self.player.parent = self
         self.cur_category = None
         self.cur_channel = None
@@ -300,7 +294,7 @@ class WMainForm(xbmcgui.WindowXML):
 
     def showDialog(self, msg):
         from okdialog import OkDialog
-        dialog = OkDialog("dialog.xml", defines.ADDON_PATH, "st.anger")
+        dialog = OkDialog("dialog.xml", defines.ADDON_PATH)
         dialog.setText(msg)
         dialog.doModal()
 
@@ -454,10 +448,8 @@ class WMainForm(xbmcgui.WindowXML):
                 for ch in val['channels']:
                     namedb[ch.name().lower()] = {'cat': cat}
                     break
-            import os
             s = json.dumps(namedb, indent=4, ensure_ascii=False)
-            with open(os.path.join(defines.CACHE_PATH, 'namedb.json'), 'wb') as fp:
-                fp.write(s)
+            Path(defines.CACHE_PATH, 'namedb.json').write_text(s)
 
         def LoadOther():
             for name, thr in thrs.items():
@@ -710,7 +702,6 @@ class WMainForm(xbmcgui.WindowXML):
         li = xbmcgui.ListItem('..')
         self.list.addItem(li)
         i = 0
-
         for ch in self.channel_groups.getSortedChannels(self.cur_category):
             if ch:
                 # не добавлять чистые каналы с ttv
@@ -720,13 +711,9 @@ class WMainForm(xbmcgui.WindowXML):
                     if defines.isCancel():
                         return
                     i += 1
-                    chname = f"{i}. {ch.title()}"
-                    chli = xbmcgui.ListItem(chname)
+                    chli = xbmcgui.ListItem(f"{i}. {ch.title()}")
                     self.setLogo(ch, chli, self.set_logo_sema)
-                    chli.setProperty('type', 'channel')
-#                     chli.setProperty("id", str2(ch.id()))
-                    chli.setProperty("name", ch.name())
-                    chli.setProperty("title", ch.title())
+                    chli.setProperties({'type': 'channel', "name": ch.name(), "title": ch.title()})
                     if not self.cur_category == WMainForm.FAVOURITE_GROUP:
                         chli.setProperty('commands', MenuForm.CMD_ADD_FAVOURITE)
                     else:
@@ -744,7 +731,6 @@ class WMainForm(xbmcgui.WindowXML):
                 except Exception as e:
                     log.e(f"fillChannels error: {e}")
         self.hideStatus()
-#         if self.selitem_id < 1:
         self.selitem_id = self.get_selitem_id(self.cur_channel)
 
     def setLogo(self, ch, chli, sema):
@@ -764,8 +750,7 @@ class WMainForm(xbmcgui.WindowXML):
 
         def AddItem(groupname):
             li = xbmcgui.ListItem(self.channel_groups[groupname]['title'])
-            li.setProperty('type', 'category')
-            li.setProperty('id', groupname)
+            li.setProperties({'type': 'category', 'id': groupname})
             self.list.addItem(li)
 
         for name in self.timers:
