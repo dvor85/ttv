@@ -37,13 +37,13 @@ class FDB:
         pass
 
     def delete(self, name):
-        log.d('delete channel name={0}'.format(name))
+        log.d(f'delete channel name={name}')
         k = self.find(name)
         if k is not None:
             if not self.channels:
                 self.get()
             if self.channels:
-                del (self.channels[k])
+                del self.channels[k]
                 return self.save()
         return FDB.API_ERROR_NOFAVOURITE
 
@@ -53,26 +53,23 @@ class FDB:
             self.get()
         if self.channels and to_id < len(self.channels):
             k = self.find(name)
-            log.d('moveTo channel from {0} to {1}'.format(k, to_id))
-            return self.swapTo(k, to_id)
+            if k is not None:
+                log.d(f'moveTo channel from {k} to {to_id}')
+                return self.swapTo(k, to_id)
 
         return FDB.API_ERROR_NOPARAM
 
     def find(self, name):
-        log.d('find channel by name={0}'.format(name))
+        log.d(f'find channel by name={name}')
         if not self.channels:
             self.get()
         if self.channels:
-            for i, ch in enumerate(self.channels):
-                if ch['name'] == name:
-                    return i
+            return next((i for i, ch in enumerate(self.channels) if ch['name'] == name), None)
 
     def swap(self, i1, i2):
-        log.d('swap channels with indexes={0}, {1}'.format(i1, i2))
+        log.d(f'swap channels with indexes={i1}, {i2}')
         try:
-            ch = self.channels[i1]
-            self.channels[i1] = self.channels[i2]
-            self.channels[i2] = ch
+            self.channels[i1], self.channels[i2] = self.channels[i2], self.channels[i1]
         except Exception as e:
             log.w(e)
             return
@@ -125,7 +122,7 @@ class LocalFDB(FDB):
             return FDB.API_ERROR_NOCONNECT
 
     def add(self, name):
-        log.d('add channel {0}'.format(name))
+        log.d(f'add channel {name}')
         channel = {'name': name, 'pin': True}
 
         if self.find(name) is None:
@@ -135,7 +132,7 @@ class LocalFDB(FDB):
         return FDB.API_ERROR_ALREADY
 
     def add_recent(self, name):
-        log.d('add recent channel {0}'.format(name))
+        log.d(f'add recent channel {name}')
         channel = {'name': name, 'pin': False}
 
         if self.find(name) is None:
@@ -151,7 +148,7 @@ class LocalFDB(FDB):
         return FDB.API_ERROR_ALREADY
 
     def set_pin(self, name, pin=True):
-        log.d('set pin={0} of channel {1}'.format(pin, name))
+        log.d(f'set pin={pin} of channel {name}')
 
         ci = self.find(name)
         if ci is not None:

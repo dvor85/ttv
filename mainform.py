@@ -601,7 +601,7 @@ class WMainForm(xbmcgui.WindowXML):
             return
 
     def showMenuWindow(self):
-        mnu = MenuForm("menu.xml", defines.ADDON_PATH, "st.anger")
+        mnu = MenuForm("menu.xml", defines.ADDON_PATH)
         mnu.li = self.getFocus().getSelectedItem()
         mnu.parent = self
         selitemid = self.list.getSelectedPosition()
