@@ -138,7 +138,7 @@ class LocalFDB(FDB):
         if self.find(name) is None:
             self.channels.insert(0, channel)
             if len(self.channels) > FDB.MAX_CHANNELS:
-                for i in range(len(self.channels), 0, -1):
+                for i in range(len(self.channels)-1, 0, -1):
                     if not self.channels[i].get('pin', True):
                         del self.channels[i]
                         break
