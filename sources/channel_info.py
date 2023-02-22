@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
+#import defines
+import sqlite3
+from pathlib import Path
+from threading import Event
+
+
 """
 {
 "название канала":{
@@ -11,6 +17,70 @@
 key = название канала
 
 """
+
+
+class ChannelInfo():
+    _instance = None
+    _lock = Event()
+
+    @staticmethod
+    def get_instance():
+        if ChannelInfo._instance is None:
+            if not ChannelInfo._lock.is_set():
+                ChannelInfo._lock.set()
+                try:
+                    ChannelInfo._instance = ChannelInfo()
+                except Exception as e:
+                    #                     log.error("get_instance error: {0}".format(e))
+                    ChannelInfo._instance = None
+                finally:
+                    ChannelInfo._lock.clear()
+        return ChannelInfo._instance
+
+    def __init__(self):
+        self.db_base = Path('/home/demon/.kodi/temp/script.torrent-tv.ru.pp/channel_info.db')
+        self.db = sqlite3.connect(self.db_base)
+
+        with self.db:
+            self.db.execute('CREATE TABLE IF NOT EXISTS channels (name TEXT UNIQUE, cat TEXT, title TEXT)')
+
+    def add(self, name, cat, title=None):
+        if not title:
+            title = name
+        try:
+            with self.db:
+                self.db.execute(f'INSERT INTO channels VALUES("{name}", "{cat}", "{title}")')
+            return True
+        except sqlite3.IntegrityError:
+            return
+
+    def delete(self, name):
+        with self.db:
+            self.db.execute(f'DELETE FROM channels WHERE name="{name}"')
+
+    def get_info_by_name(self, name):
+        with self.db:
+            self.db.row_factory = sqlite3.Row
+            r = self.db.execute(f'SELECT * FROM channels WHERE name="{name}"')
+            info = r.fetchone()
+            if info:
+                return dict(info)
+
+    def set_group(self, name, cat):
+        if self.get_info_by_name(name):
+            with self.db:
+                self.db.row_factory = None
+                self.db.execute(f'UPDATE channels SET cat=\"{cat}\" WHERE name="{name}"')
+                return True
+        else:
+            return self.add(name, cat)
+
+    def get_groups(self):
+        with self.db:
+            self.db.row_factory = None
+            r = self.db.execute('SELECT DISTINCT cat from channels')
+            return [i[0] for i in r.fetchall()]
+
 
 CHANNEL_INFO = {
     "0x0 fireplace hd": {
@@ -3652,3 +3722,11 @@ CHANNEL_INFO = {
         "cat": "Региональные"
     }
 }
+
+
+if __name__ == '__main__':
+    db = ChannelInfo()
+#     for k, v in CHANNEL_INFO.items():
+#         db.add(k, v['cat'], v.get('aliases', [k])[0])
+    print(db.get_info_by_name('первый'))
+    print(db.get_groups())

@@ -8,6 +8,7 @@ import xbmcgui
 import favdb
 import logger
 from sources import tchannel
+from sources.channel_info import ChannelInfo
 
 
 log = logger.Logger(__name__)
@@ -21,10 +22,12 @@ class MenuForm(xbmcgui.WindowXMLDialog):
     CMD_DOWN_FAVOURITE = 'favourite_down'
     CMD_SET_TRUE_PIN = 'set_pin_true'
     CMD_SET_FALSE_PIN = 'set_pin_false'
+    CMD_MOVE_TO_GROUP = 'move_to_group'
     CONTROL_CMD_LIST = 301
 
     def __init__(self, xmlFilename, scriptPath, *args, **kwargs):
         super(MenuForm, self).__init__(xmlFilename, scriptPath)
+        self.chinfo = ChannelInfo()
         self.li = None
         self.channel = None
         self.result = None
@@ -38,6 +41,7 @@ class MenuForm(xbmcgui.WindowXMLDialog):
         log.d(f"li = {self.li.getProperty('commands')}")
         try:
             cmds = self.li.getProperty('commands').split(',')
+            cmds.append(MenuForm.CMD_MOVE_TO_GROUP)
             lst = self.getControl(MenuForm.CONTROL_CMD_LIST)
             lst.reset()
             title = None
@@ -56,6 +60,8 @@ class MenuForm(xbmcgui.WindowXMLDialog):
                     title = 'Заблокировать'
                 elif c == MenuForm.CMD_SET_FALSE_PIN:
                     title = 'Разблокировать'
+                elif c == MenuForm.CMD_MOVE_TO_GROUP:
+                    title = 'Переместить в категорию'
                 if title:
                     lst.addItem(xbmcgui.ListItem(title, c))
 
@@ -78,6 +84,18 @@ class MenuForm(xbmcgui.WindowXMLDialog):
             self.result = self.exec_cmd(cmd)
             self.close()
 
+    def move_to_group(self, name):
+        dialog = xbmcgui.Dialog()
+        samples = self.chinfo.get_groups() + ['Введите свое название']
+        ret = dialog.contextmenu(samples)
+        if ret > -1:
+            if ret < len(samples)-1:
+                return self.chinfo.set_group(name, samples[ret])
+            else:
+                cat = dialog.input(samples[ret]).capitalize()
+                if cat:
+                    return self.chinfo.set_group(name, cat)
+
     def exec_cmd(self, cmd):
         try:
             fdb = favdb.LocalFDB()
@@ -97,6 +115,8 @@ class MenuForm(xbmcgui.WindowXMLDialog):
                 return fdb.set_pin(self.channel.title())
             elif cmd == MenuForm.CMD_SET_FALSE_PIN:
                 return fdb.set_pin(self.channel.title(), False)
+            elif cmd == MenuForm.CMD_MOVE_TO_GROUP:
+                return self.move_to_group(self.channel.name().lower())
         except Exception as e:
             log.e(f'Error: {e} in exec_cmd "{cmd}"')
             self.close()

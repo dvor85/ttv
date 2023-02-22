@@ -4,7 +4,7 @@
        version="10.2.0+matrix1"
        provider-name="dvor85">
     <requires>
-        <import addon="xbmc.python" version="3.0.0" />
+        <import addon="xbmc.python" version="3.0.1" />
         <import addon="script.module.requests" version="2.12.4" />
         <import addon="script.module.win_inet_pton" version="1.1.0" optional="true" />
         <import addon="script.module.pysocks" version="1.6.8" />

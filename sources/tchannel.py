@@ -10,7 +10,7 @@ import defines
 import logger
 from epgs import epgtv
 from epgs.epglist import Epg
-from .channel_info import CHANNEL_INFO
+from .channel_info import ChannelInfo
 from .grouplang import translate
 
 
@@ -90,6 +90,7 @@ class TChannel(UserDict):
         self.data.update(kwargs)
         self.logo_path = Path(defines.CACHE_PATH, 'logo')
         self.logo_path.mkdir(parents=True, exist_ok=True)
+        self.chinfo = ChannelInfo()
 
     def src(self):
         return self.get('src', 'undefined')
@@ -106,9 +107,8 @@ class TChannel(UserDict):
 
     def group(self):
         name = epgtv.get_name_offset(self.name().lower())[0]
-        gr = self.get('cat')
-        if name in CHANNEL_INFO:
-            gr = CHANNEL_INFO[name].get('cat')
+        chinfo = self.chinfo.get_info_by_name(name)
+        gr = chinfo['cat'] if chinfo else self.get('cat')
         # else:
         #     CHANNEL_INFO[name] = dict(cat=gr)
         if gr:
@@ -154,10 +154,8 @@ class TChannel(UserDict):
             name_offset = epgtv.get_name_offset(self.name().lower())
             ctime = datetime.datetime.now()
             offset = round((ctime - datetime.datetime.utcnow()).total_seconds() / 3600)
-            if name_offset[0] in CHANNEL_INFO:
-                self.data['title'] = CHANNEL_INFO[name_offset[0]].get('aliases', [name_offset[0]])[0].capitalize()
-            else:
-                self.data['title'] = name_offset[0].capitalize()
+            chinfo = self.chinfo.get_info_by_name(name_offset[0])
+            self.data['title'] = chinfo['title'].capitalize() if chinfo else name_offset[0].capitalize()
             if name_offset[1] and name_offset[1] != offset and sign(name_offset[1]):
                 self.data['title'] += " ({sign}{offset})".format(sign=sign(name_offset[1]), offset=name_offset[1])
         return self.data["title"]

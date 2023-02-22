@@ -9,7 +9,7 @@ from threading import Event, Lock
 import requests
 import defines
 import logger
-from sources.channel_info import CHANNEL_INFO
+from sources.channel_info import ChannelInfo
 from epgs.epgtv import EPGTV
 import re
 
@@ -48,6 +48,7 @@ class MAILTV(EPGTV):
         self.need_update = True
 
         self.get_jdata()
+        self.chinfo = ChannelInfo()
 
         log.d('stop initialization')
 
@@ -168,7 +169,9 @@ class MAILTV(EPGTV):
 
     def get_id_by_name(self, name):
         names = [name.lower(), name.lower().replace('-', ' ')]
-        names.extend(CHANNEL_INFO.get(names[0], {}).get("aliases", []))
+        chinfo = self.chinfo.get_info_by_name(names[0])
+        if chinfo:
+            names.extend(chinfo['title'])
         for p in self.get_jdata().values():
             for sch in p['schedule']:
                 if sch['channel']['name'].lower() in names:
