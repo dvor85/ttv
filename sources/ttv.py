@@ -140,7 +140,7 @@ class Channels(TChannels):
         self.user = {}
         self.ttv_session = None
         self._temp = Path(defines.CACHE_PATH, "ttv.json")
-        TChannels.__init__(self, name='ttv', reload_interval=86400)
+        TChannels.__init__(self, name='ttv', reload_interval=28800)
 
     def _load_jdata(self, avail=True):
         log.d(f'get {self._temp}')

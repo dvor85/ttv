@@ -122,6 +122,7 @@ class TPlayer(xbmc.Player):
 
     def play_item(self, title='', icon='', thumb='', *args, **kwargs):
         li = xbmcgui.ListItem(title, offscreen=True)
+        li.setArt({'icon': icon, 'thumb': thumb})
         if kwargs.get('url'):
             self.link = kwargs['url']
         if not self.link:

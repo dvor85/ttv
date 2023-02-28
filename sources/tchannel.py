@@ -90,7 +90,7 @@ class TChannel(UserDict):
         self.data.update(kwargs)
         self.logo_path = Path(defines.CACHE_PATH, 'logo')
         self.logo_path.mkdir(parents=True, exist_ok=True)
-        self.chinfo = ChannelInfo()
+        self.chinfo = ChannelInfo().get_instance()
 
     def src(self):
         return self.get('src', 'undefined')
@@ -108,11 +108,11 @@ class TChannel(UserDict):
     def group(self):
         name = epgtv.get_name_offset(self.name().lower())[0]
         chinfo = self.chinfo.get_info_by_name(name)
-        gr = chinfo['cat'] if chinfo else self.get('cat')
+        gr = chinfo.get('cat', self.get('cat')) if chinfo else self.get('cat')
         # else:
         #     CHANNEL_INFO[name] = dict(cat=gr)
         if gr:
-            self.data['cat'] = translate.get(gr.lower(), gr)
+            self.data['cat'] = translate.get(gr.lower(), gr).capitalize()
         return self.get('cat')
 
     def logo(self, session=None):

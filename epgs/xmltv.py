@@ -9,7 +9,7 @@ from threading import Event
 import defines
 import logger
 from pathlib import Path
-from sources.channel_info import CHANNEL_INFO
+from sources.channel_info import ChannelInfo
 from epgs.epgtv import EPGTV, strptime
 
 log = logger.Logger(__name__)
@@ -28,7 +28,7 @@ class XMLTV(EPGTV):
                 try:
                     XMLTV._instance = XMLTV()
                 except Exception as e:
-                    log.error("get_instance error: {0}".format(e))
+                    log.error(f"get_instance error: {e}")
                     XMLTV._instance = None
                 finally:
                     XMLTV._lock.clear()
@@ -58,6 +58,7 @@ class XMLTV(EPGTV):
         self.xmltv_root = None
         self.xmltv_file = Path(self.epgtv_path, "xmltv.xml.gz")
         self.epg_url = defines.ADDON.getSetting('epg_url')
+        self.chinfo = ChannelInfo().get_instance()
 
         valid_date = self.xmltv_file.exists() and datetime.date.today() == datetime.date.fromtimestamp(self.xmltv_file.stat().st_mtime)
 
@@ -115,7 +116,13 @@ class XMLTV(EPGTV):
 
     def get_id_by_name(self, name):
         names = [name.lower()]
-        names.extend(CHANNEL_INFO.get(names[0], {}).get("aliases", []))
+        chinfo = None
+        for n in names:
+            chinfo = self.chinfo.get_info_by_name(n)
+            if chinfo:
+                names.append(chinfo['title'])
+                break
+
         return next((chid for chid, ch in self.get_channels().items() if ch['name'].lower() in names), None)
 
 

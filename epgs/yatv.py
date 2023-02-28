@@ -10,7 +10,7 @@ import requests
 import defines
 import logger
 from pathlib import Path
-from sources.channel_info import CHANNEL_INFO
+from sources.channel_info import ChannelInfo
 from epgs.epgtv import EPGTV, strptime
 
 
@@ -41,6 +41,7 @@ class YATV(EPGTV):
         self.update_timer = None
         self.sess = requests.Session()
         self.lock = Lock()
+        self.chinfo = ChannelInfo.get_instance()
         self.sema = Semaphore(8)
 
         self.availableChannels = self.get_availible_channels()
@@ -152,7 +153,11 @@ class YATV(EPGTV):
 
     def get_id_by_name(self, name):
         names = [name.lower()]
-        names.extend(CHANNEL_INFO.get(names[0], {}).get("aliases", []))
+        for n in names:
+            chinfo = self.chinfo.get_info_by_name(n)
+            if chinfo:
+                names.append(chinfo['title'])
+                break
         return next((sch['channel']['id'] for p in self.get_jdata().values() for sch in p['schedules'] and sch['channel']['title'].lower() in names), None)
 
     def get_logo_by_id(self, chid):

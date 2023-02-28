@@ -19,7 +19,7 @@ class FDB:
     API_ERROR_NOPARAM = 'noparam'
     API_ERROR_NOFAVOURITE = 'nofavourite'
     API_NO_REFRESH = 0
-    MAX_CHANNELS = 30
+    MAX_CHANNELS = 50
 
     def __init__(self):
         self.channels = []
@@ -64,7 +64,7 @@ class FDB:
         if not self.channels:
             self.get()
         if self.channels:
-            return next((i for i, ch in enumerate(self.channels) if ch['name'] == name), None)
+            return next((i for i, ch in enumerate(self.channels) if ch['name'].lower() == name.lower()), None)
 
     def swap(self, i1, i2):
         log.d(f'swap channels with indexes={i1}, {i2}')

@@ -41,6 +41,9 @@ class ChannelGroups(UserDict):
     def clearGroup(self, groupname):
         self[groupname]['channels'] = []
 
+    def clearGroups(self):
+        [self.delGroup(gr) for gr in self.getGroups()]
+
     def delGroup(self, groupname):
         del self[groupname]
 
@@ -336,6 +339,7 @@ class WMainForm(xbmcgui.WindowXML):
             chtitle = args[0]
         else:
             chtitle = xbmcgui.Dialog().input(heading='введите название канала')
+        log.d(chtitle)
         if chtitle:
             for gr in self.channel_groups.find_group_by_chtitle(chtitle):
                 for ch in self.channel_groups.find_channel_by_title(gr, chtitle):
@@ -601,24 +605,24 @@ class WMainForm(xbmcgui.WindowXML):
             return
 
     def showMenuWindow(self):
-        mnu = MenuForm("menu.xml", defines.ADDON_PATH)
-        mnu.li = self.getFocus().getSelectedItem()
-        mnu.parent = self
+        mnu = MenuForm(li=self.getFocus().getSelectedItem(), parent=self)
         selitemid = self.list.getSelectedPosition()
 
         log.d('Выполнить команду')
-        mnu.doModal()
+        mnu.show()
         log.d('Комманда выполнена')
         res = mnu.GetResult()
         log.d(f'Результат команды {res}')
         if res.startswith('OK'):
+            self.channel_groups.delGroup(self.cur_category)
+            self.updateList()
 
-            self.channel_groups.clearGroup(WMainForm.FAVOURITE_GROUP)
-            fthr = defines.MyThread(self.loadFavourites)
-            fthr.start()
-            if self.cur_category == WMainForm.FAVOURITE_GROUP:
-                fthr.join(10)
-                self.loadList()
+#             self.channel_groups.clearGroup(WMainForm.FAVOURITE_GROUP)
+#             fthr = defines.MyThread(self.loadFavourites)
+#             fthr.start()
+#             if self.cur_category == WMainForm.FAVOURITE_GROUP:
+#                 fthr.join(10)
+#                 self.loadList()
 
         elif res == WMainForm.API_ERROR_INCORRECT:
             self.showStatus('Пользователь не опознан по сессии')

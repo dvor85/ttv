@@ -20,8 +20,8 @@ class Channel(TChannel):
         TChannel.__init__(self, data=data, src='playlists', player='tsp')
         if self.data.get('group-title'):
             self.data['cat'] = self.data['group-title']
-        self.data['title'] = _re_notprintable.sub('', self.data['title']).strip()
-        self.data['name'] = _re_notprintable.sub('', self.data['name']).strip()
+        self.data['title'] = _re_notprintable.sub('', self.data['title']).strip().capitalize()
+        self.data['name'] = _re_notprintable.sub('', self.data['name']).strip().capitalize()
 
 
 class Channels(TChannels):

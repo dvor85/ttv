@@ -48,7 +48,7 @@ class MAILTV(EPGTV):
         self.need_update = True
 
         self.get_jdata()
-        self.chinfo = ChannelInfo()
+        self.chinfo = ChannelInfo().get_instance()
 
         log.d('stop initialization')
 
@@ -169,15 +169,21 @@ class MAILTV(EPGTV):
 
     def get_id_by_name(self, name):
         names = [name.lower(), name.lower().replace('-', ' ')]
-        chinfo = self.chinfo.get_info_by_name(names[0])
-        if chinfo:
-            names.extend(chinfo['title'])
+        chinfo = None
+        for n in names:
+            chinfo = self.chinfo.get_info_by_name(n)
+            if chinfo:
+                names.append(chinfo['title'])
+                break
+
         for p in self.get_jdata().values():
             for sch in p['schedule']:
                 if sch['channel']['name'].lower() in names:
                     return sch['channel']['id']
                 elif len(name) > 8:
-                    return next((sch['channel']['id'] for n in names if n in sch['channel']['name'].lower()), None)
+                    for n in names:
+                        if n in sch['channel']['name'].lower():
+                            return sch['channel']['id']
 
     def get_logo_by_id(self, chid):
         if chid is None:  # or chid not in self.availableChannels["availableChannelsIds"]:
