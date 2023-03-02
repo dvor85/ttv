@@ -171,9 +171,9 @@ class MAILTV(EPGTV):
         names = [name.lower(), name.lower().replace('-', ' ')]
         chinfo = None
         for n in names:
-            chinfo = self.chinfo.get_info_by_name(n)
-            if chinfo:
-                names.append(chinfo['title'])
+            chinfo = self.chinfo.get_channel_by_name(n)
+            if chinfo and chinfo.get('ch_title'):
+                names.append(chinfo['ch_title'])
                 break
 
         for p in self.get_jdata().values():

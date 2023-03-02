@@ -50,6 +50,9 @@ class MChannel(UserDict):
         """
         return [(ch.src(), ch['url']) for ch in self.data.values() if ch['url']]
 
+    def enabled(self):
+        return any(ch.enabled() for ch in self.data.values())
+
     def group(self):
         return next((ch.group() for ch in self.data.values() if ch.group()), None)
 
@@ -105,14 +108,28 @@ class TChannel(UserDict):
 
         return UserDict.__getitem__(self, key)
 
+    def _get_group_title(self, groupname):
+        grinfo = self.chinfo.get_group_by_name(groupname)
+        if grinfo:
+            return grinfo['group_title'] if grinfo['group_title'] else groupname
+        return groupname
+
+    def enabled(self):
+        name = epgtv.get_name_offset(self.name().lower())[0]
+        chinfo = self.chinfo.get_channel_by_name(name.lower())
+        return chinfo['ch_enable'] if chinfo else True
+
     def group(self):
         name = epgtv.get_name_offset(self.name().lower())[0]
-        chinfo = self.chinfo.get_info_by_name(name)
-        gr = chinfo.get('cat', self.get('cat')) if chinfo else self.get('cat')
-        # else:
-        #     CHANNEL_INFO[name] = dict(cat=gr)
-        if gr:
-            self.data['cat'] = translate.get(gr.lower(), gr).capitalize()
+        chinfo = self.chinfo.get_channel_by_name(name)
+        gr = self.get('cat')
+        if chinfo and chinfo['group_name']:
+            gr = chinfo['group_title'] if chinfo.get('group_title') else chinfo['group_name']
+        else:
+            gr = self._get_group_title(self.get('cat').lower())
+
+            #             self.data['cat'] = translate.get(gr.lower(), gr).capitalize()
+        self.data['cat'] = gr.capitalize()
         return self.get('cat')
 
     def logo(self, session=None):
@@ -154,8 +171,10 @@ class TChannel(UserDict):
             name_offset = epgtv.get_name_offset(self.name().lower())
             ctime = datetime.datetime.now()
             offset = round((ctime - datetime.datetime.utcnow()).total_seconds() / 3600)
-            chinfo = self.chinfo.get_info_by_name(name_offset[0])
-            self.data['title'] = chinfo['title'].capitalize() if chinfo else name_offset[0].capitalize()
+            self.data['title'] = name_offset[0].capitalize()
+            chinfo = self.chinfo.get_channel_by_name(name_offset[0])
+            if chinfo:
+                self.data['title'] = chinfo['ch_title'].capitalize() if chinfo.get('ch_title') else chinfo['ch_name'].capitalize()
             if name_offset[1] and name_offset[1] != offset and sign(name_offset[1]):
                 self.data['title'] += " ({sign}{offset})".format(sign=sign(name_offset[1]), offset=name_offset[1])
         return self.data["title"]

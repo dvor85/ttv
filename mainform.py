@@ -19,6 +19,7 @@ from menu import MenuForm
 from playerform import MyPlayer
 from sources.tchannel import TChannel, MChannel
 from sources.table import channel_sources
+from sources.channel_info import ChannelInfo
 
 
 log = logger.Logger(__name__)
@@ -33,6 +34,10 @@ class ChannelGroups(UserDict):
             }
     }
     """
+
+    def __init__(self, *args, **kwargs):
+        UserDict.__init__(self, *args, **kwargs)
+        self.chinfo = ChannelInfo.get_instance()
 
     def addGroup(self, groupname, title=None):
         self[groupname] = {'title': title if title else groupname}
@@ -60,8 +65,12 @@ class ChannelGroups(UserDict):
                 groupname = ch.group()
             if groupname is None:
                 groupname = src_name
+            grinfo = self.chinfo.get_group_by_name(groupname)
+            if grinfo and not grinfo['group_enable']:
+                return
             if groupname.lower() in ["18+"] and utils.str2int(defines.AGE) < 2:
                 return
+            log.d(f"addChannel {groupname}/{ch.name()} from source: {src_name}")
             if groupname not in self:
                 self.addGroup(groupname)
             src_index = channel_sources.index_by_name(src_name)
@@ -159,6 +168,11 @@ class LoopPlay(threading.Thread):
                         msg = "Канал временно не доступен"
                         self.parent.showStatus(msg)
                         raise Exception(f"{msg}. Возможно не все каналы загрузились...")
+                    if not sel_ch.enabled():
+                        msg = "Канал отключен пользователем"
+                        xbmcgui.Dialog().notification(heading='Запрещено', message=msg)
+                        self.stop()
+                        break
 
                     defines.ADDON.setSetting('cur_category', self.parent.cur_category)
                     defines.ADDON.setSetting('cur_channel', self.parent.cur_channel)
@@ -589,7 +603,7 @@ class WMainForm(xbmcgui.WindowXML):
                 self.loadSearch()
 
             if selItem.getProperty('type') == 'category':
-                self.cur_category = selItem.getProperty("id")
+                self.cur_category = selItem.getProperty("name")
                 self.selitem_id = -1
                 self.fillChannels()
                 return
@@ -605,7 +619,10 @@ class WMainForm(xbmcgui.WindowXML):
             return
 
     def showMenuWindow(self):
-        mnu = MenuForm(li=self.getFocus().getSelectedItem(), parent=self)
+        li = self.getFocus().getSelectedItem()
+        if li.getProperty('name') in ['..', WMainForm.FAVOURITE_GROUP, WMainForm.SEARCH_GROUP]:
+            return
+        mnu = MenuForm(li=li, parent=self)
         selitemid = self.list.getSelectedPosition()
 
         log.d('Выполнить команду')
@@ -704,22 +721,23 @@ class WMainForm(xbmcgui.WindowXML):
         self.list.reset()
         self.list_type = 'channels'
         li = xbmcgui.ListItem('..')
+        li.setProperty('name', li.getLabel())
         self.list.addItem(li)
         i = 0
         for ch in self.channel_groups.getSortedChannels(self.cur_category):
             if ch:
-                # не добавлять чистые каналы с ttv
-                #                 if len(ch) == 1 and ch[0].src() in ['ttv']:
-                #                     continue
                 try:
                     if defines.isCancel():
                         return
+#                     log.d(f'fillChannels add: {ch.title()}')
                     i += 1
                     chli = xbmcgui.ListItem(f"{i}. {ch.title()}")
                     self.setLogo(ch, chli, self.set_logo_sema)
                     chli.setProperties({'type': 'channel', "name": ch.name(), "title": ch.title()})
+                    cmds = []
+
                     if not self.cur_category == WMainForm.FAVOURITE_GROUP:
-                        chli.setProperty('commands', MenuForm.CMD_ADD_FAVOURITE)
+                        cmds.append(MenuForm.CMD_ADD_FAVOURITE)
                     else:
                         cmds = [MenuForm.CMD_MOVE_FAVOURITE,
                                 MenuForm.CMD_DEL_FAVOURITE,
@@ -729,7 +747,14 @@ class WMainForm(xbmcgui.WindowXML):
                             cmds.append(MenuForm.CMD_SET_FALSE_PIN)
                         else:
                             cmds.append(MenuForm.CMD_SET_TRUE_PIN)
-                        chli.setProperty('commands', ','.join(cmds))
+
+                    if not ch.enabled():
+                        chli.setLabel(f'[COLOR 0xFF555555]{chli.getLabel()}[/COLOR]')
+                        cmds.append(MenuForm.CMD_ENABLE_CHANNEL)
+                    else:
+                        cmds.append(MenuForm.CMD_DISABLE_CHANNEL)
+
+                    chli.setProperty('commands', ','.join(cmds))
                     self.list.addItem(chli)
 
                 except Exception as e:
@@ -754,7 +779,7 @@ class WMainForm(xbmcgui.WindowXML):
 
         def AddItem(groupname):
             li = xbmcgui.ListItem(self.channel_groups[groupname]['title'])
-            li.setProperties({'type': 'category', 'id': groupname})
+            li.setProperties({'type': 'category', 'name': groupname})
             self.list.addItem(li)
 
         for name in self.timers:

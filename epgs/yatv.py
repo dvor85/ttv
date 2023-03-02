@@ -154,9 +154,9 @@ class YATV(EPGTV):
     def get_id_by_name(self, name):
         names = [name.lower()]
         for n in names:
-            chinfo = self.chinfo.get_info_by_name(n)
-            if chinfo:
-                names.append(chinfo['title'])
+            chinfo = self.chinfo.get_channel_by_name(n)
+            if chinfo and chinfo.get('ch_title'):
+                names.append(chinfo['ch_title'])
                 break
         return next((sch['channel']['id'] for p in self.get_jdata().values() for sch in p['schedules'] and sch['channel']['title'].lower() in names), None)
 

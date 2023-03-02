@@ -118,9 +118,9 @@ class XMLTV(EPGTV):
         names = [name.lower()]
         chinfo = None
         for n in names:
-            chinfo = self.chinfo.get_info_by_name(n)
-            if chinfo:
-                names.append(chinfo['title'])
+            chinfo = self.chinfo.get_channel_by_name(n)
+            if chinfo and chinfo.get('ch_title'):
+                names.append(chinfo['ch_title'])
                 break
 
         return next((chid for chid, ch in self.get_channels().items() if ch['name'].lower() in names), None)
