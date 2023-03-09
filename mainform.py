@@ -56,21 +56,17 @@ class ChannelGroups(UserDict):
         return list(self)
 
     def addChannels(self, channels, src_name):
-        [self.addChannel(ch, src_name) for ch in channels]
-        return True if channels else False
+        [self.addChannel(ch, src_name, ch.group()) for ch in channels]
+        return bool(channels)
 
     def addChannel(self, ch, src_name, groupname=None):
         try:
             if groupname is None:
-                groupname = ch.group()
-            if groupname is None:
                 groupname = src_name
             grinfo = self.chinfo.get_group_by_name(groupname)
-            if grinfo and not grinfo['group_enable']:
+            if (ch.get('adult', 0) == 1 and utils.str2int(defines.AGE) < 2) or (grinfo and not grinfo['group_enable']):
                 return
-            if groupname.lower() in ["18+"] and utils.str2int(defines.AGE) < 2:
-                return
-            log.d(f"addChannel {groupname}/{ch.name()} from source: {src_name}")
+#             log.d(f"addChannel {groupname}/{ch.name()} from source: {src_name}")
             if groupname not in self:
                 self.addGroup(groupname)
             src_index = channel_sources.index_by_name(src_name)
@@ -309,12 +305,6 @@ class WMainForm(xbmcgui.WindowXML):
             categ = next(self.channel_groups.find_group_by_chtitle(chtitle), None)
         return next(self.channel_groups.find_channel_by_title(categ, chtitle), None)
 
-    def showDialog(self, msg):
-        from okdialog import OkDialog
-        dialog = OkDialog("dialog.xml", defines.ADDON_PATH)
-        dialog.setText(msg)
-        dialog.doModal()
-
     def onFocus(self, ControlID):
         if self.rotate_screen_thr:
             self.rotate_screen_thr.stop()
@@ -460,21 +450,10 @@ class WMainForm(xbmcgui.WindowXML):
 
     def updateList(self):
 
-        def dump_channel_groups():
-            namedb = {}
-            for cat, val in self.channel_groups.items():
-                for ch in val['channels']:
-                    namedb[ch.name().lower()] = {'cat': cat}
-                    break
-            s = json.dumps(namedb, indent=4, ensure_ascii=False)
-            Path(defines.CACHE_PATH, 'namedb.json').write_text(s)
-
         def LoadOther():
             for name, thr in thrs.items():
                 if name not in ('epgtv_epg',):
                     thr.join(60)
-
-        #             dump_channel_groups()
 
         self.showStatus("Получение списка каналов")
 
@@ -631,7 +610,7 @@ class WMainForm(xbmcgui.WindowXML):
         res = mnu.GetResult()
         log.d(f'Результат команды {res}')
         if res.startswith('OK'):
-            self.channel_groups.delGroup(self.cur_category)
+            self.channel_groups.clearGroups()
             self.updateList()
 
 #             self.channel_groups.clearGroup(WMainForm.FAVOURITE_GROUP)
@@ -794,8 +773,9 @@ class WMainForm(xbmcgui.WindowXML):
         log.d('fillCategory: Clear list')
         self.list.reset()
         self.list_type = 'groups'
-        [AddItem(gr) for gr in self.channel_groups.getGroups()]
-
+        for gr in self.channel_groups.getGroups():
+            if self.channel_groups.getChannels(gr) or gr in (WMainForm.FAVOURITE_GROUP, WMainForm.SEARCH_GROUP):
+                AddItem(gr)
         if self.list.size() > 0:
             self.setFocus(self.list)
             self.list.selectItem(0)

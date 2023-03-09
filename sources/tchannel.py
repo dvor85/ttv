@@ -11,7 +11,6 @@ import logger
 from epgs import epgtv
 from epgs.epglist import Epg
 from .channel_info import ChannelInfo
-from .grouplang import translate
 
 
 log = logger.Logger(__name__)
@@ -120,17 +119,16 @@ class TChannel(UserDict):
         return chinfo['ch_enable'] if chinfo else True
 
     def group(self):
-        name = epgtv.get_name_offset(self.name().lower())[0]
-        chinfo = self.chinfo.get_channel_by_name(name)
-        gr = self.get('cat')
-        if chinfo and chinfo['group_name']:
-            gr = chinfo['group_title'] if chinfo.get('group_title') else chinfo['group_name']
-        else:
-            gr = self._get_group_title(self.get('cat').lower())
+        if not self.get('groupname'):
+            name = epgtv.get_name_offset(self.name().lower())[0]
+            chinfo = self.chinfo.get_channel_by_name(name)
+            if chinfo and chinfo['group_name']:
+                gr = chinfo['group_title'] if chinfo.get('group_title') else chinfo['group_name']
+            else:
+                gr = self._get_group_title(self.get('cat').lower())
 
-            #             self.data['cat'] = translate.get(gr.lower(), gr).capitalize()
-        self.data['cat'] = gr.capitalize()
-        return self.get('cat')
+            self.data['groupname'] = gr.capitalize()
+        return self.get('groupname')
 
     def logo(self, session=None):
         f_logo = Path(self.logo_path, f"{self.title().lower()}.png")
@@ -177,7 +175,7 @@ class TChannel(UserDict):
                 self.data['title'] = chinfo['ch_title'].capitalize() if chinfo.get('ch_title') else chinfo['ch_name'].capitalize()
             if name_offset[1] and name_offset[1] != offset and sign(name_offset[1]):
                 self.data['title'] += " ({sign}{offset})".format(sign=sign(name_offset[1]), offset=name_offset[1])
-        return self.data["title"]
+        return self.get('title')
 
     def update_epglist(self):
         try:

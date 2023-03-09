@@ -70,10 +70,9 @@ class FDB:
         log.d(f'swap channels with indexes={i1}, {i2}')
         try:
             self.channels[i1], self.channels[i2] = self.channels[i2], self.channels[i1]
+            return True
         except Exception as e:
             log.w(e)
-            return
-        return True
 
     def swapTo(self, from_id, to_id):
         sign = cmp(to_id - from_id, 0)
