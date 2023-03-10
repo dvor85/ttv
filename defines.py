@@ -88,7 +88,7 @@ def isCancel():
     return ret
 
 
-def request(url, method='get', params=None, trys=3, interval=0, session=None, proxies=None, **kwargs):
+def request(url, method='get', params=None, trys=3, interval=0.01, session=None, proxies=None, **kwargs):
     params_str = "?" + "&".join(f"{k}={v}" for k, v in params.items()) if params is not None and method == 'get' else ""
     if proxies is None and ADDON.getSetting('pomoyka_proxy_for_all') == 'true':
         proxies = PROXIES
@@ -104,7 +104,7 @@ def request(url, method='get', params=None, trys=3, interval=0, session=None, pr
     kwargs.setdefault('timeout', 10.05)
 
     t = 0
-    xbmc.sleep(interval)
+    monitor.waitForAbort(interval)
     while not isCancel():
         t += 1
         if 0 < trys < t:
@@ -118,7 +118,7 @@ def request(url, method='get', params=None, trys=3, interval=0, session=None, pr
             return r
         except Exception as e:
             log.error(f'Request error ({t}): {e}')
-            xbmc.sleep(interval + 1000)
+            monitor.waitForAbort(interval)
 
 
 def platform():

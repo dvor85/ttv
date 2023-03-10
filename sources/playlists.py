@@ -46,7 +46,7 @@ class Channels(TChannels):
         if Path(filename).exists():
             lines = Path(filename).read_text().splitlines()
         else:
-            r = defines.request(filename, interval=3000, proxies=self.proxies)
+            r = defines.request(filename, interval=3, proxies=self.proxies)
             if r.ok:
                 lines = r.text.splitlines()
                 filename.write_bytes(r.content)

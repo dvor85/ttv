@@ -221,7 +221,7 @@ class MyPlayer(xbmcgui.WindowXML):
                                     if self.channel_stop_requested:
                                         return True
                                 log.d(f'End playing url "{url_mode}"')
-                                xbmc.sleep(500)
+                                defines.monitor.waitForAbort(0.5)
 
                         except Exception as e:
                             log.e(f"Error play with {player} player: {e}")
@@ -364,7 +364,7 @@ class MyPlayer(xbmcgui.WindowXML):
                     self.run_selected_channel(timeout=5)
         elif action.getId() == 0 and action.getButtonCode() == 61530:
             xbmc.executebuiltin('Action(FullScreen)')
-            xbmc.sleep(4000)
+            defines.monitor.waitForAbort(4)
             xbmc.executebuiltin('Action(Back)')
         else:
             self.UpdateEpg(self.channel)

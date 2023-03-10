@@ -112,7 +112,7 @@ class TPlayer(xbmc.Player):
         Flags.clear()
         while self.isPlaying() and not (defines.isCancel() or Flags.is_any_flag_set()):
             try:
-                xbmc.sleep(250)
+                defines.monitor.waitForAbort(0.25)
             except Exception as e:
                 log.e(f'ERROR SLEEPING: {e}')
                 self.parent.close()
@@ -240,7 +240,7 @@ class AcePlayer(TPlayer):
             except Exception as e:
                 log.e(f"Подключение не удалось {e}")
                 if not defines.isCancel():
-                    xbmc.sleep(995)
+                    defines.monitor.waitForAbort(0.995)
                 else:
                     return
 
@@ -360,7 +360,7 @@ class AcePlayer(TPlayer):
                     self.parent.showStatus(msg)
 
                 if not defines.isCancel():
-                    xbmc.sleep(995)
+                    defines.monitor.waitForAbort(0.995)
                 else:
                     raise Exception('Cancel')
         else:

@@ -178,13 +178,13 @@ class LoopPlay(threading.Thread):
                         break
                     self.parent.player.close()
                 if not defines.isCancel():
-                    xbmc.sleep(223)
+                    defines.monitor.waitForAbort(0.223)
                     self.parent.select_channel()
 
             except Exception as e:
                 log.e(f'LoopPlay error: {e}')
             finally:
-                xbmc.sleep(1000)
+                defines.monitor.waitForAbort(1)
 
         self.parent.player.close()
         #         self.parent.show()

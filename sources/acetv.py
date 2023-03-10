@@ -49,7 +49,7 @@ class Channels(TChannels):
             jdata = self._load_jdata()
             if not jdata:
                 with self.lock:
-                    r = defines.request(self.url, proxies=defines.PROXIES, interval=3000)
+                    r = defines.request(self.url, proxies=defines.PROXIES, interval=3)
                 jdata = r.json()
                 self._save_jdata(jdata)
             if not jdata:

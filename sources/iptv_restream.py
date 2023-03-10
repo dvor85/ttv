@@ -48,9 +48,9 @@ class Channels(TChannels):
         try:
             jdata = self._load_jdata()
             if not jdata:
-                r = defines.request(self.url['channels'], interval=3000)
+                r = defines.request(self.url['channels'], interval=3)
                 jchannels = r.json()
-                r = defines.request(self.url['streams'], interval=3000)
+                r = defines.request(self.url['streams'], interval=3)
                 jstreams = r.json()
                 for ch in jchannels:
                     if "rus" in ch.get('languages', []):

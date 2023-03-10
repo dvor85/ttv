@@ -10,6 +10,8 @@ import logger
 import uuid
 from pathlib import Path
 from .tchannel import TChannel, TChannels
+import xbmcgui
+import xbmc
 
 log = logger.Logger(__name__)
 _server = 'ttv.run'
@@ -90,6 +92,24 @@ class Channel(TChannel):
             jdata = r.json()
             if not jdata["success"]:
                 return
+
+            if jdata['source'].endswith('.m3u8'):
+                pd = xbmcgui.DialogProgress()
+                pd.create('Getting source...')
+                for t in range(5):
+                    if pd.iscanceled() or defines.isCancel():
+                        break
+                    r = defines.request(jdata['source'], session=_sess, trys=1)
+                    if r.ok:
+                        srcs = [s for s in r.text.splitlines() if s.startswith('http') and 'errors' not in s]
+                        if len(srcs) > 2:
+                            break
+                    else:
+                        break
+
+                    defines.monitor.waitForAbort(5)
+                    pd.update(20*(t+1))
+                pd.close()
 
             return jdata['source']
         except Exception as e:
