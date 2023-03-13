@@ -7,7 +7,6 @@ import threading
 import xbmcgui
 import xbmc
 import time
-from pathlib import Path
 from operator import methodcaller
 from collections import UserDict
 import defines
@@ -20,7 +19,6 @@ from playerform import MyPlayer
 from sources.tchannel import TChannel, MChannel
 from sources.table import channel_sources
 from sources.channel_info import ChannelInfo
-
 
 log = logger.Logger(__name__)
 
@@ -64,7 +62,7 @@ class ChannelGroups(UserDict):
             if groupname is None:
                 groupname = src_name
             grinfo = self.chinfo.get_group_by_name(groupname)
-            if (ch.get('adult', 0) == 1 and utils.str2int(defines.AGE) < 2) or (grinfo and not grinfo['group_enable']):
+            if (ch.get('adult', 0) == 1 and defines.AGE < 2) or (grinfo and not grinfo['group_enable']):
                 return
 #             log.d(f"addChannel {groupname}/{ch.name()} from source: {src_name}")
             if groupname not in self:
@@ -148,7 +146,7 @@ class LoopPlay(threading.Thread):
         self.name = 'LoopPlay'
 
     def stop(self):
-        log.d("stop from {0}".format(self.name))
+        log.d(f"stop from {self.name}")
         self.active = False
         self.parent.player.channelStop()
 
@@ -358,7 +356,7 @@ class WMainForm(xbmcgui.WindowXML):
         src = channel_sources.get_by_name(src_name)
         try:
             res = self.channel_groups.addChannels(src.get_channels(), src_name=src_name)
-            timeout = src.reload_interval if res else 60
+            timeout = src.reload_interval + 10 if res else 60
             if timeout > 0:
                 name = f'reload_channels_{src_name}'
                 self.timers.stop(name)

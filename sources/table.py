@@ -7,10 +7,10 @@ from sources import acetv
 from sources import playlists
 from six.moves import UserList
 from threading import Lock
-from utils import str2int
 
 
 class ChannelSources(UserList):
+
     def __init__(self, *args, **kwargs):
         UserList.__init__(self, *args, **kwargs)
 
@@ -28,15 +28,15 @@ class ChannelSources(UserList):
 
 channel_sources = ChannelSources()
 _lock = Lock()
-if str2int(defines.ADDON.getSetting('acetv')) > 0:
+if defines.ADDON.getSettingInt('acetv') > 0:
     channel_sources.append(acetv.Channels(_lock))
-if str2int(defines.ADDON.getSetting('acestream')) > 0:
+if defines.ADDON.getSettingInt('acestream') > 0:
     channel_sources.append(acestream.Channels(_lock))
-if str2int(defines.ADDON.getSetting('ttv')) > 0:
+if defines.ADDON.getSettingInt('ttv') > 0:
     channel_sources.append(ttv.Channels())
-if str2int(defines.ADDON.getSetting('iptv')) > 0:
+if defines.ADDON.getSettingInt('iptv-org.github.io') > 0:
     channel_sources.append(iptv_restream.Channels())
-if str2int(defines.ADDON.getSetting('playlists')) > 0:
+if defines.ADDON.getSettingInt('playlists') > 0:
     channel_sources.append(playlists.Channels())
 
-channel_sources.sort(key=lambda src: str2int(defines.ADDON.getSetting(src.name)))
+channel_sources.sort(key=lambda src: defines.ADDON.getSettingInt(src.name))

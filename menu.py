@@ -5,9 +5,7 @@ import xbmcgui
 import favdb
 import logger
 import defines
-import utils
 from sources.channel_info import ChannelInfo
-
 
 log = logger.Logger(__name__)
 
@@ -48,10 +46,10 @@ class MenuForm(xbmcgui.Dialog):
                         MenuForm.CMD_RENAME_GROUP: {'title': 'Переименовать', 'action': self.rename_group_title},
                         MenuForm.CMD_DELETE_CHINFO: {'title': 'Сбросить изменения', 'action': self.chinfo.delete_ch_info},
                         MenuForm.CMD_DELETE_GROUP_INFO: {'title': 'Сбросить изменения', 'action': self.chinfo.delete_group_info},
-                        MenuForm.CMD_DISABLE_CHANNEL:  {'title': 'Отключить', 'action': lambda x: self.set_ch_enabled(x, 0)},
-                        MenuForm.CMD_ENABLE_CHANNEL:  {'title': 'Включить', 'action': lambda x: self.set_ch_enabled(x, 1)},
-                        MenuForm.CMD_DISABLE_GROUP:  {'title': 'Отключить', 'action': lambda x: self.set_group_enabled(x, 0)},
-                        MenuForm.CMD_ENABLE_GROUP:  {'title': 'Включить', 'action': self.enable_group},
+                        MenuForm.CMD_DISABLE_CHANNEL: {'title': 'Отключить', 'action': lambda x: self.set_ch_enabled(x, 0)},
+                        MenuForm.CMD_ENABLE_CHANNEL: {'title': 'Включить', 'action': lambda x: self.set_ch_enabled(x, 1)},
+                        MenuForm.CMD_DISABLE_GROUP: {'title': 'Отключить', 'action': lambda x: self.set_group_enabled(x, 0)},
+                        MenuForm.CMD_ENABLE_GROUP: {'title': 'Включить', 'action': self.enable_group},
 
                         }
 
@@ -69,7 +67,7 @@ class MenuForm(xbmcgui.Dialog):
         elif self.li.getProperty('type') == 'category':
             cmds.extend([MenuForm.CMD_RENAME_GROUP, MenuForm.CMD_DELETE_GROUP_INFO, MenuForm.CMD_ENABLE_GROUP, MenuForm.CMD_DISABLE_GROUP])
 
-        if utils.str2int(defines.AGE) < 2:
+        if defines.AGE < 2:
             if MenuForm.CMD_ENABLE_GROUP in cmds:
                 cmds.remove(MenuForm.CMD_ENABLE_GROUP)
             if MenuForm.CMD_ENABLE_CHANNEL in cmds:
@@ -86,7 +84,7 @@ class MenuForm(xbmcgui.Dialog):
             (self.parent.SEARCH_GROUP, self.parent.FAVOURITE_GROUP))) + ['Введите свое название']
         ret = self.contextmenu(samples)
         if ret > -1:
-            cat = samples[ret] if ret < len(samples)-1 else self.input(samples[ret])
+            cat = samples[ret] if ret < len(samples) - 1 else self.input(samples[ret])
             if cat:
                 grinfo = self.chinfo.get_group_by_name(cat)
                 grid = grinfo['id'] if grinfo else self.chinfo.add_group(cat)

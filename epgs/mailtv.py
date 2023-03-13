@@ -13,7 +13,6 @@ from sources.channel_info import ChannelInfo
 from epgs.epgtv import EPGTV
 import re
 
-
 log = logger.Logger(__name__)
 _tag_re = re.compile(r'(<!--.*?-->|<[^>]*>)')
 _spec_re = re.compile(r'&(nbsp|laquo|raquo|mdash|ndash|quot);')
@@ -23,19 +22,19 @@ class MAILTV(EPGTV):
     _instance = None
     _lock = Event()
 
-    @staticmethod
-    def get_instance():
-        if MAILTV._instance is None:
-            if not MAILTV._lock.is_set():
-                MAILTV._lock.set()
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            if not cls._lock.is_set():
+                cls._lock.set()
                 try:
-                    MAILTV._instance = MAILTV()
+                    cls._instance = cls()
                 except Exception as e:
-                    log.error("get_instance error: {0}".format(e))
-                    MAILTV._instance = None
+                    log.error(f"get_instance error: {e}")
+                    cls._instance = None
                 finally:
-                    MAILTV._lock.clear()
-        return MAILTV._instance
+                    cls._lock.clear()
+        return cls._instance
 
     def __init__(self):
         EPGTV.__init__(self, 'mailtv')
@@ -145,7 +144,7 @@ class MAILTV(EPGTV):
                         ep = {}
 
                         ep['btime'] = time.mktime(bt.timetuple())
-                        ep['name'] = evt['name']
+                        ep['name'] = _spec_re.sub(' ', _tag_re.sub('', evt['name']))
                         ep['event_id'] = evt['id']
 
                         yield ep

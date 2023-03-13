@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-
 import json
 import time
 
@@ -43,15 +42,15 @@ class Channels(TChannels):
             json.dump(jdata, fp)
 
     def update_channels(self):
-        TChannels.update_channels(self)
         jdata = dict()
         try:
             jdata = self._load_jdata()
             if not jdata:
                 with self.lock:
                     r = defines.request(self.url, proxies=defines.PROXIES, interval=3)
-                jdata = r.json()
-                self._save_jdata(jdata)
+                if r.ok:
+                    jdata = r.json()
+                    self._save_jdata(jdata)
             if not jdata:
                 log.i('Try to load previos channels, if availible')
                 jdata = self._load_jdata(False)

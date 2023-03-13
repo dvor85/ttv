@@ -10,7 +10,6 @@ import logger
 from pathlib import Path
 from utils import str2int
 
-
 log = logger.Logger(__name__)
 _name_offset_regexp = re.compile(r'\s*(?P<name>.*?)\s*\(+(?P<offset>[\-+]+\d)\)+\s*')
 
@@ -34,19 +33,19 @@ class EPGTV:
     _instance = None
     _lock = Event()
 
-    @staticmethod
-    def get_instance():
-        if EPGTV._instance is None:
-            if not EPGTV._lock.is_set():
-                EPGTV._lock.set()
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            if not cls._lock.is_set():
+                cls._lock.set()
                 try:
-                    EPGTV._instance = EPGTV()
+                    cls._instance = cls()
                 except Exception as e:
-                    log.error("get_instance error: {0}".format(e))
-                    EPGTV._instance = None
+                    log.error(f"get_instance error: {e}")
+                    cls._instance = None
                 finally:
-                    EPGTV._lock.clear()
-        return EPGTV._instance
+                    cls._lock.clear()
+        return cls._instance
 
     def __init__(self, name):
         log.d('start initialization')
@@ -55,16 +54,16 @@ class EPGTV:
         self.epgtv_path.mkdir(parents=True, exist_ok=True)
 
     def update_epg(self, page=0):
-        pass
+        raise NotImplementedError
 
     def get_epg_by_id(self, chid, epg_offset=None):
-        pass
+        raise NotImplementedError
 
     def get_id_by_name(self, name):
-        pass
+        raise NotImplementedError
 
     def get_event_info(self, event_id):
-        pass
+        raise NotImplementedError
 
     def get_epg_by_name(self, name):
         name_offset = get_name_offset(name)

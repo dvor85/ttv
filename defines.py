@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-
 import os
 import sys
 import threading
@@ -15,6 +14,7 @@ import xbmcgui
 from xbmcvfs import translatePath
 from six.moves import UserDict
 from pathlib import Path
+from contextlib import contextmanager
 
 import logger
 
@@ -27,12 +27,12 @@ ADDON_PATH = ADDON.getAddonInfo('path')
 DATA_PATH = Path(translatePath("special://profile/addon_data"), ADDON_ID)
 CACHE_PATH = Path(translatePath("special://temp"), ADDON_ID)
 PTR_FILE = ADDON.getSetting('port_path')
-AUTOSTART = ADDON.getSetting('autostart') == 'true'
-AUTOSTART_LASTCH = ADDON.getSetting('autostart_lastch') == 'true'
-GENDER = ADDON.getSetting('gender')
-AGE = ADDON.getSetting('age')
+AUTOSTART = ADDON.getSettingBool('autostart')
+AUTOSTART_LASTCH = ADDON.getSettingBool('autostart_lastch')
+GENDER = ADDON.getSettingInt('gender')
+AGE = ADDON.getSettingInt('age')
 FAVOURITE = ADDON.getSetting('favourite')
-DEBUG = ADDON.getSetting('debug') == 'true'
+DEBUG = ADDON.getSettingBool('debug')
 PROXY_TYPE, _proxy_addr, _port = urllib3.get_host(ADDON.getSetting('pomoyka_proxy'))
 PROXY_TYPE = ADDON.getSetting('proxy_type')
 if PROXY_TYPE == 'socks5':
@@ -55,7 +55,18 @@ class MyThread(threading.Thread):
         return self
 
 
+@contextmanager
+def progress_dialog(message):
+    pd = xbmcgui.DialogProgress()
+    pd.create(heading=ADDON.getAddonInfo('name'), message=message)
+    try:
+        yield pd
+    finally:
+        pd.close()
+
+
 class Timers(UserDict):
+
     def __init__(self, *args, **kwargs):
         UserDict.__init__(self, *args, **kwargs)
         self.data = {}
@@ -66,13 +77,13 @@ class Timers(UserDict):
             timer.name = name
             timer.daemon = False
             timer.start()
-            log.d('start timer "{name}"'.format(name=name))
+            log.d(f'start timer "{name}"')
             self.data[name] = timer
 
     def stop(self, name):
         if self.data.get(name):
             self.data[name].cancel()
-            log.d('stop timer "{name}"'.format(name=name))
+            log.d(f'stop timer "{name}"')
             self.data[name] = None
 
 
@@ -84,13 +95,12 @@ def showNotification(msg, icon=ADDON_ICON):
 
 
 def isCancel():
-    ret = monitor.abortRequested() or closeRequested.isSet()
-    return ret
+    return monitor.abortRequested() or closeRequested.isSet()
 
 
 def request(url, method='get', params=None, trys=3, interval=0.01, session=None, proxies=None, **kwargs):
     params_str = "?" + "&".join(f"{k}={v}" for k, v in params.items()) if params is not None and method == 'get' else ""
-    if proxies is None and ADDON.getSetting('pomoyka_proxy_for_all') == 'true':
+    if proxies is None and ADDON.getSettingBool('pomoyka_proxy_for_all'):
         proxies = PROXIES
     log.d(f'try to get: {url}{params_str}')
     log.d(f'proxies: {proxies}')

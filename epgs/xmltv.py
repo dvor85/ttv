@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # Writer (c) 2017, Vorotilin D.V., E-mail: dvor85@mail.ru
 
-
 import datetime
 import gzip
 import time
@@ -20,19 +19,19 @@ class XMLTV(EPGTV):
     _lock = Event()
     _xml_lib = 0
 
-    @staticmethod
-    def get_instance():
-        if XMLTV._instance is None:
-            if not XMLTV._lock.is_set():
-                XMLTV._lock.set()
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            if not cls._lock.is_set():
+                cls._lock.set()
                 try:
-                    XMLTV._instance = XMLTV()
+                    cls._instance = cls()
                 except Exception as e:
                     log.error(f"get_instance error: {e}")
-                    XMLTV._instance = None
+                    cls._instance = None
                 finally:
-                    XMLTV._lock.clear()
-        return XMLTV._instance
+                    cls._lock.clear()
+        return cls._instance
 
     def __init__(self):
         try:
@@ -78,7 +77,7 @@ class XMLTV(EPGTV):
 
     def update_epg(self):
         try:
-            #url = 'http://www.teleguide.info/download/new3/xmltv.xml.gz'
+            # url = 'http://www.teleguide.info/download/new3/xmltv.xml.gz'
             url = self.epg_url
             r = defines.request(url)
             with gzip.open(self.xmltv_file, 'w') as fp:

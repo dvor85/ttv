@@ -12,7 +12,6 @@ from epgs import epgtv
 from epgs.epglist import Epg
 from .channel_info import ChannelInfo
 
-
 log = logger.Logger(__name__)
 
 
@@ -108,6 +107,7 @@ class TChannel(UserDict):
         return UserDict.__getitem__(self, key)
 
     def _get_group_title(self, groupname):
+#         log.d(f"_get_group_title {groupname}")
         grinfo = self.chinfo.get_group_by_name(groupname)
         if grinfo:
             return grinfo['group_title'] if grinfo['group_title'] else groupname
@@ -125,9 +125,9 @@ class TChannel(UserDict):
             if chinfo and chinfo['group_name']:
                 gr = chinfo['group_title'] if chinfo.get('group_title') else chinfo['group_name']
             else:
-                gr = self._get_group_title(self.get('cat').lower())
+                gr = self._get_group_title(self.get('cat'))
 
-            self.data['groupname'] = gr.capitalize()
+            self.data['groupname'] = gr.capitalize() if gr else None
         return self.get('groupname')
 
     def logo(self, session=None):
@@ -224,7 +224,7 @@ class TChannels:
         self.reload_interval = reload_interval
 
     def update_channels(self):
-        self.channels = []
+        raise NotImplementedError
 
     def get_channels(self):
         """

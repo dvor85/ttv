@@ -24,7 +24,7 @@
 		<setting id="ttv" label="TTV (Порядоковый номер. Если <= 0, то выключен)" type="number" default="1" />
 		<setting default="" id="ttv_login" label="Логин ttv" type="text" enable="gt(-1,0)" subsetting="true" />
 		<setting default="" id="ttv_password" label="Пароль ttv" type="text" enable="gt(-2,0)" subsetting="true" />
-		<setting id="iptv" label="IPTV (Порядоковый номер. Если <= 0, то выключен)" type="number" default="0" />
+		<setting id="iptv-org.github.io" label="iptv-org.github.io (Порядоковый номер. Если <= 0, то выключен)" type="number" default="0" />
 		<setting id="playlists" label="Playlists m3u (Порядоковый номер. Если <= 0, то выключен)" type="number" default="0" />
 		<setting default="" id="playlists_urls" label="Ссылки на плэйлисты (разделитель ;)" type="text" enable="gt(-1,0)" subsetting="true" />
 		<setting default="false" id="playlists_use_proxy" label="Использовать прокси" type="bool" enable="gt(-2,0)" subsetting="true" />

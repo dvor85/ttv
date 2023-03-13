@@ -12,7 +12,6 @@ import logger
 import players
 import utils
 
-
 log = logger.Logger(__name__)
 
 
@@ -245,6 +244,7 @@ class MyPlayer(xbmcgui.WindowXML):
         return True
 
     def run_selected_channel(self, timeout=0):
+
         def run():
             log.d(f'CHANNEL NUMBER IS: {self.channel_number}')
             if 0 < self.channel_number < self.parent.list.size() and self.parent.selitem_id != self.channel_number:

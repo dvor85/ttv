@@ -13,7 +13,6 @@ from pathlib import Path
 from sources.channel_info import ChannelInfo
 from epgs.epgtv import EPGTV, strptime
 
-
 log = logger.Logger(__name__)
 
 
@@ -21,19 +20,19 @@ class YATV(EPGTV):
     _instance = None
     _lock = Event()
 
-    @staticmethod
-    def get_instance():
-        if YATV._instance is None:
-            if not YATV._lock.is_set():
-                YATV._lock.set()
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            if not cls._lock.is_set():
+                cls._lock.set()
                 try:
-                    YATV._instance = YATV()
+                    cls._instance = cls()
                 except Exception as e:
-                    log.error("get_instance error: {0}".format(e))
-                    YATV._instance = None
+                    log.error(f"get_instance error: {e}")
+                    cls._instance = None
                 finally:
-                    YATV._lock.clear()
-        return YATV._instance
+                    cls._lock.clear()
+        return cls._instance
 
     def __init__(self):
         EPGTV.__init__(self, 'yatv')

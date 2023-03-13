@@ -19,25 +19,22 @@ import defines
 import logger
 import utils
 
-
 log = logger.Logger(__name__)
 sys_platform = defines.platform()['os']
 
 
 class FlagsControl:
+
     def __init__(self):
         self.manual_stopped = threading.Event()
         self.switch_source = threading.Event()
         self.channel_stop = threading.Event()
 
     def clear(self):
-        for f in self.__dict__.values():
-            f.clear()
+        [f.clear() for f in self.__dict__.values()]
 
     def is_any_flag_set(self):
-        for f in self.__dict__.values():
-            if f.is_set():
-                return True
+        return any(f.is_set() for f in self.__dict__.values())
 
     def log_status(self):
         log.d(''.join([f"{k}: {f.is_set()}; " for k, f in self.__dict__.items()]))
@@ -218,10 +215,6 @@ class AcePlayer(TPlayer):
             log.d(f'AceEngine port file: "{self.port_file}"')
             self.aceport = self._getWinPort()
 
-        if not defines.ADDON.getSetting('age'):
-            defines.ADDON.setSetting('age', '1')
-        if not defines.ADDON.getSetting('gender'):
-            defines.ADDON.setSetting('gender', '1')
         log.d('Connect to AceEngine')
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._connectToTS()
@@ -282,7 +275,7 @@ class AcePlayer(TPlayer):
                 si.dwFlags = subprocess.STARTF_USESHOWWINDOW  # @UndefinedVariable
                 si.wShowWindow = subprocess.SW_HIDE  # @UndefinedVariable
 
-                subprocess.call(["taskkill", "/F", "/IM", self.ace_engine.name], shell=False,   startupinfo=si)
+                subprocess.call(["taskkill", "/F", "/IM", self.ace_engine.name], shell=False, startupinfo=si)
                 log.d(f'Remove "{self.port_file}"')
                 self.port_file.unlink(missing_ok=True)
             except Exception as e:
@@ -573,9 +566,7 @@ class AcePlayer(TPlayer):
 
             elif state.getType() == TSMessage.EVENT:
                 if state.getParams() == 'getuserdata':
-                    self._send_command('USERDATA [{{"gender": {0}}} {{"age": {1}}}]'.format(
-                        utils.str2int(defines.GENDER) + 1,
-                        utils.str2int(defines.AGE) + 1))
+                    self._send_command(f'USERDATA [{{"gender": {defines.GENDER + 1}}} {{"age": {defines.AGE + 1}}}]')
                 elif state.getParams().startswith('showdialog'):
                     _parts = state.getParams().split()
                     self.parent.showStatus('{0}: {1}'.format(unquote(_parts[2].split('=')[1]),
@@ -817,10 +808,10 @@ class NoxPlayer(TPlayer):
     def __init__(self, parent=None, *args):
         TPlayer.__init__(self, parent=parent, *args)
         log('Init noxbit player')
-        if defines.ADDON.getSetting('use_nox') == "false":
+        if not defines.ADDON.getSettingBool('use_nox'):
             raise Exception("Noxbit player is disabled")
         self.ip = defines.ADDON.getSetting('nox_ip')
-        self.port = utils.str2int(defines.ADDON.getSetting('nox_port'))
+        self.port = defines.ADDON.getSettingInt('nox_port')
         self._checkNox()
 
     def _checkNox(self):

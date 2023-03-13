@@ -10,7 +10,6 @@ import logger
 from .tchannel import TChannel, TChannels
 
 log = logger.Logger(__name__)
-_re_m3u = re.compile(r'(?P<tag>[^\s="]+)="(?P<val>[^"]+)"')
 _re_notprintable = re.compile(r'[^A-Za-zА-Яа-я0-9\+\-\_\(\)\s\.\:\/\*\\|\\\&\%\$\@\!\~\;]')
 
 
@@ -18,8 +17,7 @@ class Channel(TChannel):
 
     def __init__(self, data={}):
         TChannel.__init__(self, data=data, src='playlists', player='tsp')
-        if self.data.get('group-title'):
-            self.data['cat'] = self.data['group-title']
+        self.data['cat'] = self.data.get('group-title')
         self.data['title'] = _re_notprintable.sub('', self.data['title']).strip().capitalize()
         self.data['name'] = _re_notprintable.sub('', self.data['name']).strip().capitalize()
 
@@ -29,7 +27,7 @@ class Channels(TChannels):
     def __init__(self):
 
         self.urls = defines.ADDON.getSetting('playlists_urls').split(';')
-        self.proxies = defines.PROXIES if defines.ADDON.getSetting('playlists_use_proxy') == 'true' else None
+        self.proxies = defines.PROXIES if defines.ADDON.getSettingBool('playlists_use_proxy') else None
         TChannels.__init__(self, name='playlists', reload_interval=86400)
 
     def _load_playlist(self, filename, avail=True):
@@ -40,16 +38,19 @@ class Channels(TChannels):
         else:
             log.w(f'{filename} not exists in cache')
 
-    def parse_m3u(self, filename):
+    def parse_m3u(self, url):
+        _re_m3u = re.compile(r'(?P<tag>[^\s="]+)="(?P<val>[^"]+)"')
         ret = []
         lines = []
-        if Path(filename).exists():
-            lines = Path(filename).read_text().splitlines()
-        else:
-            r = defines.request(filename, interval=3, proxies=self.proxies)
+        if Path(url).exists():
+            lines = Path(url).read_text().splitlines()
+        elif '://' in url:
+            r = defines.request(url, interval=3, proxies=self.proxies)
             if r.ok:
                 lines = r.text.splitlines()
-                filename.write_bytes(r.content)
+                Path(defines.CACHE_PATH, Path(url).name).write_bytes(r.content)
+        else:
+            lines = url.splitlines()
 
         for line in lines:
             if line.startswith("#"):
@@ -65,7 +66,6 @@ class Channels(TChannels):
         return ret
 
     def update_channels(self):
-        TChannels.update_channels(self)
         for url in self.urls:
             fn = Path(defines.CACHE_PATH, Path(url).name)
             data = {}

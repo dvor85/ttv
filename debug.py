@@ -1,12 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import, division, unicode_literals, print_function
-
-
 import platform
 import sys
 import os
-
 
 # remote debugging with eclipse pydevd
 # append pydev remote debugger
@@ -20,7 +16,6 @@ elif platform.system() == 'Windows':
 
 import pydevd  # @UnresolvedImport @IgnorePep8
 pydevd.settrace('localhost', port=5678, stdoutToServer=True, stderrToServer=True, suspend=False)
-
 
 """
 # remote debugging with pycharm pydevd

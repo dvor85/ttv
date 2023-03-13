@@ -5,7 +5,6 @@
 
 import defines
 
-
 # try:
 if defines.DEBUG:
     import debug  # @UnusedImport
@@ -17,9 +16,11 @@ def main():
     import mainform
 
     w = mainform.WMainForm("mainform.xml", defines.ADDON_PATH)
-    w.doModal()
-    defines.log('Close plugin')
-    del w
+    try:
+        w.doModal()
+    finally:
+        defines.log('Close plugin')
+        del w
 
 
 if __name__ == '__main__':

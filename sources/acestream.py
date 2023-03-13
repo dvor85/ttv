@@ -19,7 +19,7 @@ class Channels(TChannels):
         TChannels.__init__(self, name='acestream', reload_interval=3600, lock=lock)
 
     def _load_jdata(self, avail=True):
-        log.d('get {temp}'.format(temp=self._temp))
+        log.d(f'get {self._temp}')
         if self._temp.exists():
             if not avail or (time.time() - self._temp.stat().st_mtime <= self.reload_interval):
                 with self._temp.open(mode='r') as fp:
@@ -32,15 +32,15 @@ class Channels(TChannels):
             json.dump(jdata, fp)
 
     def update_channels(self):
-        TChannels.update_channels(self)
         jdata = dict()
         try:
             jdata = self._load_jdata()
             if not jdata:
                 with self.lock:
                     r = defines.request(self.url, proxies=defines.PROXIES, interval=3)
-                jdata = r.json()
-                self._save_jdata(jdata)
+                    if r.ok:
+                        jdata = r.json()
+                        self._save_jdata(jdata)
             if not jdata:
                 log.i('Try to load previos channels, if availible')
                 jdata = self._load_jdata(False)

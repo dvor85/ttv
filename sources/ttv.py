@@ -10,8 +10,6 @@ import logger
 import uuid
 from pathlib import Path
 from .tchannel import TChannel, TChannels
-import xbmcgui
-import xbmc
 
 log = logger.Logger(__name__)
 _server = 'ttv.run'
@@ -22,9 +20,9 @@ class Channel(TChannel):
 
     def __init__(self, data={}, ttv_session=None):
         TChannel.__init__(self, data=data, src='ttv', player='ace,nox,tsp')
-        self.use_nox = defines.ADDON.getSetting('use_nox') == 'true'
-        self.use_ace = defines.ADDON.getSetting('use_ace') == 'true'
-        self.use_tsproxy = defines.ADDON.getSetting('use_tsproxy') == 'true'
+        self.use_nox = defines.ADDON.getSettingBool('use_nox')
+        self.use_ace = defines.ADDON.getSettingBool('use_ace')
+        self.use_tsproxy = defines.ADDON.getSettingBool('use_tsproxy')
         self.ttv_session = ttv_session
 
     def __getitem__(self, key):
@@ -59,7 +57,7 @@ class Channel(TChannel):
 
     def _get_nox_url(self):
         nox_ip = defines.ADDON.getSetting('nox_ip')
-        nox_port = str2int(defines.ADDON.getSetting('nox_port'))
+        nox_port = defines.ADDON.getSettingInt('nox_port')
         try:
             params = dict(
                 session=self.ttv_session,
@@ -79,7 +77,7 @@ class Channel(TChannel):
 
     def _get_tsproxy_url(self):
         zoneid = 0
-        nohls = 0 if defines.ADDON.getSetting("proxy_hls") == "true" else 1
+        nohls = int(not defines.ADDON.getSettingBool("proxy_hls"))
         try:
             params = dict(
                 session=self.ttv_session,
@@ -94,22 +92,18 @@ class Channel(TChannel):
                 return
 
             if jdata['source'].endswith('.m3u8'):
-                pd = xbmcgui.DialogProgress()
-                pd.create('Getting source...')
-                for t in range(5):
-                    if pd.iscanceled() or defines.isCancel():
-                        break
-                    r = defines.request(jdata['source'], session=_sess, trys=1)
-                    if r.ok:
-                        srcs = [s for s in r.text.splitlines() if s.startswith('http') and 'errors' not in s]
-                        if len(srcs) > 2:
+                with defines.progress_dialog('Ожидание источника канала.') as pd:
+                    for t in range(5):
+                        if pd.iscanceled() or defines.isCancel():
                             break
-                    else:
-                        break
-
-                    defines.monitor.waitForAbort(5)
-                    pd.update(20*(t+1))
-                pd.close()
+                        r = defines.request(jdata['source'], session=_sess, trys=1)
+                        if r.ok:
+                            srcs = [s for s in r.text.splitlines() if s.startswith('http') and 'errors' not in s]
+                            if len(srcs) > 2:
+                                break
+                        for k in range(5):
+                            defines.monitor.waitForAbort(1)
+                            pd.update(4 * (5 * t + k + 1))
 
             return jdata['source']
         except Exception as e:
@@ -212,7 +206,6 @@ class Channels(TChannels):
             return next((g.get("name") for g in categories if g.get('id') == chid), None)
 
     def update_channels(self):
-        TChannels.update_channels(self)
         self._initTTV()
         jdata = {}
         try:
