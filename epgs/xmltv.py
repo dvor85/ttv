@@ -96,17 +96,19 @@ class XMLTV(EPGTV):
         if chid is None:
             return
         ctime = datetime.datetime.now()
-        offset = round((ctime - datetime.datetime.utcnow()).total_seconds() / 3600) if epg_offset is None else epg_offset
+        offset = round((ctime - datetime.datetime.utcnow()).total_seconds() / 3600) - 3
+        if epg_offset is not None:
+            offset -= epg_offset
         for programme in self.xmltv_root.iter('programme'):
             if programme.get('channel') == chid:
                 ep = {}
 
                 bt = programme.get('start').split()
-                bt = strptime(bt[0], "%Y%m%d%H%M%S") + datetime.timedelta(hours=-3 + offset)
+                bt = strptime(bt[0], "%Y%m%d%H%M%S") + datetime.timedelta(hours=offset)
                 ep['btime'] = time.mktime(bt.timetuple())
 
                 et = programme.get('stop').split()
-                et = strptime(et[0], "%Y%m%d%H%M%S") + datetime.timedelta(hours=-3 + offset)
+                et = strptime(et[0], "%Y%m%d%H%M%S") + datetime.timedelta(hours=offset)
                 ep['etime'] = time.mktime(et.timetuple())
 
                 ep['name'] = programme.iter('title').next().text

@@ -128,7 +128,10 @@ class MAILTV(EPGTV):
         if chid is None:  # or chid not in self.availableChannels["availableChannelsIds"]:
             return
         ctime = datetime.datetime.now()
-        offset = round((ctime - datetime.datetime.utcnow()).total_seconds() / 3600) if epg_offset is None else epg_offset
+        offset = round((ctime - datetime.datetime.utcnow()).total_seconds() / 3600) - 3
+        if epg_offset is not None:
+            offset -= epg_offset
+#         log.d(f"offset {chid} = {offset}")
         bt = None
         ep = None
         for p in self.get_jdata().values():
@@ -138,7 +141,7 @@ class MAILTV(EPGTV):
 
                         bt = list(map(int, evt['start'].split(':')))
                         bt = datetime.datetime.fromordinal(
-                            (ctime.date().toordinal())) + datetime.timedelta(hours=bt[0], minutes=bt[1]) + datetime.timedelta(hours=-3 + offset)
+                            (ctime.date().toordinal())) + datetime.timedelta(hours=bt[0], minutes=bt[1]) + datetime.timedelta(hours=offset)
                         if ep is not None:
                             ep['etime'] = time.mktime(bt.timetuple())
                         ep = {}

@@ -167,14 +167,17 @@ class TChannel(UserDict):
     def title(self):
         if not self.get('title'):
             name_offset = epgtv.get_name_offset(self.name().lower())
-            ctime = datetime.datetime.now()
-            offset = round((ctime - datetime.datetime.utcnow()).total_seconds() / 3600)
+#             log.d(name_offset)
+#             ctime = datetime.datetime.now()
+#             offset = round((ctime - datetime.datetime.utcnow()).total_seconds() / 3600)
             self.data['title'] = name_offset[0].capitalize()
             chinfo = self.chinfo.get_channel_by_name(name_offset[0])
-            if chinfo:
-                self.data['title'] = chinfo['ch_title'].capitalize() if chinfo.get('ch_title') else chinfo['ch_name'].capitalize()
-            if name_offset[1] and name_offset[1] != offset and sign(name_offset[1]):
+            if chinfo and chinfo.get('ch_title'):
+                self.data['title'] = chinfo['ch_title'].capitalize()
+            if name_offset[1]  and sign(name_offset[1]):
                 self.data['title'] += " ({sign}{offset})".format(sign=sign(name_offset[1]), offset=name_offset[1])
+                log.d(self.get('title'))
+
         return self.get('title')
 
     def update_epglist(self):

@@ -92,17 +92,17 @@ class Channel(TChannel):
                 return
 
             if jdata['source'].endswith('.m3u8'):
-                with defines.progress_dialog('Ожидание источника канала.') as pd:
+                with defines.progress_dialog(f'Ожидание источника для канала: {self.title()}.') as pd:
                     for t in range(5):
                         if pd.iscanceled() or defines.isCancel():
                             break
-                        r = defines.request(jdata['source'], session=_sess, trys=1)
+                        r = defines.request(jdata['source'], session=_sess, trys=2, interval=2)
                         if r.ok:
                             srcs = [s for s in r.text.splitlines() if s.startswith('http') and 'errors' not in s]
                             if len(srcs) > 2:
                                 break
                         for k in range(5):
-                            defines.monitor.waitForAbort(1)
+                            defines.monitor.waitForAbort(1.2)
                             pd.update(4 * (5 * t + k + 1))
 
             return jdata['source']

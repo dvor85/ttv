@@ -3,6 +3,7 @@
 
 import datetime
 import threading
+from itertools import cycle
 
 import xbmcgui
 import xbmc
@@ -176,7 +177,7 @@ class MyPlayer(xbmcgui.WindowXML):
         try:
             self.title = f"{self.channel_number}. {channel.title()}"
             if len(channel.xurl()) > 0:
-                for src_name, player_url in channel.xurl():
+                for src_name, player_url in cycle(channel.xurl()):
                     for player, url_mode in player_url.items():
                         try:
                             url, mode = url_mode
@@ -212,14 +213,14 @@ class MyPlayer(xbmcgui.WindowXML):
                                                            thumbnailImage=logo,
                                                            url=url, mode=mode)
                                 except Exception as e:
-                                    log.e(f"Error play {url_mode}: {e}")
+                                    log.e(f"Error play {url}: {e}")
                                 finally:
                                     if self.manual_stop_requested or defines.isCancel():
                                         self.close()
                                         return
                                     if self.channel_stop_requested:
                                         return True
-                                log.d(f'End playing url "{url_mode}"')
+                                log.d(f'End playing url "{url}"')
                                 defines.monitor.waitForAbort(0.5)
 
                         except Exception as e:

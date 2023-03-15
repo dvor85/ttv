@@ -99,36 +99,32 @@ def isCancel():
 
 
 def request(url, method='get', params=None, trys=3, interval=0.01, session=None, proxies=None, **kwargs):
-    params_str = "?" + "&".join(f"{k}={v}" for k, v in params.items()) if params is not None and method == 'get' else ""
-    if proxies is None and ADDON.getSettingBool('pomoyka_proxy_for_all'):
-        proxies = PROXIES
-    log.d(f'try to get: {url}{params_str}')
-    log.d(f'proxies: {proxies}')
-    if not url:
-        return
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.99 Safari/537.36'}
-    if 'headers' in kwargs:
-        headers.update(kwargs['headers'])
-        del kwargs['headers']
-    kwargs.setdefault('allow_redirects', True)
-    kwargs.setdefault('timeout', 10.05)
+    if url:
+        params_str = "?" + "&".join(f"{k}={v}" for k, v in params.items()) if params is not None and method == 'get' else ""
+        if proxies is None and ADDON.getSettingBool('pomoyka_proxy_for_all'):
+            proxies = PROXIES
+        log.d(f'try to get: {url}{params_str}')
+        log.d(f'proxies: {proxies}')
 
-    t = 0
-    monitor.waitForAbort(interval)
-    while not isCancel():
-        t += 1
-        if 0 < trys < t:
-            raise Exception('Attempts are over')
-        try:
-            if session:
-                r = session.request(method, url, params=params, headers=headers, proxies=proxies, **kwargs)
-            else:
-                r = requests.request(method, url, params=params, headers=headers, proxies=proxies, **kwargs)
-            r.raise_for_status()
-            return r
-        except Exception as e:
-            log.error(f'Request error ({t}): {e}')
-            monitor.waitForAbort(interval)
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.99 Safari/537.36'}
+        if 'headers' in kwargs:
+            headers.update(kwargs['headers'])
+            del kwargs['headers']
+        kwargs.setdefault('allow_redirects', True)
+        kwargs.setdefault('timeout', 10.05)
+        for t in range(trys):
+            if not isCancel():
+                try:
+                    if session:
+                        r = session.request(method, url, params=params, headers=headers, proxies=proxies, **kwargs)
+                    else:
+                        r = requests.request(method, url, params=params, headers=headers, proxies=proxies, **kwargs)
+                    r.raise_for_status()
+                    return r
+                except Exception as e:
+                    log.error(f'Request error ({t+1}): {e}')
+                    monitor.waitForAbort(interval)
+        raise Exception('Attempts are over')
 
 
 def platform():

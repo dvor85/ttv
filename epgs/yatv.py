@@ -131,17 +131,19 @@ class YATV(EPGTV):
         if chid is None or chid not in self.availableChannels["availableChannelsIds"]:
             return
         ctime = datetime.datetime.now()
-        offset = round((ctime - datetime.datetime.utcnow()).total_seconds() / 3600) if epg_offset is None else epg_offset
+        offset = round((ctime - datetime.datetime.utcnow()).total_seconds() / 3600) - 3
+        if epg_offset is not None:
+            offset -= epg_offset
         for p in self.get_jdata().values():
             for sch in p['schedules']:
                 if sch['channel']['id'] == chid:
                     for evt in sch['events']:
                         ep = {}
                         bt = evt['start'].split('+')
-                        bt = strptime(bt[0]) + datetime.timedelta(hours=-3 + offset)
+                        bt = strptime(bt[0]) + datetime.timedelta(hours=offset)
                         ep['btime'] = time.mktime(bt.timetuple())
                         et = evt['finish'].split('+')
-                        et = strptime(et[0]) + datetime.timedelta(hours=-3 + offset)
+                        et = strptime(et[0]) + datetime.timedelta(hours=offset)
                         ep['etime'] = time.mktime(et.timetuple())
                         ep['name'] = evt['program']['title']
                         ep['desc'] = evt['program'].get('description', '')

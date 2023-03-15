@@ -38,8 +38,9 @@ class ChannelGroups(UserDict):
         self.chinfo = ChannelInfo.get_instance()
 
     def addGroup(self, groupname, title=None):
-        self[groupname] = {'title': title if title else groupname}
-        self.clearGroup(groupname)
+        if groupname not in self:
+            self[groupname] = {'title': title if title else groupname}
+            self.clearGroup(groupname)
 
     def clearGroup(self, groupname):
         self[groupname]['channels'] = []
@@ -64,9 +65,8 @@ class ChannelGroups(UserDict):
             grinfo = self.chinfo.get_group_by_name(groupname)
             if (ch.get('adult', 0) == 1 and defines.AGE < 2) or (grinfo and not grinfo['group_enable']):
                 return
-#             log.d(f"addChannel {groupname}/{ch.name()} from source: {src_name}")
-            if groupname not in self:
-                self.addGroup(groupname)
+#             log.d(f"addChannel {groupname}/{ch.title()} from source: {src_name}")
+            self.addGroup(groupname)
             src_index = channel_sources.index_by_name(src_name)
             c = next(self.find_channel_by_title(groupname, ch.title()), None)
             if c:
