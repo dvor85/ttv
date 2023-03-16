@@ -164,7 +164,7 @@ class LoopPlay(threading.Thread):
                         raise Exception(f"{msg}. Возможно не все каналы загрузились...")
                     if not sel_ch.enabled():
                         msg = "Канал отключен пользователем"
-                        xbmcgui.Dialog().notification(heading='Запрещено', message=msg)
+                        defines.showNotification(message=msg, icon=xbmcgui.NOTIFICATION_ERROR)
                         self.stop()
                         break
 
@@ -172,7 +172,7 @@ class LoopPlay(threading.Thread):
                     defines.ADDON.setSetting('cur_channel', self.parent.cur_channel)
                     # defence from loop
                     self.starttime = time.time()
-                    if not self.parent.player.Start(sel_ch):
+                    if not self.parent.player.Start(sel_ch, li=selItem):
                         break
                     self.parent.player.close()
                 if not defines.isCancel():
@@ -244,6 +244,7 @@ class WMainForm(xbmcgui.WindowXML):
     TIMER_SHOW_SCREEN = __name__ + ':show_screen_timer'
     TIMER_SEL_CHANNEL = __name__ + ':sel_channel_timer'
     TIMER_HIDE_WINDOW = __name__ + ':hide_window_timer'
+    TIMER_HIDE_STATUS = __name__ + ':hide_status_timer'
     TIMER_ADD_RECENT = 'add_recent_timer'
     THREAD_SET_LOGO = 'set_logo_thread'
 
@@ -670,7 +671,7 @@ class WMainForm(xbmcgui.WindowXML):
 
             self.hide_main_window(timeout=10)
 
-    def showStatus(self, text):
+    def showStatus(self, text, timeout=0):
         try:
             log.d(f"showStatus: {text}")
             if self.img_progress:
@@ -679,6 +680,10 @@ class WMainForm(xbmcgui.WindowXML):
                 self.txt_progress.setLabel(text)
         except Exception as e:
             log.w(f"showStatus error: {e}")
+        finally:
+            self.timers.stop(WMainForm.TIMER_HIDE_STATUS)
+            if timeout:
+                self.timers.start(WMainForm.TIMER_HIDE_STATUS, threading.Timer(timeout, self.hideStatus))
 
     def hideStatus(self):
         try:

@@ -166,7 +166,7 @@ class MAILTV(EPGTV):
                 if 'tv_event' in j:
                     info['desc'] = _spec_re.sub(' ', _tag_re.sub('', j['tv_event'].get('descr', '')))
                     info['screens'] = [j['tv_event'].get('sm_image_url', ''),
-                                       j['tv_event']['channel'].get('pic_url_64', '')]
+                                       j['tv_event']['channel'].get('pic_url_64', j['tv_event']['channel'].get('pic_url', ''))]
         return info
 
     def get_id_by_name(self, name):
@@ -193,7 +193,7 @@ class MAILTV(EPGTV):
         for p in self.get_jdata().values():
             for sch in p['schedule']:
                 if sch['channel']['id'] == chid:
-                    return sch['channel'].get('pic_url', '')
+                    return sch['channel'].get('pic_url_64', sch['channel'].get('pic_url', ''))
         return ''
 
 

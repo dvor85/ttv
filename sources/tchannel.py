@@ -5,7 +5,6 @@ import datetime
 import time
 from pathlib import Path
 from collections import UserDict
-
 import defines
 import logger
 from epgs import epgtv
@@ -132,31 +131,28 @@ class TChannel(UserDict):
 
     def logo(self, session=None):
         f_logo = Path(self.logo_path, f"{self.title().lower()}.png")
-        logo_url = None
-        epg = None
         if f_logo.exists():
             self.data['logo'] = str(f_logo)
-            return str(f_logo)
-        if not self.get('logo'):
+        elif not self.get('logo'):
             epg = Epg().link
             if epg is not None:
-                logo_url = epg.get_logo_by_name(self.name())
-        elif '://' in self.get('logo'):
-            logo_url = self.get('logo')
+                self.data['logo'] = epg.get_logo_by_name(self.name())
+#         elif '://' in self.get('logo'):
+#             logo_url = self.get('logo')
 
-        try:
-            if logo_url:
-                _sess = epg.get_sess() if epg else session
-                r = defines.request(logo_url, session=_sess)
-                if r.ok > 0:
-                    #                     with open(utils.fs_str(str(f_logo)), mode='wb') as fp:
-                    #                         fp.write(r.content)
-                    f_logo.write_bytes(r.content)
-                    self.data['logo'] = str(f_logo)
-        except Exception as e:
-            log.e(f'update_logo error {e}')
+#         try:
+#             if logo_url:
+#                 _sess = epg.get_sess() if epg else session
+#                 r = defines.request(logo_url, session=_sess)
+#                 if r.ok > 0:
+#                     #                     with open(utils.fs_str(str(f_logo)), mode='wb') as fp:
+#                     #                         fp.write(r.content)
+#                     f_logo.write_bytes(r.content)
+#                     self.data['logo'] = str(f_logo)
+#         except Exception as e:
+#             log.e(f'update_logo error {e}')
 
-        return str(self.get('logo'))
+        return self.get('logo', '')
 
     def id(self):
         return self.get('id', self.name())

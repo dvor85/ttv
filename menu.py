@@ -92,7 +92,7 @@ class MenuForm(xbmcgui.Dialog):
                     return self.chinfo.set_channel_info(name, group_id=grid)
 
     def rename_ch_title(self, name):
-        title = self.input('Введите новое название')
+        title = self.input('Введите новое название', defaultt=name)
         if title:
             return self.chinfo.set_channel_info(name, ch_title=title.lower())
 
@@ -115,7 +115,7 @@ class MenuForm(xbmcgui.Dialog):
             self.notification(heading='Сообщение', message='Нечего включать')
 
     def rename_group_title(self, name):
-        title = self.input('Введите новое название')
+        title = self.input('Введите новое название', defaultt=name)
         if title:
             return self.chinfo.set_group_info(name, group_title=title.lower())
 

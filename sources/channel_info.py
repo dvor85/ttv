@@ -128,20 +128,22 @@ class ChannelInfo():
     def get_groups(self, where=''):
         if where:
             where = f'WHERE {where}'
-        with self.con:
-            self.con.row_factory = sqlite3.Row
-            r = self.con.execute(f'SELECT rowid as id,* from groups {where}')
-            for i in r.fetchall():
-                yield dict(i)
+        with ChannelInfo._rlock:
+            with self.con:
+                self.con.row_factory = sqlite3.Row
+                r = self.con.execute(f'SELECT rowid as id,* from groups {where}')
+                for i in r.fetchall():
+                    yield dict(i)
 
     def get_channels(self, where=''):
         if where:
             where = f'WHERE {where}'
-        with self.con:
-            self.con.row_factory = sqlite3.Row
-            r = self.con.execute(f'SELECT * from channels LEFT JOIN groups on channels.group_id=groups.rowid {where}')
-            for i in r.fetchall():
-                yield dict(i)
+        with ChannelInfo._rlock:
+            with self.con:
+                self.con.row_factory = sqlite3.Row
+                r = self.con.execute(f'SELECT * from channels LEFT JOIN groups on channels.group_id=groups.rowid {where}')
+                for i in r.fetchall():
+                    yield dict(i)
 
 
 if __name__ == '__main__':

@@ -65,6 +65,24 @@ def progress_dialog(message):
         pd.close()
 
 
+@contextmanager
+def progress_dialog_bg(message):
+    pd = xbmcgui.DialogProgressBG()
+    pd.create(heading=ADDON.getAddonInfo('name'), message=message)
+    try:
+        yield pd
+    finally:
+        pd.close()
+
+
+def showNotification(msg, icon=ADDON_ICON, timeout=5000):
+    try:
+        xbmcgui.Dialog().notification(heading=ADDON.getAddonInfo('name'), message=msg, icon=icon, time=timeout)
+        log.d(msg)
+    except Exception as e:
+        log.e(f'showNotification error: "{e}"')
+
+
 class Timers(UserDict):
 
     def __init__(self, *args, **kwargs):
@@ -85,13 +103,6 @@ class Timers(UserDict):
             self.data[name].cancel()
             log.d(f'stop timer "{name}"')
             self.data[name] = None
-
-
-def showNotification(msg, icon=ADDON_ICON):
-    try:
-        xbmcgui.Dialog().notification(ADDON.getAddonInfo('name'), msg, icon)
-    except Exception as e:
-        log.e(f'showNotification error: "{e}"')
 
 
 def isCancel():
@@ -124,7 +135,7 @@ def request(url, method='get', params=None, trys=3, interval=0.01, session=None,
                 except Exception as e:
                     log.error(f'Request error ({t+1}): {e}')
                     monitor.waitForAbort(interval)
-        raise Exception('Attempts are over')
+        raise TimeoutError('Attempts are over')
 
 
 def platform():

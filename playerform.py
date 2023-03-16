@@ -45,6 +45,7 @@ class MyPlayer(xbmcgui.WindowXML):
         self.channel = None
         self.title = ''
         self.focusId = MyPlayer.CONTROL_WINDOW_ID
+        self.excluded_urls = set()
 
         self.timers = defines.Timers()
 
@@ -164,7 +165,7 @@ class MyPlayer(xbmcgui.WindowXML):
         if self._player:
             self.show()
 
-    def Start(self, channel):
+    def Start(self, channel, **kwargs):
         """
         Start play. Try all availible channel sources and players
         :channel: <dict> TChannel sources
@@ -183,7 +184,7 @@ class MyPlayer(xbmcgui.WindowXML):
                             url, mode = url_mode
                             if callable(url):
                                 url = url()
-                            log.d(f'Try to play with {player} player')
+                            log.d(f'Try to play {url} with {player} player')
                             logo = channel.logo()
                             if self.cicon:
                                 self.cicon.setImage(logo)
@@ -208,12 +209,22 @@ class MyPlayer(xbmcgui.WindowXML):
                                 self.parent.add_recent_channel(channel, 300)
                                 try:
                                     log.d(f'play "{url}" from source "{src_name}"')
-                                    self._player.play_item(index=0, title=self.title,
+                                    if url not in self.excluded_urls:
+                                        self._player.play_item(index=0, title=self.title,
                                                            iconImage=logo,
                                                            thumbnailImage=logo,
                                                            url=url, mode=mode)
+                                    else:
+                                        self.manualStop()
+
+#                                         chli.setLabel(f'[COLOR 0xFF555555]{chli.getLabel()}[/COLOR]')
+                                        raise ValueError(f'There is no source availible for "{channel.title()}" in "{src_name}"')
+                                except (TimeoutError, ValueError):
+                                    self.excluded_urls.add(url)
+                                    self.parent.showStatus(f'Канал "{channel.title()}" в источнике {src_name} не доступен', timeout=5)
                                 except Exception as e:
                                     log.e(f"Error play {url}: {e}")
+
                                 finally:
                                     if self.manual_stop_requested or defines.isCancel():
                                         self.close()
@@ -225,6 +236,7 @@ class MyPlayer(xbmcgui.WindowXML):
 
                         except Exception as e:
                             log.e(f"Error play with {player} player: {e}")
+
                         finally:
                             if self.manual_stop_requested or defines.isCancel():
                                 self.close()

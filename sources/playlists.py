@@ -52,17 +52,23 @@ class Channels(TChannels):
         else:
             lines = url.splitlines()
 
+        group_title = None
         for line in lines:
+#             log.d(line)
             if line.startswith("#"):
                 if line != "#EXTM3U":
                     seg = {k.replace('tvg-', ''): v for k, v in _re_m3u.findall(line)}
                     seg['title'] = line.rsplit(',', 1)[-1]
-
-                    if 'name' in seg:
+                    if seg.get('group-title'):
+                        group_title = seg['group-title']
+                    elif group_title:
+                        seg['group-title'] = group_title
+                    seg.setdefault('name', seg['title'])
+                    if seg.get('name') and '://' not in seg['title']:
                         ret.append(seg)
+#                     log.d(f"{seg}")
             elif ret:
                 ret[-1]['url'] = line
-                ret[-1].setdefault('name', Path(line).name)
         return ret
 
     def update_channels(self):
