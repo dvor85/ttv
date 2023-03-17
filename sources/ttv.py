@@ -30,11 +30,11 @@ class Channel(TChannel):
             #             return None
             if not isinstance(self.data.get(key), dict):
                 if self.use_ace:
-                    self.data[key] = {'ace': (self._get_ace_url, self.get('mode'))}
+                    self.data[key] = {'ace': {'url': self._get_ace_url, 'mode':self.get('mode')}}
                 if self.use_nox:
-                    self.data[key] = {'nox': (self._get_nox_url, self.get('mode'))}
+                    self.data[key] = {'nox': {'url':self._get_nox_url, 'mode':self.get('mode')}}
                 if self.use_tsproxy:
-                    self.data[key] = {'tsproxy': (self._get_tsproxy_url, self.get('mode'))}
+                    self.data[key] = {'tsproxy': {'url':self._get_tsproxy_url, 'mode':self.get('mode')}}
 
         return TChannel.__getitem__(self, key)
 
@@ -91,19 +91,19 @@ class Channel(TChannel):
             if not jdata["success"]:
                 return
 
-            if jdata['source'].endswith('.m3u8'):
-                with defines.progress_dialog(f'Ожидание источника для канала: {self.title()}.') as pd:
-                    for t in range(5):
-                        if pd.iscanceled() or defines.isCancel():
-                            break
-                        r = defines.request(jdata['source'], session=_sess, trys=2, interval=2)
-                        if r.ok:
-                            srcs = [s for s in r.text.splitlines() if s.startswith('http') and 'errors' not in s]
-                            if len(srcs) > 2:
-                                break
-                        for k in range(5):
-                            defines.monitor.waitForAbort(1.2)
-                            pd.update(4 * (5 * t + k + 1))
+#             if jdata['source'].endswith('.m3u8'):
+#                 with defines.progress_dialog(f'Ожидание источника для канала: {self.title()}.') as pd:
+#                     for t in range(5):
+#                         if pd.iscanceled() or defines.isCancel():
+#                             break
+#                         r = defines.request(jdata['source'], session=_sess, trys=2, interval=2)
+#                         if r.ok:
+#                             srcs = [s for s in r.text.splitlines() if s.startswith('http') and 'errors' not in s]
+#                             if len(srcs) > 2:
+#                                 break
+#                         for k in range(5):
+#                             defines.monitor.waitForAbort(1.2)
+#                             pd.update(4 * (5 * t + k + 1))
 
             return jdata['source']
         except Exception as e:
@@ -206,6 +206,7 @@ class Channels(TChannels):
             return next((g.get("name") for g in categories if g.get('id') == chid), None)
 
     def update_channels(self):
+        self.channels.clear()
         self._initTTV()
         jdata = {}
         try:

@@ -26,8 +26,6 @@ sys_platform = defines.platform()['os']
 class FlagsControl:
 
     def __init__(self):
-        self.manual_stopped = threading.Event()
-        self.switch_source = threading.Event()
         self.channel_stop = threading.Event()
 
     def clear(self):
@@ -38,14 +36,6 @@ class FlagsControl:
 
     def log_status(self):
         log.d(''.join([f"{k}: {f.is_set()}; " for k, f in self.__dict__.items()]))
-
-    def autoStop(self):
-        self.clear()
-        self.switch_source.set()
-
-    def manualStop(self):
-        self.clear()
-        self.manual_stopped.set()
 
     def channelStop(self):
         self.clear()
@@ -89,11 +79,11 @@ class TPlayer(xbmc.Player):
 
     def onPlayBackEnded(self):
         log('onPlayBackEnded')
-        self.autoStop()
+        self.stop()
 
     def onPlayBackError(self):
         log('onPlayBackError')
-        self.autoStop()
+        self.stop()
 
     def onAVStarted(self):
         log('onAVStarted')
@@ -125,12 +115,12 @@ class TPlayer(xbmc.Player):
         if not self.link:
             self.parent.showStatus('Нечего проигрывать')
             return
-        with defines.progress_dialog_bg(f"Проверка доступности источника для канала {title}") as pd:
-            r = defines.request(self.link, method='HEAD', trys=1, timeout=3)
-            pd.update(100)
-            if not r.ok:
-                self.onPlayBackError()
-                return
+#         with defines.progress_dialog_bg(f"Проверка доступности источника для канала {title}") as pd:
+#             r = defines.request(self.link, method='HEAD', trys=1, timeout=3)
+#             pd.update(100)
+#             if not r.ok:
+#                 self.onPlayBackError()
+#                 return
 
         self.play(self.link, li, windowed=True)
         log.debug(f'play_item {title}')
@@ -149,16 +139,6 @@ class TPlayer(xbmc.Player):
         Flags.log_status()
         xbmc.Player.stop(self)
 
-    def autoStop(self):
-        log('autoStop')
-        Flags.autoStop()
-        self.stop()
-
-    def manualStop(self):
-        log('manualStop')
-        Flags.manualStop()
-        self.stop()
-
     def channelStop(self):
         log('channelStop')
         Flags.channelStop()
@@ -172,7 +152,7 @@ class AcePlayer(TPlayer):
     MODE_PID = 'PID'
     MODE_NONE = None
 
-    TIMEOUT_FREEZE = utils.str2num(defines.ADDON.getSetting('freeze_timeout'), 20)
+    TIMEOUT_FREEZE = defines.ADDON.getSettingInt('freeze_timeout')
     ACE_PATH = Path(defines.ADDON.getSetting('ace_path'))
 
     _instance = None
@@ -439,8 +419,8 @@ class AcePlayer(TPlayer):
                     except Exception as e:
                         log.e(f'_wait_message error: {e}')
                         self.waiting.msg = None
-                        if not Flags.manual_stopped.is_set():
-                            self.autoStop()
+                        if not Flags.channel_stop.is_set():
+                            self.stop()
                         return
 
             else:
@@ -477,8 +457,8 @@ class AcePlayer(TPlayer):
             except Exception as e:
                 log.e(f'_wait_message error: {e}')
                 self.waiting.msg = None
-                if not Flags.manual_stopped.is_set():
-                    self.autoStop()
+                if not Flags.channel_stop.is_set():
+                    self.stop()
 
     def _createThread(self):
         self.sock_thr = SockThread(self.sock)
@@ -537,7 +517,7 @@ class AcePlayer(TPlayer):
 
                         if time.time() - self.msg_params['last_update'] >= AcePlayer.TIMEOUT_FREEZE:
                             log.w('AceEngine is freeze')
-                            self.autoStop()
+                            self.stop()
 
                     elif _descr[0] == 'check':
                         log.d(f'_stateHandler: Проверка {_descr[1]}')
@@ -555,14 +535,14 @@ class AcePlayer(TPlayer):
                         if time.time() - self.msg_params['last_update'] >= AcePlayer.TIMEOUT_FREEZE:
                             self.parent.player.showStatus(f"Пребуферизация {self.msg_params['buf']}")
                             log.w('AceEngine is freeze')
-                            self.autoStop()
+                            self.stop()
             #                     elif _descr[0] == 'dl':
             #                         if _descr[8] != self.msg_params.get('downloaded', 0):
             #                             self.msg_params['last_update'] = state.getTime()
             #                             self.msg_params['downloaded'] = _descr[8]
             #                         if time.time() - self.msg_params['last_update'] >= 10:
             #                             log.w('AceEngine is freeze')
-            #                             self.autoStop()
+            #                             self.switchSource()
 
             #                         self.parent.showInfoStatus('Buf:%s DL:%s UL:%s' % (_descr[1], _descr[5], _descr[7]))
             #                     else:

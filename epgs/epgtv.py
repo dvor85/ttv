@@ -66,14 +66,14 @@ class EPGTV:
         raise NotImplementedError
 
     def get_epg_by_name(self, name):
-        name_offset = get_name_offset(name)
+        name_offset = get_name_offset(name.lower())
         return self.get_epg_by_id(self.get_id_by_name(name_offset[0]), name_offset[1])
 
     def get_logo_by_id(self, chid):
         return ''
 
     def get_logo_by_name(self, name):
-        name_offset = get_name_offset(name)
+        name_offset = get_name_offset(name.lower())
         return self.get_logo_by_id(self.get_id_by_name(name_offset[0]))
 
 

@@ -147,42 +147,36 @@ class LoopPlay(threading.Thread):
 
     def stop(self):
         log.d(f"stop from {self.name}")
-        self.active = False
         self.parent.player.channelStop()
 
     def run(self):
-        self.active = True
-        while self.active and not defines.isCancel() and (time.time() - self.starttime) > 60:
-            try:
-                selItem = self.parent.list.getListItem(self.parent.selitem_id)
-                if selItem and selItem.getProperty('type') == "channel":
-                    self.parent.cur_channel = selItem.getProperty('title')
-                    sel_ch = self.parent.get_channel_by_title(self.parent.cur_channel)
-                    if not sel_ch:
-                        msg = "Канал временно не доступен"
-                        self.parent.showStatus(msg)
-                        raise Exception(f"{msg}. Возможно не все каналы загрузились...")
-                    if not sel_ch.enabled():
-                        msg = "Канал отключен пользователем"
-                        defines.showNotification(message=msg, icon=xbmcgui.NOTIFICATION_ERROR)
-                        self.stop()
-                        break
+        try:
+            selItem = self.parent.list.getListItem(self.parent.selitem_id)
+            if selItem and selItem.getProperty('type') == "channel":
+                self.parent.cur_channel = selItem.getProperty('title')
+                sel_ch = self.parent.get_channel_by_title(self.parent.cur_channel)
+                if not sel_ch:
+                    msg = "Канал временно не доступен"
+                    self.parent.showStatus(msg)
+                    raise Exception(f"{msg}. Возможно не все каналы загрузились...")
+                if not sel_ch.enabled():
+                    msg = "Канал отключен пользователем"
+                    defines.showNotification(message=msg, icon=xbmcgui.NOTIFICATION_ERROR)
+                    raise Exception(f"Канал {sel_ch.title()} отключен пользователем")
 
-                    defines.ADDON.setSetting('cur_category', self.parent.cur_category)
-                    defines.ADDON.setSetting('cur_channel', self.parent.cur_channel)
-                    # defence from loop
-                    self.starttime = time.time()
-                    if not self.parent.player.Start(sel_ch, li=selItem):
-                        break
-                    self.parent.player.close()
-                if not defines.isCancel():
-                    defines.monitor.waitForAbort(0.223)
-                    self.parent.select_channel()
+                defines.ADDON.setSetting('cur_category', self.parent.cur_category)
+                defines.ADDON.setSetting('cur_channel', self.parent.cur_channel)
+                # defence from loop
+                self.starttime = time.time()
+                self.parent.player.Start(sel_ch, chli=selItem)
+            if not defines.isCancel():
+                self.parent.select_channel()
 
-            except Exception as e:
-                log.e(f'LoopPlay error: {e}')
-            finally:
-                defines.monitor.waitForAbort(1)
+        except Exception as e:
+            log.e(f'LoopPlay error: {e}')
+            self.stop()
+        finally:
+            defines.monitor.waitForAbort(1)
 
         self.parent.player.close()
         #         self.parent.show()
@@ -341,7 +335,7 @@ class WMainForm(xbmcgui.WindowXML):
         if len(args) > 0:
             chtitle = args[0]
         else:
-            chtitle = xbmcgui.Dialog().input(heading='введите название канала')
+            chtitle = xbmcgui.Dialog().input(heading='Введите название канала')
         log.d(chtitle)
         if chtitle:
             for gr in self.channel_groups.find_group_by_chtitle(chtitle):
@@ -457,7 +451,7 @@ class WMainForm(xbmcgui.WindowXML):
         self.showStatus("Получение списка каналов")
 
         for groupname in (WMainForm.SEARCH_GROUP, WMainForm.FAVOURITE_GROUP):
-            title = '[COLOR FFFFFF00][B]' + groupname + '[/B][/COLOR]'
+            title = f'[COLOR FFFFFF00][B]{groupname}[/B][/COLOR]'
             self.channel_groups.addGroup(groupname, title)
 
         thrs = {'favourite': defines.MyThread(self.loadFavourites),
@@ -565,7 +559,7 @@ class WMainForm(xbmcgui.WindowXML):
         log.d(f'onClick {controlID}')
         if controlID == 200:
             self.setFocusId(WMainForm.CONTROL_LIST)
-            self.player.manualStop()
+            self.player.channelStop()
         elif controlID == WMainForm.CONTROL_LIST:
             selItem = self.list.getSelectedItem()
 
@@ -647,7 +641,7 @@ class WMainForm(xbmcgui.WindowXML):
             log.d('ACTION CLOSE FORM')
             self.close()
         elif action in (xbmcgui.ACTION_STOP, xbmcgui.ACTION_PAUSE):
-            self.player.manualStop()
+            self.player.channelStop()
 
         if not defines.isCancel():
             if action.getButtonCode() == 61513:
@@ -730,6 +724,8 @@ class WMainForm(xbmcgui.WindowXML):
                         else:
                             cmds.append(MenuForm.CMD_SET_TRUE_PIN)
 
+                    if not ch.is_availible():
+                        chli.setLabel(f'[COLOR 0xFF333333]{chli.getLabel()}[/COLOR]')
                     if not ch.enabled():
                         chli.setLabel(f'[COLOR 0xFF555555]{chli.getLabel()}[/COLOR]')
                         cmds.append(MenuForm.CMD_ENABLE_CHANNEL)

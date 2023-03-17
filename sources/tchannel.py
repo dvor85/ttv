@@ -32,7 +32,7 @@ class MChannel(UserDict):
                 for u in pu[1].values():
                     if ch['url']:
                         for cu in ch['url'].values():
-                            if isinstance(u[0], str) and isinstance(cu[0], str) and u[0] == cu[0]:
+                            if isinstance(u['url'], str) and isinstance(cu['url'], str) and u['url'] == cu['url']:
                                 return
         if not isinstance(ch, self.__class__):
             while index in self.data:
@@ -43,9 +43,12 @@ class MChannel(UserDict):
 
     def xurl(self):
         """
-        [src_name, {player: (url, mode)}]
+        [src_name, {player: {url, mode}}]
         """
         return [(ch.src(), ch['url']) for ch in self.data.values() if ch['url']]
+
+    def is_availible(self):
+        return any(ch.is_availible() for ch in self.data.values())
 
     def enabled(self):
         return any(ch.enabled() for ch in self.data.values())
@@ -54,13 +57,13 @@ class MChannel(UserDict):
         return next((ch.group() for ch in self.data.values() if ch.group()), None)
 
     def logo(self):
-        return next((ch.logo() for ch in self.data.values() if ch.logo()), None)
+        return next((ch.logo() for ch in self.data.values() if ch.logo()), '')
 
     def id(self):
         return next((ch.id() for ch in self.data.values() if ch.id()), None)
 
     def name(self):
-        return next((ch.name() for ch in self.data.values() if ch.name()), None)
+        return next((ch.name() for ch in self.data.values() if ch.name()), '')
 
     def pin(self):
         return next((ch.get('pin') for ch in self.data.values() if ch.get('pin')), None)
@@ -101,9 +104,12 @@ class TChannel(UserDict):
     def __getitem__(self, key):
         if key == 'url':
             if not isinstance(self.data.get(key), dict):
-                self.data[key] = {self.player(): (self.data.get(key), self.get('mode', 'PID'))}
+                self.data[key] = {self.player(): {'url': self.data.get(key), 'mode': self.get('mode', 'PID')}}
 
         return UserDict.__getitem__(self, key)
+
+    def is_availible(self):
+        return any(url_mode.get('availible', True) for url_mode in self['url'].values())
 
     def _get_group_title(self, groupname):
 #         log.d(f"_get_group_title {groupname}")
@@ -113,13 +119,13 @@ class TChannel(UserDict):
         return groupname
 
     def enabled(self):
-        name = epgtv.get_name_offset(self.name().lower())[0]
-        chinfo = self.chinfo.get_channel_by_name(name.lower())
+#         name = epgtv.get_name_offset(self.title().lower())[0]
+        chinfo = self.chinfo.get_channel_by_name(self.name().lower())
         return chinfo['ch_enable'] if chinfo else True
 
     def group(self):
         if not self.get('groupname'):
-            name = epgtv.get_name_offset(self.name().lower())[0]
+            name = epgtv.get_name_offset(self.title().lower())[0]
             chinfo = self.chinfo.get_channel_by_name(name)
             if chinfo and chinfo['group_name']:
                 gr = chinfo['group_title'] if chinfo.get('group_title') else chinfo['group_name']
@@ -130,29 +136,32 @@ class TChannel(UserDict):
         return self.get('groupname')
 
     def logo(self, session=None):
-        f_logo = Path(self.logo_path, f"{self.title().lower()}.png")
+        name = epgtv.get_name_offset(self.title().lower())[0]
+        f_logo = Path(self.logo_path, f"{name}.png")
+        logo_url = None
+        epg = None
         if f_logo.exists():
             self.data['logo'] = str(f_logo)
-        elif not self.get('logo'):
+            return str(f_logo)
+        if not self.get('logo'):
             epg = Epg().link
             if epg is not None:
-                self.data['logo'] = epg.get_logo_by_name(self.name())
-#         elif '://' in self.get('logo'):
-#             logo_url = self.get('logo')
+                logo_url = epg.get_logo_by_name(self.title())
+        elif '://' in self.get('logo'):
+            logo_url = self.get('logo')
 
-#         try:
-#             if logo_url:
-#                 _sess = epg.get_sess() if epg else session
-#                 r = defines.request(logo_url, session=_sess)
-#                 if r.ok > 0:
-#                     #                     with open(utils.fs_str(str(f_logo)), mode='wb') as fp:
-#                     #                         fp.write(r.content)
-#                     f_logo.write_bytes(r.content)
-#                     self.data['logo'] = str(f_logo)
-#         except Exception as e:
-#             log.e(f'update_logo error {e}')
+        try:
+            if logo_url:
+                _sess = epg.get_sess() if epg else session
+                r = defines.request(logo_url, session=_sess)
+                if r.ok:
+                    f_logo.write_bytes(r.content)
+                    self.data['logo'] = str(f_logo)
+                    return str(f_logo)
+        except Exception as e:
+            log.e(f'update_logo error {e}')
 
-        return self.get('logo', '')
+        return str(self.get('logo'))
 
     def id(self):
         return self.get('id', self.name())
@@ -163,16 +172,12 @@ class TChannel(UserDict):
     def title(self):
         if not self.get('title'):
             name_offset = epgtv.get_name_offset(self.name().lower())
-#             log.d(name_offset)
-#             ctime = datetime.datetime.now()
-#             offset = round((ctime - datetime.datetime.utcnow()).total_seconds() / 3600)
             self.data['title'] = name_offset[0].capitalize()
             chinfo = self.chinfo.get_channel_by_name(name_offset[0])
             if chinfo and chinfo.get('ch_title'):
                 self.data['title'] = chinfo['ch_title'].capitalize()
             if name_offset[1]  and sign(name_offset[1]):
                 self.data['title'] += " ({sign}{offset})".format(sign=sign(name_offset[1]), offset=name_offset[1])
-                log.d(self.get('title'))
 
         return self.get('title')
 
@@ -180,7 +185,7 @@ class TChannel(UserDict):
         try:
             epg = Epg().link
             if not self.get('epg') and epg is not None:
-                self.data['epg'] = list(epg.get_epg_by_name(self.name()))
+                self.data['epg'] = list(epg.get_epg_by_name(self.title()))
         except Exception as e:
             log.e(f'update_epglist error {e}')
 

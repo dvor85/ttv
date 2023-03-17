@@ -6,6 +6,7 @@ import favdb
 import logger
 import defines
 from sources.channel_info import ChannelInfo
+from epgs.epgtv import get_name_offset
 
 log = logger.Logger(__name__)
 
@@ -79,6 +80,7 @@ class MenuForm(xbmcgui.Dialog):
             self.result = lst[ret]['action'](self.li.getProperty("name").lower())
 
     def move_to_group(self, name):
+        name = get_name_offset(self.li.getProperty("title").lower())[0]
         group_titles = [gr['group_title'].capitalize() if gr.get('group_title') else gr['group_name'].capitalize() for gr in self.chinfo.get_groups()]
         samples = list(set(group_titles).union(self.parent.channel_groups.getGroups()).difference(
             (self.parent.SEARCH_GROUP, self.parent.FAVOURITE_GROUP))) + ['Введите свое название']
@@ -92,7 +94,7 @@ class MenuForm(xbmcgui.Dialog):
                     return self.chinfo.set_channel_info(name, group_id=grid)
 
     def rename_ch_title(self, name):
-        title = self.input('Введите новое название', defaultt=name)
+        title = self.input('Введите новое название', defaultt=self.li.getProperty("title").lower())
         if title:
             return self.chinfo.set_channel_info(name, ch_title=title.lower())
 

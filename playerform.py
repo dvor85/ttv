@@ -4,7 +4,7 @@
 import datetime
 import threading
 from itertools import cycle
-
+from pathlib import Path
 import xbmcgui
 import xbmc
 
@@ -45,7 +45,6 @@ class MyPlayer(xbmcgui.WindowXML):
         self.channel = None
         self.title = ''
         self.focusId = MyPlayer.CONTROL_WINDOW_ID
-        self.excluded_urls = set()
 
         self.timers = defines.Timers()
 
@@ -86,14 +85,6 @@ class MyPlayer(xbmcgui.WindowXML):
 
         self.control_window.setVisible(True)
         self.hide_control_window(timeout=5)
-
-    @property
-    def manual_stop_requested(self):
-        return players.Flags.manual_stopped.is_set()
-
-    @property
-    def switch_source_requested(self):
-        return players.Flags.switch_source.is_set()
 
     @property
     def channel_stop_requested(self):
@@ -169,24 +160,29 @@ class MyPlayer(xbmcgui.WindowXML):
         """
         Start play. Try all availible channel sources and players
         :channel: <dict> TChannel sources
-        :return: If channel stop requested, then return True, else None
+        :return: If channel stop requested, then return
         """
 
         log("Start play")
         self.channel = channel
         self.channel_number = self.parent.selitem_id
+        chli = kwargs.get('chli')
+        errors = 0
+        players.Flags.clear()
         try:
             self.title = f"{self.channel_number}. {channel.title()}"
             if len(channel.xurl()) > 0:
                 for src_name, player_url in cycle(channel.xurl()):
                     for player, url_mode in player_url.items():
                         try:
-                            url, mode = url_mode
+                            url = url_mode['url']
                             if callable(url):
                                 url = url()
+
                             log.d(f'Try to play {url} with {player} player')
                             logo = channel.logo()
                             if self.cicon:
+                                log.d(f"logo={logo}")
                                 self.cicon.setImage(logo)
                             if player == 'ace':
                                 if self._player and self._player.last_error:
@@ -209,48 +205,84 @@ class MyPlayer(xbmcgui.WindowXML):
                                 self.parent.add_recent_channel(channel, 300)
                                 try:
                                     log.d(f'play "{url}" from source "{src_name}"')
-                                    if url not in self.excluded_urls:
+                                    if url_mode.get('availible', True):
+                                        with defines.progress_dialog_bg(f"Проверка доступности источника для канала {channel.title()}") as pd:
+                                            r = defines.request(url, method='HEAD', trys=1, timeout=3)
+                                            pd.update(100)
+                                            if not r.ok:
+                                                raise ValueError(f'There is no source availible for "{channel.title()}" in "{src_name}"')
+                                        if url.endswith('.m3u8'):
+                                            with defines.progress_dialog(f'Ожидание источника для канала: {channel.title()}.') as pd:
+                                                srcs = None
+                                                for t in range(5):
+                                                    r = defines.request(url, trys=2, interval=2)
+                                                    if r.ok:
+                                                        srcs = [s for s in r.text.splitlines() if s and not s.startswith('#') and \
+                                                                not any(ex in s for ex in ('errors', 'promo', 'block'))]
+
+                                                        if srcs:
+                                                            if src_name not in ('ttv'):
+                                                                break
+#                                                             else:
+#                                                                 url = Path(defines.CACHE_PATH, 'ttv.m3u8')
+#                                                                 url.write_text(r.text)
+#                                                                 url = str(url)
+                                                            elif len(srcs) > 2:
+                                                                break
+
+                                                    for k in range(5):
+                                                        if pd.iscanceled() or defines.isCancel():
+                                                            self.channelStop()
+                                                            raise Exception('Waiting for source has been canceled')
+                                                        defines.monitor.waitForAbort(1.2)
+                                                        pd.update(4 * (5 * t + k + 1))
+                                                log.d(f"sources={srcs}")
+                                                if not srcs:
+                                                    raise ValueError(f'There is no source availible for "{channel.title()}" in "{src_name}"')
+
                                         self._player.play_item(index=0, title=self.title,
                                                            iconImage=logo,
                                                            thumbnailImage=logo,
-                                                           url=url, mode=mode)
-                                    else:
-                                        self.manualStop()
+                                                           url=url, mode=url_mode['mode'])
+                                    elif not channel.is_availible() or errors > 10:
+                                        if chli:
+                                            chli.setLabel(f'[COLOR 0xFF333333]{chli.getLabel()}[/COLOR]')
+                                        self.channelStop()
 
-#                                         chli.setLabel(f'[COLOR 0xFF555555]{chli.getLabel()}[/COLOR]')
                                         raise ValueError(f'There is no source availible for "{channel.title()}" in "{src_name}"')
                                 except (TimeoutError, ValueError):
-                                    self.excluded_urls.add(url)
+                                    url_mode['availible'] = False
                                     self.parent.showStatus(f'Канал "{channel.title()}" в источнике {src_name} не доступен', timeout=5)
                                 except Exception as e:
-                                    log.e(f"Error play {url}: {e}")
+                                    errors += 1
+                                    log.e(f"Error {errors} play {url}: {e}")
+                                    defines.monitor.waitForAbort(1)
 
                                 finally:
-                                    if self.manual_stop_requested or defines.isCancel():
+                                    if self.channel_stop_requested or defines.isCancel() or errors > 10:
                                         self.close()
                                         return
-                                    if self.channel_stop_requested:
-                                        return True
                                 log.d(f'End playing url "{url}"')
-                                defines.monitor.waitForAbort(0.5)
+                                defines.monitor.waitForAbort(1)
 
                         except Exception as e:
-                            log.e(f"Error play with {player} player: {e}")
+                            errors += 1
+                            log.e(f"Error {errors} play with {player} player: {e}")
+                            defines.monitor.waitForAbort(1)
 
                         finally:
-                            if self.manual_stop_requested or defines.isCancel():
+                            if self.channel_stop_requested or defines.isCancel() or errors > 10:
                                 self.close()
                                 return
-                            if self.channel_stop_requested:
-                                return True
             else:
                 log.notice('Нечего проигрывать!')
-                self.manualStop()
+                self.channelStop()
 
         except Exception as e:
-            log.e(f'Start error: {e}')
+            errors += 1
+            log.e(f'Start error {errors}: {e}')
 
-        if self.manual_stop_requested or defines.isCancel():
+        if self.channel_stop_requested or defines.isCancel() or errors > 10:
             self.close()
             return
 
@@ -301,18 +333,6 @@ class MyPlayer(xbmcgui.WindowXML):
         except Exception as e:
             log.w(f"hideStatus error: {e}")
 
-    def autoStop(self):
-        if self._player:
-            self._player.autoStop()
-        else:
-            players.Flags.autoStop()
-
-    def manualStop(self):
-        if self._player:
-            self._player.manualStop()
-        else:
-            players.Flags.manualStop()
-
     def channelStop(self):
         if self._player:
             self._player.channelStop()
@@ -347,9 +367,9 @@ class MyPlayer(xbmcgui.WindowXML):
                 self.close()
 
         elif action in (xbmcgui.ACTION_NEXT_ITEM, xbmcgui.ACTION_PREV_ITEM):
-            self.autoStop()
+            self.Stop()
         elif action in (xbmcgui.ACTION_STOP, xbmcgui.ACTION_PAUSE):
-            self.manualStop()
+            self.channelStop()
 
         elif action in (
                 xbmcgui.ACTION_MOVE_UP, xbmcgui.ACTION_MOVE_DOWN, xbmcgui.ACTION_PAGE_UP, xbmcgui.ACTION_PAGE_DOWN):
@@ -394,10 +414,10 @@ class MyPlayer(xbmcgui.WindowXML):
 
     def onClick(self, controlID):
         if controlID == MyPlayer.CONTROL_BUTTON_STOP:
-            self.manualStop()
+            self.channelStop()
             self.close()
         elif controlID == MyPlayer.CONTROL_BUTTON_NEXT:
-            self.autoStop()
+            self.Stop()
 
     def close(self):
         for name in self.timers:

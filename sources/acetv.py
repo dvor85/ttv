@@ -42,6 +42,7 @@ class Channels(TChannels):
             json.dump(jdata, fp)
 
     def update_channels(self):
+        self.channels.clear()
         jdata = dict()
         try:
             jdata = self._load_jdata()

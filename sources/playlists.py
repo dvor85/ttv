@@ -18,7 +18,7 @@ class Channel(TChannel):
     def __init__(self, data={}):
         TChannel.__init__(self, data=data, src='playlists', player='tsp')
         self.data['cat'] = self.data.get('group-title')
-        self.data['title'] = _re_notprintable.sub('', self.data['title']).strip().capitalize()
+#         self.data['title'] = _re_notprintable.sub('', self.data['title']).strip().capitalize()
         self.data['name'] = _re_notprintable.sub('', self.data['name']).strip().capitalize()
 
 
@@ -58,20 +58,20 @@ class Channels(TChannels):
             if line.startswith("#"):
                 if line != "#EXTM3U":
                     seg = {k.replace('tvg-', ''): v for k, v in _re_m3u.findall(line)}
-                    seg['title'] = line.rsplit(',', 1)[-1]
+                    seg['name'] = line.rsplit(',', 1)[-1]
                     if seg.get('group-title'):
                         group_title = seg['group-title']
                     elif group_title:
                         seg['group-title'] = group_title
-                    seg.setdefault('name', seg['title'])
-                    if seg.get('name') and '://' not in seg['title']:
+                    if seg.get('name') and '://' not in seg['name']:
                         ret.append(seg)
 #                     log.d(f"{seg}")
-            elif ret:
-                ret[-1]['url'] = line
+            elif line.strip() and ret:
+                ret[-1]['url'] = line.strip()
         return ret
 
     def update_channels(self):
+        self.channels.clear()
         for url in self.urls:
             fn = Path(defines.CACHE_PATH, Path(url).name)
             data = {}
