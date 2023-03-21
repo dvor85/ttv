@@ -4,14 +4,16 @@
 import datetime
 import threading
 from itertools import cycle
-from pathlib import Path
 import xbmcgui
 import xbmc
+import re
+import requests
 
 import defines
 import logger
 import players
 import utils
+from epgs.epgtv import get_name_offset
 
 log = logger.Logger(__name__)
 
@@ -55,6 +57,7 @@ class MyPlayer(xbmcgui.WindowXML):
         self.swinfo = None
         self.cicon = None
         self.control_window = None
+        self.proxy_tv = {}
         self.visible = threading.Event()
 
     def onInit(self):
@@ -156,6 +159,21 @@ class MyPlayer(xbmcgui.WindowXML):
         if self._player:
             self.show()
 
+    def find_source_proxy_tv(self, name):
+        log.d(f"find_source_proxy_tv for {name}")
+        _re_name_url = re.compile(r'#EXTINF:.*?,(?P<name>.*?)\-.*\<br\>(?P<url>[\w\.\:/]+)\<br\>')
+        res = {}
+        params = {"udpxyaddr": f"ch:{name}"}
+        headers = {'Referer': 'https://proxytv.ru/', 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/109.0'}
+        with requests.Session() as sess:
+            defines.request('https://proxytv.ru/', session=sess, headers=headers)
+            r = defines.request('https://proxytv.ru/iptv/php/srch.php', method='post', session=sess, params=params, headers=headers)
+            if r.ok:
+                for n, u in _re_name_url.findall(r.text):
+                    if n.lower() == name:
+                        res.setdefault(n.lower(), []).append(u)
+        return res
+
     def Start(self, channel, **kwargs):
         """
         Start play. Try all availible channel sources and players
@@ -169,6 +187,7 @@ class MyPlayer(xbmcgui.WindowXML):
         chli = kwargs.get('chli')
         errors = 0
         players.Flags.clear()
+        title = get_name_offset(channel.title().lower())[0]
         try:
             self.title = f"{self.channel_number}. {channel.title()}"
             if len(channel.xurl()) > 0:
@@ -209,8 +228,14 @@ class MyPlayer(xbmcgui.WindowXML):
                                         with defines.progress_dialog_bg(f"Проверка доступности источника для канала {channel.title()}") as pd:
                                             r = defines.request(url, method='HEAD', trys=1, timeout=3)
                                             pd.update(100)
-                                            if not r.ok:
-                                                raise ValueError(f'There is no source availible for "{channel.title()}" in "{src_name}"')
+                                            if not (r and r.ok):
+                                                if title not in self.proxy_tv:
+                                                    self.proxy_tv.update(self.find_source_proxy_tv(title))
+                                                    log.d(self.proxy_tv)
+                                                if not self.proxy_tv.get(title):
+                                                    raise ValueError(f'There is no source availible for "{channel.title()}" in "{src_name}"')
+                                                else:
+                                                    url = self.proxy_tv[title].pop(0)
                                         if url.endswith('.m3u8'):
                                             with defines.progress_dialog(f'Ожидание источника для канала: {channel.title()}.') as pd:
                                                 srcs = None
@@ -223,10 +248,6 @@ class MyPlayer(xbmcgui.WindowXML):
                                                         if srcs:
                                                             if src_name not in ('ttv'):
                                                                 break
-#                                                             else:
-#                                                                 url = Path(defines.CACHE_PATH, 'ttv.m3u8')
-#                                                                 url.write_text(r.text)
-#                                                                 url = str(url)
                                                             elif len(srcs) > 2:
                                                                 break
 

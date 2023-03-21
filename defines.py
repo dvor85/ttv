@@ -135,7 +135,7 @@ def request(url, method='get', params=None, trys=3, interval=0.01, session=None,
                 except Exception as e:
                     log.error(f'Request error ({t+1}): {e}')
                     monitor.waitForAbort(interval)
-        raise TimeoutError('Attempts are over')
+#         raise TimeoutError('Attempts are over')
 
 
 def platform():
