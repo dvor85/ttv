@@ -97,7 +97,7 @@ class Channel(TChannel):
 #                         if pd.iscanceled() or defines.isCancel():
 #                             break
 #                         r = defines.request(jdata['source'], session=_sess, trys=2, interval=2)
-#                         if r.ok:
+#                         if (r and r.ok):
 #                             srcs = [s for s in r.text.splitlines() if s.startswith('http') and 'errors' not in s]
 #                             if len(srcs) > 2:
 #                                 break
@@ -140,7 +140,7 @@ class Channel(TChannel):
             count=2,
             typeresult='json')
         r = defines.request(f'http://api.{_server}/v3/translation_screen.php', params=params, session=_sess, trys=1)
-        if r.ok:
+        if (r and r.ok):
             jdata = r.json()
             if str2int(jdata.get('success')) != 0 and not jdata.get('error'):
                 info['screens'] = [x['filename'].replace('web1.1ttv.org', f'shot.{_server}') for x in jdata['screens']]
@@ -218,7 +218,7 @@ class Channels(TChannels):
                         type='channel',
                         typeresult='json')
                     r = defines.request(f'http://api.{_server}/v3/translation_list.php', params=params, session=_sess, trys=1)
-                    if r.ok:
+                    if (r and r.ok):
                         jdata = r.json()
 
                         if str2int(jdata.get('success')) == 0:

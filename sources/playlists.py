@@ -46,7 +46,7 @@ class Channels(TChannels):
             lines = Path(url).read_text().splitlines()
         elif '://' in url:
             r = defines.request(url, interval=3, proxies=self.proxies)
-            if r.ok:
+            if (r and r.ok):
                 lines = r.text.splitlines()
                 Path(defines.CACHE_PATH, Path(url).name).write_bytes(r.content)
         else:

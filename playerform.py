@@ -14,8 +14,10 @@ import logger
 import players
 import utils
 from epgs.epgtv import get_name_offset
+from sources.tchannel import TChannel
 
 log = logger.Logger(__name__)
+_re_name_url = re.compile(r'#EXTINF:.*?,(?P<name>.*?)\-.*\<br\>(?P<url>[\w\.\:/]+)\<br\>')
 
 
 class MyPlayer(xbmcgui.WindowXML):
@@ -57,7 +59,7 @@ class MyPlayer(xbmcgui.WindowXML):
         self.swinfo = None
         self.cicon = None
         self.control_window = None
-        self.proxy_tv = {}
+        self.proxytv = {}
         self.visible = threading.Event()
 
     def onInit(self):
@@ -159,19 +161,19 @@ class MyPlayer(xbmcgui.WindowXML):
         if self._player:
             self.show()
 
-    def find_source_proxy_tv(self, name):
-        log.d(f"find_source_proxy_tv for {name}")
-        _re_name_url = re.compile(r'#EXTINF:.*?,(?P<name>.*?)\-.*\<br\>(?P<url>[\w\.\:/]+)\<br\>')
+    def find_source_proxytv(self, name):
+        log.d(f"find_source_proxytv for {name}")
         res = {}
         params = {"udpxyaddr": f"ch:{name}"}
-        headers = {'Referer': 'https://proxytv.ru/', 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/109.0'}
+#         headers = {'Referer': 'https://proxytv.ru/', 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/109.0'}
+        headers = {'Referer': 'https://proxytv.ru/'}
         with requests.Session() as sess:
             defines.request('https://proxytv.ru/', session=sess, headers=headers)
             r = defines.request('https://proxytv.ru/iptv/php/srch.php', method='post', session=sess, params=params, headers=headers)
-            if r.ok:
+            if (r and r.ok):
+#                 log.d(r.text)
                 for n, u in _re_name_url.findall(r.text):
-                    if n.lower() == name:
-                        res.setdefault(n.lower(), []).append(u)
+                    res.setdefault(n.lower(), []).append(u)
         return res
 
     def Start(self, channel, **kwargs):
@@ -188,10 +190,11 @@ class MyPlayer(xbmcgui.WindowXML):
         errors = 0
         players.Flags.clear()
         title = get_name_offset(channel.title().lower())[0]
+        title_wo_hd = title.replace(' hd', '') if title.endswith(' hd') else title
         try:
             self.title = f"{self.channel_number}. {channel.title()}"
-            if len(channel.xurl()) > 0:
-                for src_name, player_url in cycle(channel.xurl()):
+            while not (self.channel_stop_requested or defines.isCancel()):
+                for src_name, player_url in channel.xurl().copy():
                     for player, url_mode in player_url.items():
                         try:
                             url = url_mode['url']
@@ -228,20 +231,27 @@ class MyPlayer(xbmcgui.WindowXML):
                                         with defines.progress_dialog_bg(f"Проверка доступности источника для канала {channel.title()}") as pd:
                                             r = defines.request(url, method='HEAD', trys=1, timeout=3)
                                             pd.update(100)
-                                            if not (r and r.ok):
-                                                if title not in self.proxy_tv:
-                                                    self.proxy_tv.update(self.find_source_proxy_tv(title))
-                                                    log.d(self.proxy_tv)
-                                                if not self.proxy_tv.get(title):
-                                                    raise ValueError(f'There is no source availible for "{channel.title()}" in "{src_name}"')
+                                            if not r or (r and not (r == 'dis' or r.ok)):
+                                                if title_wo_hd not in self.proxytv:
+                                                    self.proxytv.update(self.find_source_proxytv(title_wo_hd))
+                                                    self.proxytv.setdefault(title, [])
+                                                    self.proxytv.setdefault(title_wo_hd, [])
+                                                    log.d(self.proxytv)
+                                                if self.proxytv[title]:
+                                                    for u in self.proxytv[title]:
+                                                        self.channel.insert(1, TChannel({'name': title, 'src': 'proxytv.ru', 'player': 'tsp', 'url': u}))
                                                 else:
-                                                    url = self.proxy_tv[title].pop(0)
+                                                    for u in self.proxytv.get(title_wo_hd, []):
+                                                        self.channel.insert(1, TChannel({'name': title_wo_hd, 'src': 'proxytv.ru', 'player': 'tsp', 'url': u}))        
+                                                raise ValueError(f'{url} not availible for "{channel.title()}" in "{src_name}"')
+                                                    
+#                                                     url = self.proxytv[title].pop(0)
                                         if url.endswith('.m3u8'):
                                             with defines.progress_dialog(f'Ожидание источника для канала: {channel.title()}.') as pd:
                                                 srcs = None
                                                 for t in range(5):
                                                     r = defines.request(url, trys=2, interval=2)
-                                                    if r.ok:
+                                                    if (r and r.ok):
                                                         srcs = [s for s in r.text.splitlines() if s and not s.startswith('#') and \
                                                                 not any(ex in s for ex in ('errors', 'promo', 'block'))]
 
@@ -295,9 +305,6 @@ class MyPlayer(xbmcgui.WindowXML):
                             if self.channel_stop_requested or defines.isCancel() or errors > 10:
                                 self.close()
                                 return
-            else:
-                log.notice('Нечего проигрывать!')
-                self.channelStop()
 
         except Exception as e:
             errors += 1

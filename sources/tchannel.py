@@ -154,7 +154,7 @@ class TChannel(UserDict):
             if logo_url:
                 _sess = epg.get_sess() if epg else session
                 r = defines.request(logo_url, session=_sess)
-                if r.ok:
+                if (r and r.ok):
                     f_logo.write_bytes(r.content)
                     self.data['logo'] = str(f_logo)
                     return str(f_logo)

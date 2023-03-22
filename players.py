@@ -118,7 +118,7 @@ class TPlayer(xbmc.Player):
 #         with defines.progress_dialog_bg(f"Проверка доступности источника для канала {title}") as pd:
 #             r = defines.request(self.link, method='HEAD', trys=1, timeout=3)
 #             pd.update(100)
-#             if not r.ok:
+#             if not (r and r.ok):
 #                 self.onPlayBackError()
 #                 return
 
