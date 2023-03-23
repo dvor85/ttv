@@ -21,11 +21,12 @@ class MenuForm(xbmcgui.Dialog):
     CMD_SET_FALSE_PIN = 'set_pin_false'
     CMD_MOVE_TO_GROUP = 'move_to_group'
     CMD_RENAME_CH_TITLE = 'rename_ch_title'
+    CMD_DISABLE_CHANNEL = 'disable_channel'
+    CMD_ENABLE_CHANNEL = 'enable_channel'
+    CMD_SET_EPG_CHANNEL = 'epg_channel'
     CMD_DELETE_CHINFO = 'delete_chinfo'
     CMD_DELETE_GROUP_INFO = 'delete_group_info'
     CMD_RENAME_GROUP = 'rename_group'
-    CMD_DISABLE_CHANNEL = 'disable_channel'
-    CMD_ENABLE_CHANNEL = 'enable_channel'
     CMD_DISABLE_GROUP = 'disable_group'
     CMD_ENABLE_GROUP = 'enable_group'
 
@@ -44,6 +45,7 @@ class MenuForm(xbmcgui.Dialog):
                         MenuForm.CMD_SET_FALSE_PIN: {'title': 'Разрешить автоудаления', 'action': lambda x: self.fdb.set_pin(x, False)},
                         MenuForm.CMD_MOVE_TO_GROUP: {'title': 'Переместить в категорию', 'action': self.move_to_group},
                         MenuForm.CMD_RENAME_CH_TITLE: {'title': 'Переименовать', 'action': self.rename_ch_title},
+                        MenuForm.CMD_SET_EPG_CHANNEL: {'title': 'Привязать EPG', 'action': self.set_ch_epg},
                         MenuForm.CMD_RENAME_GROUP: {'title': 'Переименовать', 'action': self.rename_group_title},
                         MenuForm.CMD_DELETE_CHINFO: {'title': 'Сбросить изменения', 'action': self.chinfo.delete_ch_info},
                         MenuForm.CMD_DELETE_GROUP_INFO: {'title': 'Сбросить изменения', 'action': self.chinfo.delete_group_info},
@@ -63,7 +65,7 @@ class MenuForm(xbmcgui.Dialog):
         cmds = self.li.getProperty('commands').split(',')
 
         if self.li.getProperty('type') == 'channel':
-            cmds.extend([MenuForm.CMD_MOVE_TO_GROUP, MenuForm.CMD_RENAME_CH_TITLE, MenuForm.CMD_DELETE_CHINFO])
+            cmds.extend([MenuForm.CMD_MOVE_TO_GROUP, MenuForm.CMD_RENAME_CH_TITLE, MenuForm.CMD_SET_EPG_CHANNEL, MenuForm.CMD_DELETE_CHINFO])
 
         elif self.li.getProperty('type') == 'category':
             cmds.extend([MenuForm.CMD_RENAME_GROUP, MenuForm.CMD_DELETE_GROUP_INFO, MenuForm.CMD_ENABLE_GROUP, MenuForm.CMD_DISABLE_GROUP])
@@ -97,6 +99,11 @@ class MenuForm(xbmcgui.Dialog):
         title = self.input('Введите новое название', defaultt=self.li.getProperty("title").lower())
         if title:
             return self.chinfo.set_channel_info(name, ch_title=title.lower())
+
+    def set_ch_epg(self, name):
+        title = self.input('Введите название канала', defaultt=self.li.getProperty("title").lower())
+        if title:
+            return self.chinfo.set_channel_info(name, ch_epg=title.lower())
 
     def set_ch_enabled(self, name, state):
         return self.chinfo.set_channel_info(name, ch_enable=state)

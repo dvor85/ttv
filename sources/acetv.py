@@ -49,9 +49,9 @@ class Channels(TChannels):
             if not jdata:
                 with self.lock:
                     r = defines.request(self.url, proxies=defines.PROXIES, interval=3)
-                if (r and r.ok):
-                    jdata = r.json()
-                    self._save_jdata(jdata)
+                    if r:
+                        jdata = r.json()
+                        self._save_jdata(jdata)
             if not jdata:
                 log.i('Try to load previos channels, if availible')
                 jdata = self._load_jdata(False)

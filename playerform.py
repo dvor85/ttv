@@ -168,9 +168,9 @@ class MyPlayer(xbmcgui.WindowXML):
 #         headers = {'Referer': 'https://proxytv.ru/', 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/109.0'}
         headers = {'Referer': 'https://proxytv.ru/'}
         with requests.Session() as sess:
-            defines.request('https://proxytv.ru/', session=sess, headers=headers)
+            defines.request('https://proxytv.ru/', method='head', session=sess, headers=headers)
             r = defines.request('https://proxytv.ru/iptv/php/srch.php', method='post', session=sess, params=params, headers=headers)
-            if (r and r.ok):
+            if r:
 #                 log.d(r.text)
                 for n, u in _re_name_url.findall(r.text):
                     res.setdefault(n.lower(), []).append(u)
@@ -229,29 +229,15 @@ class MyPlayer(xbmcgui.WindowXML):
                                     log.d(f'play "{url}" from source "{src_name}"')
                                     if url_mode.get('availible', True):
                                         with defines.progress_dialog_bg(f"Проверка доступности источника для канала {channel.title()}") as pd:
-                                            r = defines.request(url, method='HEAD', trys=1, timeout=3)
+                                            defines.request(url, method='HEAD', timeout=3)
                                             pd.update(100)
-                                            if not r or (r and not (r == 'dis' or r.ok)):
-                                                if title_wo_hd not in self.proxytv:
-                                                    self.proxytv.update(self.find_source_proxytv(title_wo_hd))
-                                                    self.proxytv.setdefault(title, [])
-                                                    self.proxytv.setdefault(title_wo_hd, [])
-                                                    log.d(self.proxytv)
-                                                if self.proxytv[title]:
-                                                    for u in self.proxytv[title]:
-                                                        self.channel.insert(1, TChannel({'name': title, 'src': 'proxytv.ru', 'player': 'tsp', 'url': u}))
-                                                else:
-                                                    for u in self.proxytv.get(title_wo_hd, []):
-                                                        self.channel.insert(1, TChannel({'name': title_wo_hd, 'src': 'proxytv.ru', 'player': 'tsp', 'url': u}))        
-                                                raise ValueError(f'{url} not availible for "{channel.title()}" in "{src_name}"')
-                                                    
-#                                                     url = self.proxytv[title].pop(0)
+
                                         if url.endswith('.m3u8'):
                                             with defines.progress_dialog(f'Ожидание источника для канала: {channel.title()}.') as pd:
                                                 srcs = None
                                                 for t in range(5):
                                                     r = defines.request(url, trys=2, interval=2)
-                                                    if (r and r.ok):
+                                                    if r:
                                                         srcs = [s for s in r.text.splitlines() if s and not s.startswith('#') and \
                                                                 not any(ex in s for ex in ('errors', 'promo', 'block'))]
 
@@ -276,11 +262,23 @@ class MyPlayer(xbmcgui.WindowXML):
                                                            thumbnailImage=logo,
                                                            url=url, mode=url_mode['mode'])
                                     elif not channel.is_availible() or errors > 10:
-                                        if chli:
-                                            chli.setLabel(f'[COLOR 0xFF333333]{chli.getLabel()}[/COLOR]')
-                                        self.channelStop()
+                                        if title_wo_hd not in self.proxytv:
+                                            self.proxytv.update(self.find_source_proxytv(title_wo_hd))
+                                            self.proxytv.setdefault(title, [])
+                                            self.proxytv.setdefault(title_wo_hd, [])
+                                            log.d(self.proxytv)
+                                        if self.proxytv[title]:
+                                            for u in self.proxytv[title]:
+                                                channel.insert(1, TChannel({'name': title, 'src': 'proxytv.ru', 'player': 'tsp', 'url': u}))
+                                        else:
+                                            for u in self.proxytv[title_wo_hd]:
+                                                channel.insert(1, TChannel({'name': title_wo_hd, 'src': 'proxytv.ru', 'player': 'tsp', 'url': u}))
 
-                                        raise ValueError(f'There is no source availible for "{channel.title()}" in "{src_name}"')
+                                        if not channel.is_availible():
+                                            if chli:
+                                                chli.setLabel(f'[COLOR 0xFF333333]{chli.getLabel()}[/COLOR]')
+                                            self.channelStop()
+
                                 except (TimeoutError, ValueError):
                                     url_mode['availible'] = False
                                     self.parent.showStatus(f'Канал "{channel.title()}" в источнике {src_name} не доступен', timeout=5)
@@ -294,7 +292,7 @@ class MyPlayer(xbmcgui.WindowXML):
                                         self.close()
                                         return
                                 log.d(f'End playing url "{url}"')
-                                defines.monitor.waitForAbort(1)
+                                defines.monitor.waitForAbort(0.2)
 
                         except Exception as e:
                             errors += 1

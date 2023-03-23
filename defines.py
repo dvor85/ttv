@@ -109,7 +109,7 @@ def isCancel():
     return monitor.abortRequested() or closeRequested.isSet()
 
 
-def request(url, method='get', params=None, trys=3, interval=0.01, session=None, proxies=None, **kwargs):
+def request(url, method='get', params=None, trys=1, interval=0.01, session=None, proxies=None, **kwargs):
     if url:
         params_str = "?" + "&".join(f"{k}={v}" for k, v in params.items()) if params is not None and method == 'get' else ""
         if proxies is None and ADDON.getSettingBool('pomoyka_proxy_for_all'):
@@ -124,6 +124,7 @@ def request(url, method='get', params=None, trys=3, interval=0.01, session=None,
         kwargs.setdefault('allow_redirects', True)
         kwargs.setdefault('timeout', 10.05)
         for t in range(trys):
+            monitor.waitForAbort(interval)
             if not isCancel():
                 try:
                     if session:
@@ -135,16 +136,12 @@ def request(url, method='get', params=None, trys=3, interval=0.01, session=None,
                 except requests.exceptions.ConnectionError as ce:
                     log.d(f'Connection error {ce}')
                     if 'Remote end closed connection without response' in str(ce):
-                        return 'dis'
-                    else:
-                        monitor.waitForAbort(interval)
-                    
+                        return
 
                 except Exception as e:
                     log.error(f'Request error ({t+1}): {e}')
-                    monitor.waitForAbort(interval)
 
-#         raise TimeoutError('Attempts are over')
+        raise TimeoutError('Attempts are over')
 
 
 def platform():

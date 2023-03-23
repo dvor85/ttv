@@ -46,12 +46,13 @@ class Channel(TChannel):
                 typeresult='json')
 
             r = defines.request(f"http://api.{_server}/v3/translation_stream.php", params=params, session=_sess, trys=1)
-            jdata = r.json()
-            if not jdata["success"]:
-                return
+            if r:
+                jdata = r.json()
+                if not jdata["success"]:
+                    return
 
-            self.data['mode'] = jdata["type"].upper().replace("CONTENTID", "PID")
-            return jdata['source']
+                self.data['mode'] = jdata["type"].upper().replace("CONTENTID", "PID")
+                return jdata['source']
         except Exception as e:
             log.w(f'_get_ace_url error: {e}')
 
@@ -64,14 +65,14 @@ class Channel(TChannel):
                 channel_id=self.id(),
                 typeresult='json')
             r = defines.request(f"http://api.{_server}/v3/get_noxbit_cid.php", params=params, session=_sess, trys=1)
+            if r:
+                jdata = r.json()
+                if not jdata["success"]:
+                    return
 
-            jdata = r.json()
-            if not jdata["success"]:
-                return
-
-            cid = jdata["cid"]
-            streamtype = defines.ADDON.getSetting('nox_streamtype')
-            return f"http://{nox_ip}:{nox_port}/{streamtype}?cid={cid}"
+                cid = jdata["cid"]
+                streamtype = defines.ADDON.getSetting('nox_streamtype')
+                return f"http://{nox_ip}:{nox_port}/{streamtype}?cid={cid}"
         except Exception as e:
             log.w(f'_get_nox_url error: {e}')
 
@@ -86,26 +87,12 @@ class Channel(TChannel):
                 zone_id=zoneid,
                 nohls=nohls)
             r = defines.request(f"http://api.{_server}/v3/translation_http.php", params=params, session=_sess, trys=1)
+            if r:
+                jdata = r.json()
+                if not jdata["success"]:
+                    return
 
-            jdata = r.json()
-            if not jdata["success"]:
-                return
-
-#             if jdata['source'].endswith('.m3u8'):
-#                 with defines.progress_dialog(f'Ожидание источника для канала: {self.title()}.') as pd:
-#                     for t in range(5):
-#                         if pd.iscanceled() or defines.isCancel():
-#                             break
-#                         r = defines.request(jdata['source'], session=_sess, trys=2, interval=2)
-#                         if (r and r.ok):
-#                             srcs = [s for s in r.text.splitlines() if s.startswith('http') and 'errors' not in s]
-#                             if len(srcs) > 2:
-#                                 break
-#                         for k in range(5):
-#                             defines.monitor.waitForAbort(1.2)
-#                             pd.update(4 * (5 * t + k + 1))
-
-            return jdata['source']
+                return jdata['source']
         except Exception as e:
             log.w(f'_get_tsproxy_url error: {e}')
 
@@ -118,10 +105,10 @@ class Channel(TChannel):
                     epg_id=self.get('epg_id'),
                     typeresult='json')
                 r = defines.request(f'http://api.{_server}/v3/translation_epg.php', params=params, session=_sess, trys=1)
-
-                jdata = r.json()
-                if str2int(jdata.get('success')) != 0:
-                    self.data['epg'] = jdata['data']
+                if r:
+                    jdata = r.json()
+                    if str2int(jdata.get('success')) != 0:
+                        self.data['epg'] = jdata['data']
             except Exception as e:
                 log.d(f'update_epglist error: {e}')
 
@@ -140,7 +127,7 @@ class Channel(TChannel):
             count=2,
             typeresult='json')
         r = defines.request(f'http://api.{_server}/v3/translation_screen.php', params=params, session=_sess, trys=1)
-        if (r and r.ok):
+        if r:
             jdata = r.json()
             if str2int(jdata.get('success')) != 0 and not jdata.get('error'):
                 info['screens'] = [x['filename'].replace('web1.1ttv.org', f'shot.{_server}') for x in jdata['screens']]
@@ -187,9 +174,10 @@ class Channels(TChannels):
                     guid=guid
                 )
                 r = defines.request(f'http://api.{_server}/v3/auth.php', params=params, session=_sess, trys=1)
-                jdata = r.json()
-                if str2int(jdata.get('success')) == 0:
-                    raise Exception(f"Auth error: {jdata.get('error')}")
+                if r:
+                    jdata = r.json()
+                    if str2int(jdata.get('success')) == 0:
+                        raise Exception(f"Auth error: {jdata.get('error')}")
             except Exception as e:
                 log.e(e)
 
@@ -218,7 +206,7 @@ class Channels(TChannels):
                         type='channel',
                         typeresult='json')
                     r = defines.request(f'http://api.{_server}/v3/translation_list.php', params=params, session=_sess, trys=1)
-                    if (r and r.ok):
+                    if r:
                         jdata = r.json()
 
                         if str2int(jdata.get('success')) == 0:

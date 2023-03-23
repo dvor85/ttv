@@ -96,8 +96,9 @@ class YATV(EPGTV):
                 with gzip.open(yatv_file, 'wb') as fp:
                     try:
                         r = defines.request(url, params=_params, session=self.sess, headers={'Referer': 'https://tv.yandex.ru/'})
-                        fp.write(r.content)
-                        self.jdata[page] = r.json()
+                        if r:
+                            fp.write(r.content)
+                            self.jdata[page] = r.json()
                     except Exception as e:
                         log.error('update_yatv error: {0}'.format(e))
         if page not in self.jdata:
@@ -125,7 +126,8 @@ class YATV(EPGTV):
             "lang": "ru"
         }
         r = defines.request(url, params=_params, session=self.sess, headers={'Referer': 'https://tv.yandex.ru/'})
-        return r.json()
+        if r:
+            return r.json()
 
     def get_epg_by_id(self, chid, epg_offset=None):
         if chid is None or chid not in self.availableChannels["availableChannelsIds"]:
@@ -153,11 +155,15 @@ class YATV(EPGTV):
                         yield ep
 
     def get_id_by_name(self, name):
-        names = [name.lower()]
+        names = [name.lower(), name.lower().replace('-', ' ')]
+        chinfo = None
         for n in names:
             chinfo = self.chinfo.get_channel_by_name(n)
-            if chinfo and chinfo.get('ch_title'):
-                names.append(chinfo['ch_title'])
+            if chinfo:
+                if chinfo.get('ch_epg'):
+                    names.insert(0, chinfo['ch_epg'])
+                elif chinfo.get('ch_title'):
+                    names.insert(0, chinfo['ch_title'])
                 break
         return next((sch['channel']['id'] for p in self.get_jdata().values() for sch in p['schedules'] and sch['channel']['title'].lower() in names), None)
 

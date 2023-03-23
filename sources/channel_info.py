@@ -19,6 +19,7 @@ except ImportError:
 
 
 class ChannelInfo():
+    VERSION = 2
     _instance = None
     _lock = Event()
     _rlock = RLock()
@@ -40,10 +41,18 @@ class ChannelInfo():
     def __init__(self, db_base=None):
         self.db_base = db_base if db_base else Path(defines.DATA_PATH, 'channel_info.db')
         self.con = sqlite3.connect(self.db_base, check_same_thread=False)
-        with ChannelInfo._rlock:
-            with self.con:
-                self.con.execute('CREATE TABLE IF NOT EXISTS channels (ch_name TEXT UNIQUE NOT NULL, group_id INT, ch_title TEXT, ch_enable INT)')
-                self.con.execute('CREATE TABLE IF NOT EXISTS groups (group_name TEXT UNIQUE NOT NULL, group_title TEXT, group_enable INT)')
+        try:
+            with ChannelInfo._rlock:
+                with self.con:
+                    self.con.execute('CREATE TABLE IF NOT EXISTS channels (ch_name TEXT UNIQUE NOT NULL, group_id INT, ch_title TEXT, ch_enable INT)')
+                    self.con.execute('CREATE TABLE IF NOT EXISTS groups (group_name TEXT UNIQUE NOT NULL, group_title TEXT, group_enable INT)')
+                with self.con:
+                    user_version = self.con.execute('PRAGMA user_version').fetchone()[0]
+                    if user_version < ChannelInfo.VERSION:
+                        self.con.execute('ALTER TABLE channels ADD ch_epg TEXT')
+                    self.con.execute(f'PRAGMA user_version={ChannelInfo.VERSION}')
+        except sqlite3.DatabaseError as e:
+            log.e(e)
 
     def add_channel(self, name, **kwargs):
         if name is not None:
@@ -56,7 +65,8 @@ class ChannelInfo():
                         if not grid and 'group_name' in kwargs:
                             grinfo = self.get_group_by_name(kwargs['group_name'])
                             grid = grinfo['id'] if grinfo else self.add_group(kwargs['group_name'])
-                        return self.con.execute('INSERT INTO channels VALUES(?, ?, ?, ?)', (name, grid, kwargs.get('ch_title'), kwargs.get('ch_enable', 1))).rowcount
+                        return self.con.execute('INSERT INTO channels VALUES(?, ?, ?, ?, ?)',
+                                                (name, grid, kwargs.get('ch_title'), kwargs.get('ch_enable', 1), kwargs.get('ch_epg'))).rowcount
             except sqlite3.IntegrityError:
                 return
 
@@ -67,7 +77,8 @@ class ChannelInfo():
             try:
                 with ChannelInfo._rlock:
                     with self.con:
-                        return self.con.execute('INSERT INTO groups VALUES(?, ?, ?)', (name, kwargs.get('group_title'), kwargs.get('group_enable', 1))).lastrowid
+                        return self.con.execute('INSERT INTO groups VALUES(?, ?, ?)',
+                                                (name, kwargs.get('group_title'), kwargs.get('group_enable', 1))).lastrowid
             except sqlite3.IntegrityError:
                 return
 

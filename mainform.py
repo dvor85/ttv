@@ -401,8 +401,9 @@ class WMainForm(xbmcgui.WindowXML):
                             self.showScreen(ep['screens'], 1)
                         if self.description_label and 'desc' in ep:
                             self.description_label.setText(ep['desc'])
-                except:
+                except Exception as e:
                     break
+                    raise e
 
             return True
 

@@ -1,6 +1,5 @@
 <settings>
 	<category label="Основные">		
-		<setting id="skin" label="Обложка" type="labelenum" values="st.anger" />				
 		<setting default="false" id="autostart" label="Автозапуск аддона" type="bool" />
 		<setting default="false" id="autostart_lastch" label="Автозапуск последнего канала" type="bool" />
 		<setting default="0" id="favourite" label="База избранных" type="enum" values="Auto|Локальная" visible="false" />

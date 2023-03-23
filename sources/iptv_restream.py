@@ -8,6 +8,7 @@ from pathlib import Path
 import defines
 import logger
 from .tchannel import TChannel, TChannels
+import requests
 
 log = logger.Logger(__name__)
 
@@ -48,10 +49,11 @@ class Channels(TChannels):
         try:
             jdata = self._load_jdata()
             if not jdata:
-                r = defines.request(self.url['channels'], interval=3)
-                jchannels = r.json()
-                r = defines.request(self.url['streams'], interval=3)
-                jstreams = r.json()
+                with requests.Session() as sess:
+                    r = defines.request(self.url['channels'], interval=3, session=sess)
+                    jchannels = r.json()
+                    r = defines.request(self.url['streams'], interval=3, session=sess)
+                    jstreams = r.json()
                 for ch in jchannels:
                     if "rus" in ch.get('languages', []):
                         [ch.update(st) for st in jstreams if st['channel'] == ch['id']]

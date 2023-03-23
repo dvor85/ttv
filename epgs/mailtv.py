@@ -92,8 +92,8 @@ class MAILTV(EPGTV):
             with gzip.open(mailtv_file, 'w+') as fp:
                 try:
                     r = defines.request(url, method='post', params=_params, session=self.sess, headers={'Referer': 'https://tv.mail.ru/'})
-                    self.need_update = (r and r.ok)
-                    if (r and r.ok):
+                    self.need_update = r.ok
+                    if r:
                         self.jdata[page] = r.json()
                         status = self.jdata[page].get('status', '').lower()
                         log.d(f'status={status}')
@@ -160,7 +160,7 @@ class MAILTV(EPGTV):
                    }
         r = defines.request(url, method='post', params=_params, session=self.sess, headers={'Referer': 'https://tv.mail.ru/'}, trys=1, timeout=1)
 
-        if (r and r.ok):
+        if r:
             j = r.json()
             if j.get('status', '').lower() == 'ok':
                 if 'tv_event' in j:
@@ -174,8 +174,11 @@ class MAILTV(EPGTV):
         chinfo = None
         for n in names:
             chinfo = self.chinfo.get_channel_by_name(n)
-            if chinfo and chinfo.get('ch_title'):
-                names.append(chinfo['ch_title'])
+            if chinfo:
+                if chinfo.get('ch_epg'):
+                    names.insert(0, chinfo['ch_epg'])
+                elif chinfo.get('ch_title'):
+                    names.insert(0, chinfo['ch_title'])
                 break
 
         for p in self.get_jdata().values():
