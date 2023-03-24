@@ -62,17 +62,17 @@ class TPlayer(xbmc.Player):
         finally:
             return cls._instance
 
-    @classmethod
-    def clear_instance(cls):
-        if cls._instance is not None:
-            with cls._lock:
-                cls._instance = None
+    def clear_instance(self):
+        if self._instance is not None:
+            with self._lock:
+                self._instance = None
 
     def __init__(self, parent=None, *args):
         super(TPlayer, self).__init__()
         self.parent = parent
         self.link = None  # Для передачи ссылки плееру
         self.last_error = None
+        self.starttime = 0
 
     def onPlayBackStopped(self):
         log("onPlayBackStopped")
@@ -80,16 +80,23 @@ class TPlayer(xbmc.Player):
     def onPlayBackEnded(self):
         log('onPlayBackEnded')
         self.stop()
+        secs = time.time() - self.starttime
+        if secs < 60:
+            self.last_error = TimeoutError(f'Playback ended in {secs} sec')
 
     def onPlayBackError(self):
         log('onPlayBackError')
         self.stop()
+        secs = time.time() - self.starttime
+        if secs < 60:
+            self.last_error = TimeoutError(f'Playback error in {secs} sec')
 
     def onAVStarted(self):
         log('onAVStarted')
         Flags.clear()
         self.parent.hide_main_window()
         self.parent.player.hideStatus()
+        self.starttime = time.time()
 
     def onAVChange(self):
         log('onAVChange')
@@ -115,11 +122,10 @@ class TPlayer(xbmc.Player):
         if not self.link:
             self.parent.showStatus('Нечего проигрывать')
             return
-
         self.play(self.link, li, windowed=True)
         log.debug(f'play_item {title}')
         self.parent.player.Show()
-        self.starttime = time.time()
+
         self.loop()
         Flags.log_status()
 

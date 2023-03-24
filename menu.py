@@ -47,7 +47,7 @@ class MenuForm(xbmcgui.Dialog):
                         MenuForm.CMD_RENAME_CH_TITLE: {'title': 'Переименовать', 'action': self.rename_ch_title},
                         MenuForm.CMD_SET_EPG_CHANNEL: {'title': 'Привязать EPG', 'action': self.set_ch_epg},
                         MenuForm.CMD_RENAME_GROUP: {'title': 'Переименовать', 'action': self.rename_group_title},
-                        MenuForm.CMD_DELETE_CHINFO: {'title': 'Сбросить изменения', 'action': self.chinfo.delete_ch_info},
+                        MenuForm.CMD_DELETE_CHINFO: {'title': 'Сбросить изменения', 'action': self.delete_ch_info},
                         MenuForm.CMD_DELETE_GROUP_INFO: {'title': 'Сбросить изменения', 'action': self.chinfo.delete_group_info},
                         MenuForm.CMD_DISABLE_CHANNEL: {'title': 'Отключить', 'action': lambda x: self.set_ch_enabled(x, 0)},
                         MenuForm.CMD_ENABLE_CHANNEL: {'title': 'Включить', 'action': lambda x: self.set_ch_enabled(x, 1)},
@@ -96,14 +96,20 @@ class MenuForm(xbmcgui.Dialog):
                     return self.chinfo.set_channel_info(name, group_id=grid)
 
     def rename_ch_title(self, name):
-        title = self.input('Введите новое название', defaultt=self.li.getProperty("title").lower())
+        name = get_name_offset(name)[0]
+        title = self.input('Введите новое название', defaultt=get_name_offset(self.li.getProperty("title").lower())[0])
         if title:
             return self.chinfo.set_channel_info(name, ch_title=title.lower())
 
     def set_ch_epg(self, name):
-        title = self.input('Введите название канала', defaultt=self.li.getProperty("title").lower())
+        name = get_name_offset(name)[0]
+        title = self.input('Введите название канала', defaultt=get_name_offset(self.li.getProperty("title").lower())[0])
         if title:
             return self.chinfo.set_channel_info(name, ch_epg=title.lower())
+
+    def delete_ch_info(self, name):
+        name = get_name_offset(name)[0]
+        return self.chinfo.delete_ch_info(name)
 
     def set_ch_enabled(self, name, state):
         return self.chinfo.set_channel_info(name, ch_enable=state)

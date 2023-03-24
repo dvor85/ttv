@@ -116,15 +116,17 @@ class XMLTV(EPGTV):
                 yield ep
 
     def get_id_by_name(self, name):
-        names = [name.lower(), name.lower().replace('-', ' ')]
+        name = name.lower()
+        name_wo_hd = name.replace(' hd', '') if name.endswith(' hd') else name
+        names = {name, name.replace('-', ' '), name_wo_hd}
         chinfo = None
-        for n in names:
+        for n in names.copy():
             chinfo = self.chinfo.get_channel_by_name(n)
             if chinfo:
                 if chinfo.get('ch_epg'):
-                    names.insert(0, chinfo['ch_epg'])
+                    names = {chinfo['ch_epg']}
                 elif chinfo.get('ch_title'):
-                    names.insert(0, chinfo['ch_title'])
+                    names.add(chinfo['ch_title'])
                 break
 
         return next((chid for chid, ch in self.get_channels().items() if ch['name'].lower() in names), None)

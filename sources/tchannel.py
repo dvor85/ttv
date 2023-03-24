@@ -27,13 +27,13 @@ class MChannel(UserDict):
         self.data.update(chs)
 
     def insert(self, index, ch):
-        if self.title() != ch.title():
-            for pu in self.xurl():
-                for u in pu[1].values():
-                    if ch['url']:
-                        for cu in ch['url'].values():
-                            if isinstance(u['url'], str) and isinstance(cu['url'], str) and u['url'] == cu['url']:
-                                return
+        # if self.title() != ch.title():
+        for pu in self.xurl():
+            for u in pu[1].values():
+                if ch['url']:
+                    for cu in ch['url'].values():
+                        if isinstance(u['url'], str) and isinstance(cu['url'], str) and u['url'] == cu['url']:
+                            return
         if not isinstance(ch, self.__class__):
             while index in self.data:
                 index += 1
@@ -112,14 +112,14 @@ class TChannel(UserDict):
         return any(url_mode.get('availible', True) for url_mode in self['url'].values())
 
     def _get_group_title(self, groupname):
-#         log.d(f"_get_group_title {groupname}")
+        #         log.d(f"_get_group_title {groupname}")
         grinfo = self.chinfo.get_group_by_name(groupname)
         if grinfo:
             return grinfo['group_title'] if grinfo['group_title'] else groupname
         return groupname
 
     def enabled(self):
-#         name = epgtv.get_name_offset(self.title().lower())[0]
+        #         name = epgtv.get_name_offset(self.title().lower())[0]
         chinfo = self.chinfo.get_channel_by_name(self.name().lower())
         return chinfo['ch_enable'] if chinfo else True
 
@@ -176,7 +176,7 @@ class TChannel(UserDict):
             chinfo = self.chinfo.get_channel_by_name(name_offset[0])
             if chinfo and chinfo.get('ch_title'):
                 self.data['title'] = chinfo['ch_title'].capitalize()
-            if name_offset[1]  and sign(name_offset[1]):
+            if name_offset[1] and sign(name_offset[1]):
                 self.data['title'] += " ({sign}{offset})".format(sign=sign(name_offset[1]), offset=name_offset[1])
 
         return self.get('title')

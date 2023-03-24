@@ -170,25 +170,32 @@ class MAILTV(EPGTV):
         return info
 
     def get_id_by_name(self, name):
-        names = [name.lower(), name.lower().replace('-', ' ')]
+        name = name.lower()
+        name_wo_hd = name.replace(' hd', '') if name.endswith(' hd') else name
+        names = {name, name.replace('-', ' '), name_wo_hd}
         chinfo = None
-        for n in names:
+        for n in names.copy():
             chinfo = self.chinfo.get_channel_by_name(n)
             if chinfo:
                 if chinfo.get('ch_epg'):
-                    names.insert(0, chinfo['ch_epg'])
+                    names = {chinfo['ch_epg']}
                 elif chinfo.get('ch_title'):
-                    names.insert(0, chinfo['ch_title'])
+                    names.add(chinfo['ch_title'])
                 break
 
         for p in self.get_jdata().values():
             for sch in p['schedule']:
                 if sch['channel']['name'].lower() in names:
                     return sch['channel']['id']
-                elif len(name) > 8:
-                    for n in names:
-                        if n in sch['channel']['name'].lower():
-                            return sch['channel']['id']
+                # else:
+                #     for a in names:
+                #         b = sch['channel']['name'].lower()
+                #         if sum(i == j for i, j in zip_longest(a, b))/max(len(a), len(b)) > 0.6:
+                #             return sch['channel']['id']
+                # elif len(name) > 8:
+                #     for n in names:
+                #         if n in sch['channel']['name'].lower():
+                #             return sch['channel']['id']
 
     def get_logo_by_id(self, chid):
         if chid is None:  # or chid not in self.availableChannels["availableChannelsIds"]:

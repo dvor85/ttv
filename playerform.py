@@ -15,6 +15,7 @@ import players
 import utils
 from epgs.epgtv import get_name_offset
 from sources.tchannel import TChannel
+from sources.channel_info import ChannelInfo
 
 log = logger.Logger(__name__)
 _re_name_url = re.compile(r'#EXTINF:.*?,(?P<name>.*?)\-.*\<br\>(?P<url>[\w\.\:/]+)\<br\>')
@@ -55,12 +56,13 @@ class MyPlayer(xbmcgui.WindowXML):
         self.channel_number = 0
         self.channel_number_str = ''
         self.progress = None
-        self.chinfo = None
+        self.chinfo_label = None
         self.swinfo = None
         self.cicon = None
         self.control_window = None
         self.proxytv = {}
         self.visible = threading.Event()
+        self.chinfo = ChannelInfo().get_instance()
 
     def onInit(self):
         log.d('onInit')
@@ -76,8 +78,8 @@ class MyPlayer(xbmcgui.WindowXML):
 
         self.cicon.setImage(logo)
         self.control_window = self.getControl(MyPlayer.CONTROL_WINDOW_ID)
-        self.chinfo = self.getControl(MyPlayer.CH_NAME_ID)
-        self.chinfo.setLabel(self.title)
+        self.chinfo_label = self.getControl(MyPlayer.CH_NAME_ID)
+        self.chinfo_label.setLabel(self.title)
         self.swinfo = self.getControl(MyPlayer.DLG_SWITCH_ID)
         self.hideStatus()
 
@@ -161,6 +163,13 @@ class MyPlayer(xbmcgui.WindowXML):
         if self._player:
             self.show()
 
+    def get_normal_title(self, name):
+        name = get_name_offset(name.lower())[0]
+        chinfo = self.chinfo.get_channel_by_name(name)
+        if chinfo:
+            return chinfo.get('ch_title', chinfo.get('ch_epg', name))
+        return name
+
     def find_source_proxytv(self, name):
         log.d(f"find_source_proxytv for {name}")
         res = {}
@@ -171,7 +180,7 @@ class MyPlayer(xbmcgui.WindowXML):
             defines.request('https://proxytv.ru/', method='head', session=sess, headers=headers)
             r = defines.request('https://proxytv.ru/iptv/php/srch.php', method='post', session=sess, params=params, headers=headers)
             if r:
-#                 log.d(r.text)
+                #                 log.d(r.text)
                 for n, u in _re_name_url.findall(r.text):
                     res.setdefault(n.lower(), []).append(u)
         return res
@@ -189,7 +198,7 @@ class MyPlayer(xbmcgui.WindowXML):
         chli = kwargs.get('chli')
         errors = 0
         players.Flags.clear()
-        title = get_name_offset(channel.title().lower())[0]
+        title = self.get_normal_title(channel.title())
         title_wo_hd = title.replace(' hd', '') if title.endswith(' hd') else title
         try:
             self.title = f"{self.channel_number}. {channel.title()}"
@@ -204,23 +213,18 @@ class MyPlayer(xbmcgui.WindowXML):
                             log.d(f'Try to play {url} with {player} player')
                             logo = channel.logo()
                             if self.cicon:
-                                log.d(f"logo={logo}")
+                                # log.d(f"logo={logo}")
                                 self.cicon.setImage(logo)
-                            if player == 'ace':
-                                if self._player and self._player.last_error:
-                                    players.AcePlayer.clear_instance()
-                                    self._player = None
-                                self._player = players.AcePlayer.get_instance(parent=self.parent)
 
+                            if self._player and self._player.last_error:
+                                self._player.clear_instance()
+                                self._player = None
+
+                            if player == 'ace':
+                                self._player = players.AcePlayer.get_instance(parent=self.parent)
                             elif player == 'nox':
-                                if self._player and self._player.last_error:
-                                    players.NoxPlayer.clear_instance()
-                                    self._player = None
                                 self._player = players.NoxPlayer.get_instance(parent=self.parent)
                             else:
-                                if self._player and self._player.last_error:
-                                    players.TPlayer.clear_instance()
-                                    self._player = None
                                 self._player = players.TPlayer.get_instance(parent=self.parent)
 
                             if self._player:
@@ -238,7 +242,7 @@ class MyPlayer(xbmcgui.WindowXML):
                                                 for t in range(5):
                                                     r = defines.request(url, trys=2, interval=2)
                                                     if r:
-                                                        srcs = [s for s in r.text.splitlines() if s and not s.startswith('#') and \
+                                                        srcs = [s for s in r.text.splitlines() if s and not s.startswith('#') and
                                                                 not any(ex in s for ex in ('errors', 'promo', 'block'))]
 
                                                         if srcs:
@@ -255,12 +259,15 @@ class MyPlayer(xbmcgui.WindowXML):
                                                         pd.update(4 * (5 * t + k + 1))
                                                 log.d(f"sources={srcs}")
                                                 if not srcs:
-                                                    raise ValueError(f'There is no source availible for "{channel.title()}" in "{src_name}"')
+                                                    raise ValueError(f'Source "{url}" is not availible. Channel "{channel.title()}" in "{src_name}"')
 
                                         self._player.play_item(index=0, title=self.title,
-                                                           iconImage=logo,
-                                                           thumbnailImage=logo,
-                                                           url=url, mode=url_mode['mode'])
+                                                               iconImage=logo,
+                                                               thumbnailImage=logo,
+                                                               url=url, mode=url_mode['mode'])
+                                        if self._player.last_error:
+                                            raise self._player.last_error
+
                                     elif not channel.is_availible() or errors > 10:
                                         if title_wo_hd not in self.proxytv:
                                             self.proxytv.update(self.find_source_proxytv(title_wo_hd))
@@ -269,17 +276,20 @@ class MyPlayer(xbmcgui.WindowXML):
                                             log.d(self.proxytv)
                                         if self.proxytv[title]:
                                             for u in self.proxytv[title]:
-                                                channel.insert(1, TChannel({'name': title, 'src': 'proxytv.ru', 'player': 'tsp', 'url': u}))
+                                                channel.insert(0, TChannel({'name': title, 'src': 'proxytv.ru', 'player': 'tsp', 'url': u}))
                                         else:
                                             for u in self.proxytv[title_wo_hd]:
-                                                channel.insert(1, TChannel({'name': title_wo_hd, 'src': 'proxytv.ru', 'player': 'tsp', 'url': u}))
+                                                channel.insert(0, TChannel({'name': title_wo_hd, 'src': 'proxytv.ru', 'player': 'tsp', 'url': u}))
 
                                         if not channel.is_availible():
                                             if chli:
                                                 chli.setLabel(f'[COLOR 0xFF333333]{chli.getLabel()}[/COLOR]')
                                             self.channelStop()
 
-                                except (TimeoutError, ValueError):
+                                    log.d(f'End playing url "{url}"')
+
+                                except (TimeoutError, ValueError) as e:
+                                    log.d(e)
                                     url_mode['availible'] = False
                                     self.parent.showStatus(f'Канал "{channel.title()}" в источнике {src_name} не доступен', timeout=5)
                                 except Exception as e:
@@ -291,7 +301,7 @@ class MyPlayer(xbmcgui.WindowXML):
                                     if self.channel_stop_requested or defines.isCancel() or errors > 10:
                                         self.close()
                                         return
-                                log.d(f'End playing url "{url}"')
+
                                 defines.monitor.waitForAbort(0.2)
 
                         except Exception as e:
@@ -326,7 +336,7 @@ class MyPlayer(xbmcgui.WindowXML):
             else:
                 self.hideStatus()
             self.channel_number = self.parent.selitem_id
-            self.chinfo.setLabel(self.parent.list.getListItem(self.parent.selitem_id).getLabel())
+            self.chinfo_label.setLabel(self.parent.list.getListItem(self.parent.selitem_id).getLabel())
             self.channel_number_str = ''
             self.timers.stop(MyPlayer.TIMER_RUN_SEL_CHANNEL)
 
@@ -374,7 +384,7 @@ class MyPlayer(xbmcgui.WindowXML):
         def viewEPG():
             selItem = self.parent.list.getListItem(self.channel_number)
             if selItem and selItem.getProperty("type") == 'channel':
-                self.chinfo.setLabel(selItem.getLabel())
+                self.chinfo_label.setLabel(selItem.getLabel())
                 self.showStatus('Переключение...')
 
                 sel_ch = self.parent.get_channel_by_title(selItem.getProperty("title"))

@@ -48,7 +48,7 @@ class ChannelInfo():
                     self.con.execute('CREATE TABLE IF NOT EXISTS groups (group_name TEXT UNIQUE NOT NULL, group_title TEXT, group_enable INT)')
                 with self.con:
                     user_version = self.con.execute('PRAGMA user_version').fetchone()[0]
-                    if user_version < ChannelInfo.VERSION:
+                    if user_version < 2:
                         self.con.execute('ALTER TABLE channels ADD ch_epg TEXT')
                     self.con.execute(f'PRAGMA user_version={ChannelInfo.VERSION}')
         except sqlite3.DatabaseError as e:
@@ -88,7 +88,7 @@ class ChannelInfo():
             return next(self.get_channels(where=f'ch_name="{name}"'), None)
 
     def get_group_by_name(self, name):
-#         log.d(f"get_group_by_name {name}")
+        #         log.d(f"get_group_by_name {name}")
         if name is not None:
             name = name.lower()
             return next(self.get_groups(where=f'group_name="{name}" or group_title="{name}"'), None)
@@ -158,8 +158,7 @@ class ChannelInfo():
 
 
 if __name__ == '__main__':
-    db = ChannelInfo(db_base=Path('~/.kodi/temp/script.torrent-tv.ru.pp/channel_info.con').expanduser())
+    db = ChannelInfo(db_base=Path('~/.kodi/temp/script.torrent-tv.ru.pp/channel_info.db').expanduser())
 
     print(list(db.get_groups()))
     print(list(db.get_channels()))
-    print(db.get_channel_by_name('euronews по-русски'))
