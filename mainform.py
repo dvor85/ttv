@@ -63,7 +63,7 @@ class ChannelGroups(UserDict):
             if groupname is None:
                 groupname = src_name
             grinfo = self.chinfo.get_group_by_name(groupname)
-            if (ch.get('adult', 0) == 1 and defines.AGE < 2) or (grinfo and not grinfo['group_enable']):
+            if (ch.get('adult') and defines.AGE < 2) or (grinfo and not grinfo['group_enable']):
                 return
 #             log.d(f"addChannel {groupname}/{ch.title()} from source: {src_name}")
             self.addGroup(groupname)

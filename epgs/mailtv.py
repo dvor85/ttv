@@ -173,7 +173,6 @@ class MAILTV(EPGTV):
         name = name.lower()
         name_wo_hd = name.replace(' hd', '') if name.endswith(' hd') else name
         names = {name, name.replace('-', ' '), name_wo_hd}
-        chinfo = None
         for n in names.copy():
             chinfo = self.chinfo.get_channel_by_name(n)
             if chinfo:

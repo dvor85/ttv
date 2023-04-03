@@ -3,11 +3,11 @@
 
 import datetime
 import threading
-from itertools import cycle
 import xbmcgui
 import xbmc
 import re
 import requests
+from collections import UserDict
 
 import defines
 import logger
@@ -18,7 +18,30 @@ from sources.tchannel import TChannel
 from sources.channel_info import ChannelInfo
 
 log = logger.Logger(__name__)
-_re_name_url = re.compile(r'#EXTINF:.*?,(?P<name>.*?)\-.*\<br\>(?P<url>[\w\.\:/]+)\<br\>')
+
+
+class ProxyTV(UserDict):
+    _re_name_url = re.compile(r'#EXTINF:.*?,(?P<name>.*?)\-.*\<br\>(?P<url>[\w\.\:/]+)\<br\>')
+
+    def __init__(self):
+        UserDict.__init__(self)
+        self.sess = requests.Session()
+        self.data = {}
+
+    def search_by_name(self, name):
+        name = name.lower()
+        log.d(f"search source in proxytv by {name}")
+        params = {"udpxyaddr": f"ch:{name}"}
+        headers = {'Referer': 'https://proxytv.ru/'}
+        if not self.sess.cookies:
+            defines.request('https://proxytv.ru/', method='head', session=self.sess, headers=headers)
+
+        r = defines.request('https://proxytv.ru/iptv/php/srch.php', method='post', session=self.sess, params=params, headers=headers)
+        if r:
+            self.data.setdefault(name, [])
+            self.data.setdefault(f'{name} hd', [])
+            for n, u in ProxyTV._re_name_url.findall(r.text):
+                self.data.setdefault(n.lower().strip(), []).append(u)
 
 
 class MyPlayer(xbmcgui.WindowXML):
@@ -60,7 +83,7 @@ class MyPlayer(xbmcgui.WindowXML):
         self.swinfo = None
         self.cicon = None
         self.control_window = None
-        self.proxytv = {}
+        self.proxytv = ProxyTV()
         self.visible = threading.Event()
         self.chinfo = ChannelInfo().get_instance()
 
@@ -75,8 +98,7 @@ class MyPlayer(xbmcgui.WindowXML):
         logo = self.channel.logo()
         if logo:
             self.cicon.setVisible(True)
-
-        self.cicon.setImage(logo)
+            self.cicon.setImage(logo)
         self.control_window = self.getControl(MyPlayer.CONTROL_WINDOW_ID)
         self.chinfo_label = self.getControl(MyPlayer.CH_NAME_ID)
         self.chinfo_label.setLabel(self.title)
@@ -92,10 +114,6 @@ class MyPlayer(xbmcgui.WindowXML):
 
         self.control_window.setVisible(True)
         self.hide_control_window(timeout=5)
-
-    @property
-    def channel_stop_requested(self):
-        return players.Flags.channel_stop.is_set()
 
     def init_channel_number(self):
         if self.channel_number != 0:
@@ -166,29 +184,12 @@ class MyPlayer(xbmcgui.WindowXML):
     def get_normal_title(self, name):
         name = get_name_offset(name.lower())[0]
         chinfo = self.chinfo.get_channel_by_name(name)
-        if chinfo:
-            return chinfo.get('ch_title', chinfo.get('ch_epg', name))
-        return name
-
-    def find_source_proxytv(self, name):
-        log.d(f"find_source_proxytv for {name}")
-        res = {}
-        params = {"udpxyaddr": f"ch:{name}"}
-#         headers = {'Referer': 'https://proxytv.ru/', 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/109.0'}
-        headers = {'Referer': 'https://proxytv.ru/'}
-        with requests.Session() as sess:
-            defines.request('https://proxytv.ru/', method='head', session=sess, headers=headers)
-            r = defines.request('https://proxytv.ru/iptv/php/srch.php', method='post', session=sess, params=params, headers=headers)
-            if r:
-                #                 log.d(r.text)
-                for n, u in _re_name_url.findall(r.text):
-                    res.setdefault(n.lower(), []).append(u)
-        return res
+        return next(filter(bool, (chinfo['ch_title'], chinfo['ch_epg'])), name) if chinfo else name
 
     def Start(self, channel, **kwargs):
         """
         Start play. Try all availible channel sources and players
-        :channel: <dict> TChannel sources
+        :channel: <dict> MChannel sources
         :return: If channel stop requested, then return
         """
 
@@ -196,133 +197,102 @@ class MyPlayer(xbmcgui.WindowXML):
         self.channel = channel
         self.channel_number = self.parent.selitem_id
         chli = kwargs.get('chli')
-        errors = 0
         players.Flags.clear()
         title = self.get_normal_title(channel.title())
         title_wo_hd = title.replace(' hd', '') if title.endswith(' hd') else title
-        try:
-            self.title = f"{self.channel_number}. {channel.title()}"
-            while not (self.channel_stop_requested or defines.isCancel()):
-                for src_name, player_url in channel.xurl().copy():
-                    for player, url_mode in player_url.items():
-                        try:
-                            url = url_mode['url']
-                            if callable(url):
-                                url = url()
+        self.title = f"{self.channel_number}. {channel.title()}"
+        while not (players.Flags.channel_stop_requested() or defines.isCancel()):
+            for src_name, player_url in channel.xurl().copy():
+                for player, url_mode in player_url.items():
+                    try:
+                        url = url_mode['url']
+                        if callable(url):
+                            url = url()
 
-                            log.d(f'Try to play {url} with {player} player')
-                            logo = channel.logo()
-                            if self.cicon:
-                                # log.d(f"logo={logo}")
-                                self.cicon.setImage(logo)
+                        log.d(f'Try to play {url} with {player} player')
+                        logo = channel.logo()
+                        if self.cicon:
+                            self.cicon.setImage(logo)
 
-                            if self._player and self._player.last_error:
-                                self._player.clear_instance()
-                                self._player = None
+                        if self._player and self._player.last_error:
+                            self._player.clear_instance()
+                            self._player = None
 
-                            if player == 'ace':
-                                self._player = players.AcePlayer.get_instance(parent=self.parent)
-                            elif player == 'nox':
-                                self._player = players.NoxPlayer.get_instance(parent=self.parent)
-                            else:
-                                self._player = players.TPlayer.get_instance(parent=self.parent)
+                        if player == 'ace':
+                            self._player = players.AcePlayer.get_instance(parent=self.parent)
+                        elif player == 'nox':
+                            self._player = players.NoxPlayer.get_instance(parent=self.parent)
+                        else:
+                            self._player = players.TPlayer.get_instance(parent=self.parent)
 
-                            if self._player:
-                                self.parent.add_recent_channel(channel, 300)
-                                try:
-                                    log.d(f'play "{url}" from source "{src_name}"')
-                                    if url_mode.get('availible', True):
-                                        with defines.progress_dialog_bg(f"Проверка доступности источника для канала {channel.title()}") as pd:
-                                            defines.request(url, method='HEAD', timeout=3)
-                                            pd.update(100)
+                        if self._player:
+                            self.parent.add_recent_channel(channel, 300)
+                            if url_mode.get('availible', True):
+                                log.d(f'play "{url}" from source "{src_name}"')
+                                with defines.progress_dialog_bg(f"Проверка доступности источника для канала {channel.title()}") as pd:
+                                    defines.request(url, method='GET', timeout=3, stream=True)
+                                    pd.update(100)
 
-                                        if url.endswith('.m3u8'):
-                                            with defines.progress_dialog(f'Ожидание источника для канала: {channel.title()}.') as pd:
-                                                srcs = None
-                                                for t in range(5):
-                                                    r = defines.request(url, trys=2, interval=2)
-                                                    if r:
-                                                        srcs = [s for s in r.text.splitlines() if s and not s.startswith('#') and
-                                                                not any(ex in s for ex in ('errors', 'promo', 'block'))]
+                                if url.endswith('.m3u8'):
+                                    with defines.progress_dialog(f'Ожидание источника для канала: {channel.title()}.') as pd:
+                                        srcs = None
+                                        for t in range(5):
+                                            r = defines.request(url, trys=2, interval=2)
+                                            if r:
+                                                srcs = [s for s in r.text.splitlines() if s and not s.startswith('#') and
+                                                        not any(ex in s for ex in ('errors', 'promo', 'block'))]
 
-                                                        if srcs:
-                                                            if src_name not in ('ttv'):
-                                                                break
-                                                            elif len(srcs) > 2:
-                                                                break
+                                                if srcs:
+                                                    if src_name not in ('ttv'):
+                                                        break
+                                                    elif len(srcs) > 2:
+                                                        break
 
-                                                    for k in range(5):
-                                                        if pd.iscanceled() or defines.isCancel():
-                                                            self.channelStop()
-                                                            raise Exception('Waiting for source has been canceled')
-                                                        defines.monitor.waitForAbort(1.2)
-                                                        pd.update(4 * (5 * t + k + 1))
-                                                log.d(f"sources={srcs}")
-                                                if not srcs:
-                                                    raise ValueError(f'Source "{url}" is not availible. Channel "{channel.title()}" in "{src_name}"')
+                                            for k in range(5):
+                                                if pd.iscanceled() or defines.isCancel():
+                                                    self.channelStop()
+                                                    raise Exception('Waiting for source has been canceled')
+                                                defines.monitor.waitForAbort(1.2)
+                                                pd.update(4 * (5 * t + k + 1))
+                                        log.d(f"sources={srcs}")
+                                        if not srcs:
+                                            raise ValueError(f'Source "{url}" is not availible. Channel "{channel.title()}" in "{src_name}"')
+                                while not (players.Flags.channel_stop_requested() or defines.isCancel()):
+                                    self._player.play_item(index=0, title=self.title,
+                                                           iconImage=logo,
+                                                           thumbnailImage=logo,
+                                                           url=url, mode=url_mode['mode'])
+                                    if self._player.last_error:
+                                        raise self._player.last_error
+                                log.d(f'End playing url "{url}"')
 
-                                        self._player.play_item(index=0, title=self.title,
-                                                               iconImage=logo,
-                                                               thumbnailImage=logo,
-                                                               url=url, mode=url_mode['mode'])
-                                        if self._player.last_error:
-                                            raise self._player.last_error
+                            elif not channel.is_availible():
+                                if title_wo_hd not in self.proxytv:
+                                    self.proxytv.search_by_name(title_wo_hd)
+                                    log.d(self.proxytv)
+                                    if self.proxytv[title]:
+                                        for u in self.proxytv[title]:
+                                            channel.insert(0, TChannel({'name': title, 'src': 'proxytv.ru', 'player': 'tsp', 'url': u}))
+                                    else:
+                                        for u in self.proxytv[title_wo_hd]:
+                                            channel.insert(0, TChannel({'name': title_wo_hd, 'src': 'proxytv.ru', 'player': 'tsp', 'url': u}))
 
-                                    elif not channel.is_availible() or errors > 10:
-                                        if title_wo_hd not in self.proxytv:
-                                            self.proxytv.update(self.find_source_proxytv(title_wo_hd))
-                                            self.proxytv.setdefault(title, [])
-                                            self.proxytv.setdefault(title_wo_hd, [])
-                                            log.d(self.proxytv)
-                                        if self.proxytv[title]:
-                                            for u in self.proxytv[title]:
-                                                channel.insert(0, TChannel({'name': title, 'src': 'proxytv.ru', 'player': 'tsp', 'url': u}))
-                                        else:
-                                            for u in self.proxytv[title_wo_hd]:
-                                                channel.insert(0, TChannel({'name': title_wo_hd, 'src': 'proxytv.ru', 'player': 'tsp', 'url': u}))
+                                if not channel.is_availible() and title_wo_hd in self.proxytv:
+                                    if chli:
+                                        chli.setLabel(f'[COLOR 0xFF333333]{chli.getLabel()}[/COLOR]')
+                                    self.channelStop()
 
-                                        if not channel.is_availible():
-                                            if chli:
-                                                chli.setLabel(f'[COLOR 0xFF333333]{chli.getLabel()}[/COLOR]')
-                                            self.channelStop()
+                            defines.monitor.waitForAbort(0.2)
 
-                                    log.d(f'End playing url "{url}"')
-
-                                except (TimeoutError, ValueError) as e:
-                                    log.d(e)
-                                    url_mode['availible'] = False
-                                    self.parent.showStatus(f'Канал "{channel.title()}" в источнике {src_name} не доступен', timeout=5)
-                                except Exception as e:
-                                    errors += 1
-                                    log.e(f"Error {errors} play {url}: {e}")
-                                    defines.monitor.waitForAbort(1)
-
-                                finally:
-                                    if self.channel_stop_requested or defines.isCancel() or errors > 10:
-                                        self.close()
-                                        return
-
-                                defines.monitor.waitForAbort(0.2)
-
-                        except Exception as e:
-                            errors += 1
-                            log.e(f"Error {errors} play with {player} player: {e}")
-                            defines.monitor.waitForAbort(1)
-
-                        finally:
-                            if self.channel_stop_requested or defines.isCancel() or errors > 10:
-                                self.close()
-                                return
-
-        except Exception as e:
-            errors += 1
-            log.e(f'Start error {errors}: {e}')
-
-        if self.channel_stop_requested or defines.isCancel() or errors > 10:
-            self.close()
-            return
-
-        return True
+                    except Exception as e:
+                        log.d(e)
+                        url_mode['availible'] = False
+                        self.parent.showStatus(f'Ссылка недоступна для канала "{channel.title()}" в источнике {src_name}', timeout=5)
+#
+                    finally:
+                        if players.Flags.channel_stop_requested() or defines.isCancel():
+                            self.close()
+                            return
 
     def run_selected_channel(self, timeout=0):
 

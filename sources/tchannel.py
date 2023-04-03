@@ -111,8 +111,8 @@ class TChannel(UserDict):
     def is_availible(self):
         return any(url_mode.get('availible', True) for url_mode in self['url'].values())
 
-    def _get_group_title(self, groupname):
-        #         log.d(f"_get_group_title {groupname}")
+    def get_group_title(self, groupname):
+        #         log.d(f"get_group_title {groupname}")
         grinfo = self.chinfo.get_group_by_name(groupname)
         if grinfo:
             return grinfo['group_title'] if grinfo['group_title'] else groupname
@@ -127,10 +127,10 @@ class TChannel(UserDict):
         if not self.get('groupname'):
             name = epgtv.get_name_offset(self.title().lower())[0]
             chinfo = self.chinfo.get_channel_by_name(name)
-            if chinfo and chinfo['group_name']:
-                gr = chinfo['group_title'] if chinfo.get('group_title') else chinfo['group_name']
+            if chinfo:
+                gr = next(filter(bool, (chinfo['group_title'], chinfo['group_name'])), self.get_group_title(self.get('cat')))
             else:
-                gr = self._get_group_title(self.get('cat'))
+                gr = self.get_group_title(self.get('cat'))
 
             self.data['groupname'] = gr.capitalize() if gr else None
         return self.get('groupname')

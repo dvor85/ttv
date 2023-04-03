@@ -133,15 +133,11 @@ def request(url, method='get', params=None, trys=1, interval=0.01, session=None,
                         r = requests.request(method, url, params=params, headers=headers, proxies=proxies, **kwargs)
                     r.raise_for_status()
                     return r
-                except requests.exceptions.ConnectionError as ce:
-                    log.d(f'Connection error {ce}')
-                    if 'Remote end closed connection without response' in str(ce):
-                        return
 
                 except Exception as e:
                     log.error(f'Request error ({t+1}): {e}')
 
-        raise TimeoutError('Attempts are over')
+        raise TimeoutError(f'Attempts of request of "{url}" are over')
 
 
 def platform():

@@ -41,6 +41,9 @@ class FlagsControl:
         self.clear()
         self.channel_stop.set()
 
+    def channel_stop_requested(self):
+        return self.channel_stop.is_set()
+
 
 Flags = FlagsControl()
 
@@ -81,14 +84,14 @@ class TPlayer(xbmc.Player):
         log('onPlayBackEnded')
         self.stop()
         secs = time.time() - self.starttime
-        if secs < 60:
+        if secs < 30 and not Flags.channel_stop_requested():
             self.last_error = TimeoutError(f'Playback ended in {secs} sec')
 
     def onPlayBackError(self):
         log('onPlayBackError')
         self.stop()
         secs = time.time() - self.starttime
-        if secs < 60:
+        if secs < 30:
             self.last_error = TimeoutError(f'Playback error in {secs} sec')
 
     def onAVStarted(self):
