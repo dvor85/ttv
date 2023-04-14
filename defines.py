@@ -75,9 +75,9 @@ def progress_dialog_bg(message):
         pd.close()
 
 
-def showNotification(message, icon=ADDON_ICON, timeout=5000):
+def showNotification(message, heading=ADDON.getAddonInfo('name'), icon=ADDON_ICON, timeout=5000):
     try:
-        xbmcgui.Dialog().notification(heading=ADDON.getAddonInfo('name'), message=message, icon=icon, time=timeout)
+        xbmcgui.Dialog().notification(heading=heading, message=message, icon=icon, time=timeout)
         log.d(message)
     except Exception as e:
         log.e(f'showNotification error: "{e}"')

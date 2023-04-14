@@ -27,6 +27,7 @@ class FlagsControl:
 
     def __init__(self):
         self.channel_stop = threading.Event()
+        self.switch_source = threading.Event()
 
     def clear(self):
         [f.clear() for f in self.__dict__.values()]
@@ -41,8 +42,15 @@ class FlagsControl:
         self.clear()
         self.channel_stop.set()
 
+    def switchSource(self):
+        self.clear()
+        self.switch_source.set()
+
     def channel_stop_requested(self):
         return self.channel_stop.is_set()
+
+    def switch_source_requested(self):
+        return self.switch_source.is_set()
 
 
 Flags = FlagsControl()
@@ -79,17 +87,20 @@ class TPlayer(xbmc.Player):
 
     def onPlayBackStopped(self):
         log("onPlayBackStopped")
+        secs = time.time() - self.starttime
+        if secs < 30 and not Flags.is_any_flag_set():
+            self.last_error = TimeoutError(f'Playback ended in {secs} sec')
 
     def onPlayBackEnded(self):
         log('onPlayBackEnded')
-        self.stop()
+#         self.stop()
         secs = time.time() - self.starttime
-        if secs < 30 and not Flags.channel_stop_requested():
+        if secs < 30 and not Flags.is_any_flag_set():
             self.last_error = TimeoutError(f'Playback ended in {secs} sec')
 
     def onPlayBackError(self):
         log('onPlayBackError')
-        self.stop()
+#         self.stop()
         secs = time.time() - self.starttime
         if secs < 30:
             self.last_error = TimeoutError(f'Playback error in {secs} sec')
@@ -99,7 +110,7 @@ class TPlayer(xbmc.Player):
         Flags.clear()
         self.parent.hide_main_window()
         self.parent.player.hideStatus()
-        self.starttime = time.time()
+#         self.starttime = time.time()
 
     def onAVChange(self):
         log('onAVChange')
@@ -115,7 +126,7 @@ class TPlayer(xbmc.Player):
                 self.parent.close()
                 raise
 
-        self.stop()
+#         self.stop()
 
     def play_item(self, title='', icon='', thumb='', *args, **kwargs):
         li = xbmcgui.ListItem(title, offscreen=True)
@@ -125,6 +136,7 @@ class TPlayer(xbmc.Player):
         if not self.link:
             self.parent.showStatus('Нечего проигрывать')
             return
+        self.starttime = time.time()
         self.play(self.link, li, windowed=True)
         log.debug(f'play_item {title}')
         self.parent.player.Show()
@@ -145,6 +157,11 @@ class TPlayer(xbmc.Player):
     def channelStop(self):
         log('channelStop')
         Flags.channelStop()
+        self.stop()
+
+    def switchSource(self):
+        log('switchSource')
+        Flags.switchSource()
         self.stop()
 
 

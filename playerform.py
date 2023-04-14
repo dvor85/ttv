@@ -16,12 +16,16 @@ import utils
 from epgs.epgtv import get_name_offset
 from sources.tchannel import TChannel
 from sources.channel_info import ChannelInfo
+from http.server import BaseHTTPRequestHandler
+import socketserver
+from collections import deque
 
 log = logger.Logger(__name__)
 
 
 class ProxyTV(UserDict):
-    _re_name_url = re.compile(r'#EXTINF:.*?,(?P<name>.*?)\-.*\<br\>(?P<url>[\w\.\:/]+)\<br\>')
+#     _re_name_url = re.compile(r'#EXTINF:.*?,(?P<name>.*?)\-.*\<br\>(?P<url>[\w\.\:/]+)\<br\>')
+    _re_name_url = re.compile(r'> (?P<prov>[^\<\>]+)<br><div align=\"left\">.+?#EXTINF:.+?,(?P<name>.+?)\-\d+\<br\>(?P<url>[\w\.\:/]+)\<br\>')
 
     def __init__(self):
         UserDict.__init__(self)
@@ -40,8 +44,54 @@ class ProxyTV(UserDict):
         if r:
             self.data.setdefault(name, [])
             self.data.setdefault(f'{name} hd', [])
-            for n, u in ProxyTV._re_name_url.findall(r.text):
-                self.data.setdefault(n.lower().strip(), []).append(u)
+            for p, n, u in ProxyTV._re_name_url.findall(r.text):
+                self.data.setdefault(n.lower().strip(), []).append({p:u})
+
+
+class MyProxyServer(socketserver.ThreadingTCPServer):
+    daemon_threads = True
+
+    def __init__(self, port):
+        self.timeout = 5
+        return super().__init__(('127.0.0.1', port), MyProxyHandler)
+
+
+class MyProxyHandler(BaseHTTPRequestHandler):
+    URL = None
+
+    def setup(self) -> None:
+        BaseHTTPRequestHandler.setup(self)
+        self.timeout = 5
+        self.BUFMAX = 16
+        self.BUFBLOCK = 8192
+        self.buff = deque(bytes([]), self.BUFMAX)
+
+    def do_HEAD(self, **headers):
+        self.send_response(200)
+        [self.send_header(k, v) for k, v in headers.items()]
+        self.end_headers()
+
+    def do_GET(self):
+        r = None
+        self.buff.clear()
+        while not (players.Flags.is_any_flag_set() or defines.isCancel()):
+            r = defines.request(MyProxyHandler.URL, trys=2, stream=True, timeout=self.timeout)
+            self.do_HEAD(**{'Content-type': 'application/octet-stream'})
+            for data in r.iter_content(self.BUFBLOCK):
+                if data and not (players.Flags.is_any_flag_set() or defines.isCancel()):
+                    self.do_WRITE(data)
+                else:
+                    break
+
+    def do_WRITE(self, stream):
+        self.buff.append(stream)
+        if len(self.buff) == self.BUFMAX:
+            self.wfile.write(self.buff.popleft())
+            self.wfile.flush()
+
+    @staticmethod
+    def set_url(url):
+        MyProxyHandler.URL = url
 
 
 class MyPlayer(xbmcgui.WindowXML):
@@ -64,6 +114,7 @@ class MyPlayer(xbmcgui.WindowXML):
 
     TIMER_RUN_SEL_CHANNEL = 'run_selected_channel'
     TIMER_HIDE_CONTROL = 'hide_control_timer'
+    TIMER_HIDE_STATUS = 'hide_status'
 
     def __init__(self, xmlFilename, scriptPath, *args, **kwargs):
         super(MyPlayer, self).__init__(xmlFilename, scriptPath)
@@ -83,6 +134,7 @@ class MyPlayer(xbmcgui.WindowXML):
         self.swinfo = None
         self.cicon = None
         self.control_window = None
+
         self.proxytv = ProxyTV()
         self.visible = threading.Event()
         self.chinfo = ChannelInfo().get_instance()
@@ -205,11 +257,13 @@ class MyPlayer(xbmcgui.WindowXML):
             for src_name, player_url in channel.xurl().copy():
                 for player, url_mode in player_url.items():
                     try:
+                        players.Flags.clear()
                         url = url_mode['url']
                         if callable(url):
                             url = url()
 
                         log.d(f'Try to play {url} with {player} player')
+
                         logo = channel.logo()
                         if self.cicon:
                             self.cicon.setImage(logo)
@@ -228,7 +282,7 @@ class MyPlayer(xbmcgui.WindowXML):
                         if self._player:
                             self.parent.add_recent_channel(channel, 300)
                             if url_mode.get('availible', True):
-                                log.d(f'play "{url}" from source "{src_name}"')
+
                                 with defines.progress_dialog_bg(f"Проверка доступности источника для канала {channel.title()}") as pd:
                                     defines.request(url, method='GET', timeout=3, stream=True)
                                     pd.update(100)
@@ -257,13 +311,23 @@ class MyPlayer(xbmcgui.WindowXML):
                                         log.d(f"sources={srcs}")
                                         if not srcs:
                                             raise ValueError(f'Source "{url}" is not availible. Channel "{channel.title()}" in "{src_name}"')
-                                while not (players.Flags.channel_stop_requested() or defines.isCancel()):
+                                else:
+                                    pass
+                                    MyProxyHandler.set_url(url)
+                                    url = f'http://127.0.0.1:{self.parent.proxy_port}'
+
+                                while not (players.Flags.is_any_flag_set() or defines.isCancel()):
+                                    log.d(f'play "{url}" from source "{src_name}"')
+                                    xbmc.executebuiltin('Dialog.Close(okdialog)')
+                                    defines.showNotification(heading='Источник', message=src_name, icon='')
                                     self._player.play_item(index=0, title=self.title,
                                                            iconImage=logo,
                                                            thumbnailImage=logo,
                                                            url=url, mode=url_mode['mode'])
+
                                     if self._player.last_error:
                                         raise self._player.last_error
+                                    defines.monitor.waitForAbort(1)
                                 log.d(f'End playing url "{url}"')
 
                             elif not channel.is_availible():
@@ -271,18 +335,20 @@ class MyPlayer(xbmcgui.WindowXML):
                                     self.proxytv.search_by_name(title_wo_hd)
                                     log.d(self.proxytv)
                                     if self.proxytv[title]:
-                                        for u in self.proxytv[title]:
-                                            channel.insert(0, TChannel({'name': title, 'src': 'proxytv.ru', 'player': 'tsp', 'url': u}))
+                                        for u_obj in self.proxytv[title]:
+                                            for prov, u in u_obj.items():
+                                                channel.insert(0, TChannel({'name': title, 'src': prov, 'player': 'tsp', 'url': u}))
                                     else:
-                                        for u in self.proxytv[title_wo_hd]:
-                                            channel.insert(0, TChannel({'name': title_wo_hd, 'src': 'proxytv.ru', 'player': 'tsp', 'url': u}))
+                                        for u_obj in self.proxytv[title_wo_hd]:
+                                            for prov, u in u_obj.items():
+                                                channel.insert(0, TChannel({'name': title_wo_hd, 'src': prov, 'player': 'tsp', 'url': u}))
 
                                 if not channel.is_availible() and title_wo_hd in self.proxytv:
                                     if chli:
                                         chli.setLabel(f'[COLOR 0xFF333333]{chli.getLabel()}[/COLOR]')
                                     self.channelStop()
 
-                            defines.monitor.waitForAbort(0.2)
+                            defines.monitor.waitForAbort(1)
 
                     except Exception as e:
                         log.d(e)
@@ -323,7 +389,7 @@ class MyPlayer(xbmcgui.WindowXML):
         if self.channel_number <= 0:
             self.channel_number = self.parent.list.size() - 1
 
-    def showStatus(self, text):
+    def showStatus(self, text, timeout=0):
         try:
             log.d(f"showStatus: {text}")
             if self.swinfo:
@@ -331,6 +397,10 @@ class MyPlayer(xbmcgui.WindowXML):
                 self.swinfo.setVisible(True)
         except Exception as e:
             log.w(f"showStatus error: {e}")
+        finally:
+            self.timers.stop(MyPlayer.TIMER_HIDE_STATUS)
+            if timeout:
+                self.timers.start(MyPlayer.TIMER_HIDE_STATUS, threading.Timer(timeout, self.hideStatus))
 
     def hideStatus(self):
         try:
@@ -344,6 +414,12 @@ class MyPlayer(xbmcgui.WindowXML):
             self._player.channelStop()
         else:
             players.Flags.channelStop()
+
+    def switchSource(self):
+        if self._player:
+            self._player.switchSource()
+        else:
+            players.Flags.switchSource()
 
     def Stop(self):
         if self._player:
@@ -373,7 +449,7 @@ class MyPlayer(xbmcgui.WindowXML):
                 self.close()
 
         elif action in (xbmcgui.ACTION_NEXT_ITEM, xbmcgui.ACTION_PREV_ITEM):
-            self.Stop()
+            self.switchSource()
         elif action in (xbmcgui.ACTION_STOP, xbmcgui.ACTION_PAUSE):
             self.channelStop()
 
@@ -431,3 +507,4 @@ class MyPlayer(xbmcgui.WindowXML):
         if self.visible.is_set():
             xbmcgui.WindowXML.close(self)
         self.visible.clear()
+
