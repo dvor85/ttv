@@ -24,7 +24,7 @@ log = logger.Logger(__name__)
 
 
 class ProxyTV(UserDict):
-#     _re_name_url = re.compile(r'#EXTINF:.*?,(?P<name>.*?)\-.*\<br\>(?P<url>[\w\.\:/]+)\<br\>')
+    #     _re_name_url = re.compile(r'#EXTINF:.*?,(?P<name>.*?)\-.*\<br\>(?P<url>[\w\.\:/]+)\<br\>')
     _re_name_url = re.compile(r'> (?P<prov>[^\<\>]+)<br><div align=\"left\">.+?#EXTINF:.+?,(?P<name>.+?)\-\d+\<br\>(?P<url>[\w\.\:/]+)\<br\>')
 
     def __init__(self):
@@ -45,11 +45,11 @@ class ProxyTV(UserDict):
             self.data.setdefault(name, [])
             self.data.setdefault(f'{name} hd', [])
             for p, n, u in ProxyTV._re_name_url.findall(r.text):
-                self.data.setdefault(n.lower().strip(), []).append({p:u})
+                self.data.setdefault(n.lower().strip(), []).append({p: u})
 
 
 class MyProxyServer(socketserver.ThreadingTCPServer):
-    daemon_threads = True
+    daemon_threads = False
 
     def __init__(self, port):
         self.timeout = 5
@@ -57,10 +57,9 @@ class MyProxyServer(socketserver.ThreadingTCPServer):
 
 
 class MyProxyHandler(BaseHTTPRequestHandler):
-    URL = None
 
     def setup(self) -> None:
-        BaseHTTPRequestHandler.setup(self)
+        super().setup()
         self.timeout = 5
         self.BUFMAX = 16
         self.BUFBLOCK = 8192
@@ -72,26 +71,23 @@ class MyProxyHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        r = None
         self.buff.clear()
-        while not (players.Flags.is_any_flag_set() or defines.isCancel()):
-            r = defines.request(MyProxyHandler.URL, trys=2, stream=True, timeout=self.timeout)
+        url = self.path[1:]
+        if '://' in url:
             self.do_HEAD(**{'Content-type': 'application/octet-stream'})
-            for data in r.iter_content(self.BUFBLOCK):
-                if data and not (players.Flags.is_any_flag_set() or defines.isCancel()):
-                    self.do_WRITE(data)
-                else:
-                    break
+            while not (players.Flags.is_any_flag_set() or defines.isCancel()):
+                r = defines.request(url, trys=2, stream=True, timeout=self.timeout)
+                for data in r.iter_content(self.BUFBLOCK):
+                    if data and not (players.Flags.is_any_flag_set() or defines.isCancel()):
+                        self.do_WRITE(data)
+                    else:
+                        break
 
     def do_WRITE(self, stream):
         self.buff.append(stream)
         if len(self.buff) == self.BUFMAX:
             self.wfile.write(self.buff.popleft())
             self.wfile.flush()
-
-    @staticmethod
-    def set_url(url):
-        MyProxyHandler.URL = url
 
 
 class MyPlayer(xbmcgui.WindowXML):
@@ -312,9 +308,7 @@ class MyPlayer(xbmcgui.WindowXML):
                                         if not srcs:
                                             raise ValueError(f'Source "{url}" is not availible. Channel "{channel.title()}" in "{src_name}"')
                                 else:
-                                    pass
-                                    MyProxyHandler.set_url(url)
-                                    url = f'http://127.0.0.1:{self.parent.proxy_port}'
+                                    url = f'http://127.0.0.1:{self.parent.proxy_port}/{url}'
 
                                 while not (players.Flags.is_any_flag_set() or defines.isCancel()):
                                     log.d(f'play "{url}" from source "{src_name}"')
@@ -507,4 +501,3 @@ class MyPlayer(xbmcgui.WindowXML):
         if self.visible.is_set():
             xbmcgui.WindowXML.close(self)
         self.visible.clear()
-
