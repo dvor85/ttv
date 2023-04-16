@@ -259,9 +259,10 @@ class WMainForm(xbmcgui.WindowXML):
         self.first_init = defines.AUTOSTART_LASTCH
         self.channel_number_str = ''
         self.set_logo_sema = threading.Semaphore(24)
+        self.proxy_address = '127.0.0.1'
         self.proxy_port = 9097
 
-        self.proxy_server = MyProxyServer(self.proxy_port)
+        self.proxy_server = MyProxyServer(self.proxy_address, self.proxy_port)
         defines.MyThread(self.proxy_server.serve_forever).start()
         log.d(f"serving at port {self.proxy_port}")
 

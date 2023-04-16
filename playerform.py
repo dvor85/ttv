@@ -18,7 +18,6 @@ from sources.tchannel import TChannel
 from sources.channel_info import ChannelInfo
 from http.server import BaseHTTPRequestHandler
 import socketserver
-from collections import deque
 
 log = logger.Logger(__name__)
 
@@ -50,20 +49,15 @@ class ProxyTV(UserDict):
 
 class MyProxyServer(socketserver.ThreadingTCPServer):
     daemon_threads = False
+    timeout = 5
 
-    def __init__(self, port):
-        self.timeout = 5
-        return super().__init__(('127.0.0.1', port), MyProxyHandler)
+    def __init__(self, address, port):
+        return super().__init__((address, port), MyProxyHandler)
 
 
 class MyProxyHandler(BaseHTTPRequestHandler):
-
-    def setup(self) -> None:
-        super().setup()
-        self.timeout = 5
-        self.BUFMAX = 16
-        self.BUFBLOCK = 8192
-        self.buff = deque(bytes([]), self.BUFMAX)
+    timeout = 5
+    buff = 8192
 
     def do_HEAD(self, **headers):
         self.send_response(200)
@@ -71,23 +65,14 @@ class MyProxyHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        self.buff.clear()
         url = self.path[1:]
         if '://' in url:
             self.do_HEAD(**{'Content-type': 'application/octet-stream'})
             while not (players.Flags.is_any_flag_set() or defines.isCancel()):
                 r = defines.request(url, trys=2, stream=True, timeout=self.timeout)
-                for data in r.iter_content(self.BUFBLOCK):
-                    if data and not (players.Flags.is_any_flag_set() or defines.isCancel()):
-                        self.do_WRITE(data)
-                    else:
-                        break
-
-    def do_WRITE(self, stream):
-        self.buff.append(stream)
-        if len(self.buff) == self.BUFMAX:
-            self.wfile.write(self.buff.popleft())
-            self.wfile.flush()
+                for data in r.iter_content(self.buff):
+                    self.wfile.write(data)
+                    self.wfile.flush()
 
 
 class MyPlayer(xbmcgui.WindowXML):
@@ -308,7 +293,7 @@ class MyPlayer(xbmcgui.WindowXML):
                                         if not srcs:
                                             raise ValueError(f'Source "{url}" is not availible. Channel "{channel.title()}" in "{src_name}"')
                                 else:
-                                    url = f'http://127.0.0.1:{self.parent.proxy_port}/{url}'
+                                    url = f'http://{self.parent.proxy_address}:{self.parent.proxy_port}/{url}'
 
                                 while not (players.Flags.is_any_flag_set() or defines.isCancel()):
                                     log.d(f'play "{url}" from source "{src_name}"')
@@ -336,6 +321,12 @@ class MyPlayer(xbmcgui.WindowXML):
                                         for u_obj in self.proxytv[title_wo_hd]:
                                             for prov, u in u_obj.items():
                                                 channel.insert(0, TChannel({'name': title_wo_hd, 'src': prov, 'player': 'tsp', 'url': u}))
+
+                                    for t, urls in self.proxytv.items():
+                                        for u_obj in urls:
+                                            for prov, u in u_obj.items():
+                                                self.parent.channel_groups.addChannel(
+                                                    TChannel({'name': t, 'src': prov, 'player': 'tsp', 'url': u}), src_name=prov, groupname=self.parent.cur_category)
 
                                 if not channel.is_availible() and title_wo_hd in self.proxytv:
                                     if chli:

@@ -146,13 +146,13 @@ class TPlayer(xbmc.Player):
 
     def end(self):
         log('end player method')
-        xbmc.Player.stop(self)
+        self.stop()
         self.onPlayBackEnded()
 
     def stop(self):
         log('stop')
         Flags.log_status()
-        xbmc.Player.stop(self)
+        super().stop()
 
     def channelStop(self):
         log('channelStop')
