@@ -16,15 +16,14 @@ import utils
 from epgs.epgtv import get_name_offset
 from sources.tchannel import TChannel
 from sources.channel_info import ChannelInfo
-from http.server import BaseHTTPRequestHandler
-import socketserver
 
 log = logger.Logger(__name__)
 
 
 class ProxyTV(UserDict):
     #     _re_name_url = re.compile(r'#EXTINF:.*?,(?P<name>.*?)\-.*\<br\>(?P<url>[\w\.\:/]+)\<br\>')
-    _re_name_url = re.compile(r'> (?P<prov>[^\<\>]+)<br><div align=\"left\">.+?#EXTINF:.+?,(?P<name>.+?)\-\d+\<br\>(?P<url>[\w\.\:/]+)\<br\>')
+    __re_name_url = re.compile(r'> (?P<prov>[^\<\>]+)<br><div align=\"left\">.+?#EXTINF:.+?,(?P<name>.+?)\-\d+\<br\>(?P<url>[\w\.\:/]+)\<br\>')
+    __re_spaces = re.compile(r'\s{2,}')
 
     def __init__(self):
         UserDict.__init__(self)
@@ -43,36 +42,8 @@ class ProxyTV(UserDict):
         if r:
             self.data.setdefault(name, [])
             self.data.setdefault(f'{name} hd', [])
-            for p, n, u in ProxyTV._re_name_url.findall(r.text):
-                self.data.setdefault(n.lower().strip(), []).append({p: u})
-
-
-class MyProxyServer(socketserver.ThreadingTCPServer):
-    daemon_threads = False
-    timeout = 5
-
-    def __init__(self, address, port):
-        return super().__init__((address, port), MyProxyHandler)
-
-
-class MyProxyHandler(BaseHTTPRequestHandler):
-    timeout = 5
-    buff = 8192
-
-    def do_HEAD(self, **headers):
-        self.send_response(200)
-        [self.send_header(k, v) for k, v in headers.items()]
-        self.end_headers()
-
-    def do_GET(self):
-        url = self.path[1:]
-        if '://' in url:
-            self.do_HEAD(**{'Content-type': 'application/octet-stream'})
-            while not (players.Flags.is_any_flag_set() or defines.isCancel()):
-                r = defines.request(url, trys=2, stream=True, timeout=self.timeout)
-                for data in r.iter_content(self.buff):
-                    self.wfile.write(data)
-                    self.wfile.flush()
+            for p, n, u in self.__re_name_url.findall(r.text):
+                self.data.setdefault(self.__re_spaces.sub(' ', n.lower().strip()), []).append({p: u})
 
 
 class MyPlayer(xbmcgui.WindowXML):
@@ -293,7 +264,7 @@ class MyPlayer(xbmcgui.WindowXML):
                                         if not srcs:
                                             raise ValueError(f'Source "{url}" is not availible. Channel "{channel.title()}" in "{src_name}"')
                                 else:
-                                    url = f'http://{self.parent.proxy_address}:{self.parent.proxy_port}/{url}'
+                                    url = f'http://{defines.PROXY_ADDR_PORT[0]}:{defines.PROXY_ADDR_PORT[1]}/{url}'
 
                                 while not (players.Flags.is_any_flag_set() or defines.isCancel()):
                                     log.d(f'play "{url}" from source "{src_name}"')

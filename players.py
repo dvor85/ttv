@@ -129,13 +129,13 @@ class TPlayer(xbmc.Player):
 #         self.stop()
 
     def play_item(self, title='', icon='', thumb='', *args, **kwargs):
-        li = xbmcgui.ListItem(title, offscreen=True)
-        li.setArt({'icon': icon, 'thumb': thumb})
         if kwargs.get('url'):
             self.link = kwargs['url']
         if not self.link:
             self.parent.showStatus('Нечего проигрывать')
             return
+        li = xbmcgui.ListItem(title, offscreen=True)
+        li.setArt({'icon': icon, 'thumb': thumb})
         self.starttime = time.time()
         self.play(self.link, li, windowed=True)
         log.debug(f'play_item {title}')

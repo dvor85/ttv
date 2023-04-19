@@ -12,6 +12,7 @@
 		<setting default="socks5" id="proxy_type" label="Тип прокси" type="labelenum" values="http|socks5" visible="true" />
 		<setting default="127.0.0.1:9050" id="pomoyka_proxy" label="Прокси" type="text" />
 		<setting default="false" id="pomoyka_proxy_for_all" label="Использовать прокси для всего" type="bool" />
+		<setting default="127.0.0.1:9097" id="proxy_addr_port" label="Прокси для ProxyTV" type="text" />
 	</category>
 	<category label="EPG">
 		<setting default="mailtv" id="epg_source" label="Источник телепрограммы" type="labelenum" values="mailtv|xmltv" enable="false" />

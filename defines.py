@@ -33,6 +33,7 @@ GENDER = ADDON.getSettingInt('gender')
 AGE = ADDON.getSettingInt('age')
 FAVOURITE = ADDON.getSetting('favourite')
 DEBUG = ADDON.getSettingBool('debug')
+PROXY_ADDR_PORT = ADDON.getSetting('proxy_addr_port').split(':')
 PROXY_TYPE, _proxy_addr, _port = urllib3.get_host(ADDON.getSetting('pomoyka_proxy'))
 PROXY_TYPE = ADDON.getSetting('proxy_type')
 if PROXY_TYPE == 'socks5':

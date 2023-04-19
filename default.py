@@ -4,22 +4,25 @@
 # Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
 import defines
-
 # try:
 if defines.DEBUG:
     import debug  # @UnusedImport
 # except Exception as e:
 #     defines.log.error(e)
+import mainform
+from proxyserver import MyProxyServer
 
 
 def main():
-    import mainform
 
     w = mainform.WMainForm("mainform.xml", defines.ADDON_PATH)
     try:
+        proxy_server = MyProxyServer(*defines.PROXY_ADDR_PORT)
+        defines.MyThread(proxy_server.serve_forever).start()
         w.doModal()
     finally:
         defines.log('Close plugin')
+        proxy_server.shutdown()
         del w
 
 
