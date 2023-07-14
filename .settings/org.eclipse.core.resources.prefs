@@ -9,6 +9,7 @@ encoding//sources/acetv.py=utf-8
 encoding//sources/channel_info.py=utf-8
 encoding//sources/iptv_restream.py=utf-8
 encoding//sources/playlists.py=utf-8
+encoding//sources/proxytv.py=utf-8
 encoding//sources/table.py=utf-8
 encoding//sources/tchannel.py=utf-8
 encoding//sources/ttv.py=utf-8

@@ -17,67 +17,10 @@ import utils
 from epgs.epgtv import get_name_offset
 from sources.tchannel import TChannel
 from sources.channel_info import ChannelInfo
+from sources.proxytv import ProxyTV
 
 log = logger.Logger(__name__)
-
-
-class ProxyTV(UserDict):
-    #     _re_name_url = re.compile(r'#EXTINF:.*?,(?P<name>.*?)\-.*\<br\>(?P<url>[\w\.\:/]+)\<br\>')
-    __re_name_url = re.compile(r'> (?P<prov>[^\<\>]+)<br><div align=\"left\">.+?#EXTINF:.+?,(?P<name>.+?)\-\d+\<br\>(?P<url>[\w\.\:/]+)\<br\>')
-    __re_spaces = re.compile(r'\s{2,}')
-
-    providers = {'ЗАО "Аист", г.Тольятти': 'aist',
-                 'ЗАО "Диджитал Нетворк", г.Москва': 'didgital',
-                 'ООО "Е-Лайт-Телеком", г.Кемерово': 'elite',
-                 'ООО "ИнфоЛада", г.Тольятти': 'lada',
-                 'ООО "Лан-Оптик", г.Кимры': 'optik',
-                 'ООО "Новотелеком", г.Новосибирск': 'novotel',
-                 'ООО "Перспектива", г.Санкт-Петербург': 'perspektiv',
-                 'ООО "Пост ЛТД", г.Пятигорск': 'post',
-                 'ООО "Рэдком", г.Хабаровск': 'redkom',
-                 'ПАО "Ростелеком", г.Н.Новгород': 'rostnng',
-                 'ПАО "Ростелеком", г.Новосибирск': 'rostnsk',
-                 'ООО "Скайнет", г.Санкт-Петербург': 'skaynet',
-                 'ООО "Агросвязь-М", г.Магнитогорск': 'citilink',
-                 'ООО НПП "Тенет", г.Одесса': 'tenet',
-                 'OOО "Группа Тауэр-Телеком", г.Волжский': 'tauer',
-                 'ГК "Транстелеком", г.Новосибирск': 'zapsib',
-                 'ООО "УГМК-Телеком", г.Екатеринбург': 'utelekom',
-                 'ПАО "Вымпелком", г.Москва': 'corbina',
-                 'ООО "Ярнет", г.Ярославль': 'yarnet'
-                 }
-
-    def __init__(self):
-        UserDict.__init__(self)
-        self.sortby = []
-        self.sess = requests.Session()
-        self.data = {}
-
-    def sortby_prov(self, elem):
-        try:
-            return self.sortby.index(self.providers[list(elem.keys())[0]])
-        except:
-            return -1
-
-    def search_by_name(self, name, sortby=''):
-        name = name.lower()
-        self.sortby = sortby.split(',')
-        log.d(f"search source in proxytv by {name}")
-        params = {"udpxyaddr": f"ch:{name}"}
-        headers = {'Referer': 'https://proxytv.ru/'}
-        if not self.sess.cookies:
-            defines.request('https://proxytv.ru/', method='head', session=self.sess, headers=headers)
-
-        r = defines.request('https://proxytv.ru/iptv/php/srch.php', method='post', session=self.sess, params=params, headers=headers)
-        if r:
-            self.data.setdefault(name, [])
-            self.data.setdefault(f'{name} hd', [])
-            for p, n, u in self.__re_name_url.findall(r.text):
-                self.data.setdefault(self.__re_spaces.sub(' ', n.lower().strip()), []).append({p: u})
-                
-            self.data[name].sort(key=self.sortby_prov, reverse=True)
-            self.data[f'{name} hd'].sort(key=self.sortby_prov, reverse=True)
-                
+              
 
 
 class MyPlayer(xbmcgui.WindowXML):
@@ -121,7 +64,7 @@ class MyPlayer(xbmcgui.WindowXML):
         self.cicon = None
         self.control_window = None
 
-        self.proxytv = ProxyTV()
+        self.proxytv = ProxyTV.get_instance()
         self.visible = threading.Event()
         self.chinfo = ChannelInfo().get_instance()
 

@@ -28,6 +28,7 @@
 		<setting id="playlists" label="Playlists m3u (Порядоковый номер. Если <= 0, то выключен)" type="number" default="0" />
 		<setting default="" id="playlists_urls" label="Ссылки на плэйлисты (разделитель ;)" type="text" enable="gt(-1,0)" subsetting="true" />
 		<setting default="false" id="playlists_use_proxy" label="Использовать прокси" type="bool" enable="gt(-2,0)" subsetting="true" />
+		<setting id="proxytv" label="ProxyTV (Порядоковый номер. Если <= 0, то выключен)" type="number" default="0" />
 		
 	</category>
 	<category label="AceStream">

@@ -5,6 +5,7 @@ import defines
 from . import acestream, ttv, iptv_restream
 from sources import acetv
 from sources import playlists
+from sources import proxytv
 from six.moves import UserList
 from threading import Lock
 
@@ -38,5 +39,7 @@ if defines.ADDON.getSettingInt('iptv-org.github.io') > 0:
     channel_sources.append(iptv_restream.Channels())
 if defines.ADDON.getSettingInt('playlists') > 0:
     channel_sources.append(playlists.Channels())
+if defines.ADDON.getSettingInt('proxytv') > 0:
+    channel_sources.append(proxytv.Channels())
 
 channel_sources.sort(key=lambda src: defines.ADDON.getSettingInt(src.name))
