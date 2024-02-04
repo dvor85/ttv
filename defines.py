@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
 # Edited (c) 2015, Vorotilin D.V., E-mail: dvor85@mail.ru
 
+from contextlib import contextmanager
 import os
+from pathlib import Path
+import requests
+import six
 import sys
 import threading
+from urllib3.util import parse_url
 
-import requests
-import urllib3
-import six
-import xbmcaddon
 import xbmc
+import xbmcaddon
 import xbmcgui
 from xbmcvfs import translatePath
-from six.moves import UserDict
-from pathlib import Path
-from contextlib import contextmanager
 
 import logger
+from six.moves import UserDict
 
 log = logger.Logger(__name__)
 
@@ -34,12 +34,12 @@ AGE = ADDON.getSettingInt('age')
 FAVOURITE = ADDON.getSetting('favourite')
 DEBUG = ADDON.getSettingBool('debug')
 PROXY_ADDR_PORT = ADDON.getSetting('proxy_addr_port').split(':')
-PROXY_TYPE, _proxy_addr, _port = urllib3.get_host(ADDON.getSetting('pomoyka_proxy'))
+p = parse_url(ADDON.getSetting('pomoyka_proxy'))
 PROXY_TYPE = ADDON.getSetting('proxy_type')
 if PROXY_TYPE == 'socks5':
     PROXY_TYPE = 'socks5h'
-PROXIES = {"http": f"{PROXY_TYPE}://{_proxy_addr}:{_port}",
-           "https": f"{PROXY_TYPE}://{_proxy_addr}:{_port}"}
+PROXIES = {"http": f"{PROXY_TYPE}://{p.hostname}:{p.port}",
+           "https": f"{PROXY_TYPE}://{p.hostname}:{p.port}"}
 Path(CACHE_PATH).mkdir(parents=True, exist_ok=True)
 closeRequested = threading.Event()
 monitor = xbmc.Monitor()
